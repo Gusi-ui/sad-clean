@@ -14,6 +14,7 @@ interface UserData {
   first_name?: string;
   last_name?: string;
   full_name?: string;
+  role?: 'admin' | 'worker';
 }
 
 interface AuthContextType {
@@ -22,7 +23,7 @@ interface AuthContextType {
   signIn: (
     email: string,
     password: string
-  ) => Promise<{ error: AuthError | null }>;
+  ) => Promise<{ error: AuthError | null; redirectTo?: string }>;
   signUp: (
     email: string,
     password: string,
@@ -30,6 +31,7 @@ interface AuthContextType {
   ) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
+  getUserRole: () => Promise<'admin' | 'worker' | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -74,12 +76,54 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const signIn = async (email: string, password: string) => {
+  const getUserRole = async (): Promise<'admin' | 'worker' | null> => {
+    if (!user) return null;
+
+    try {
+      const { data, error } = await supabase
+        .from('auth_users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error getting user role:', error);
+        return null;
+      }
+
+      return data?.role as 'admin' | 'worker' | null;
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error getting user role:', error);
+      return null;
+    }
+  };
+
+  const signIn = async (
+    email: string,
+    password: string
+  ): Promise<{ error: AuthError | null; redirectTo?: string }> => {
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    return { error: error as AuthError | null };
+
+    if (error) {
+      return { error: error as AuthError | null };
+    }
+
+    // Obtener el rol del usuario para determinar la redirección
+    const {
+      data: { user: currentUser },
+    } = await supabase.auth.getUser();
+    if (currentUser) {
+      const role = await getUserRole();
+      const redirectTo = role === 'admin' ? '/dashboard' : '/worker-dashboard';
+      return { error: null, redirectTo };
+    }
+
+    return { error: null };
   };
 
   const signUp = async (
@@ -115,6 +159,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     signOut,
     signUp,
     user,
+    getUserRole,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

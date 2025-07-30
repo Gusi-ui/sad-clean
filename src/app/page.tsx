@@ -15,18 +15,14 @@ export default function Home() {
               <div className='w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg'>
                 <span className='text-white font-bold text-lg'>SAD</span>
               </div>
-              <span className='text-xl font-bold text-gray-900'>LAS</span>
+              <span className='text-xl font-bold text-gray-900'>
+                Sistema de Ayuda a Domicilio
+              </span>
             </div>
             <div className='hidden md:flex items-center space-x-6'>
-              <Link
-                href='/auth'
-                className='text-gray-600 hover:text-blue-600 transition-colors'
-              >
-                Iniciar Sesión
-              </Link>
-              <Link href='/dashboard'>
+              <Link href='/auth'>
                 <Button size='sm' variant='outline'>
-                  Panel Admin
+                  Iniciar Sesión
                 </Button>
               </Link>
             </div>
@@ -53,16 +49,7 @@ export default function Home() {
               <div className='flex flex-col sm:flex-row gap-4 justify-center lg:justify-start'>
                 <Link href='/auth'>
                   <Button size='lg' className='w-full sm:w-auto'>
-                    🚀 Comenzar Ahora
-                  </Button>
-                </Link>
-                <Link href='/dashboard'>
-                  <Button
-                    size='lg'
-                    variant='outline'
-                    className='w-full sm:w-auto'
-                  >
-                    👨‍💼 Panel Administrativo
+                    🔐 Iniciar Sesión
                   </Button>
                 </Link>
               </div>
@@ -112,7 +99,7 @@ export default function Home() {
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
           <div className='text-center mb-16'>
             <h2 className='text-3xl md:text-4xl font-bold text-gray-900 mb-6'>
-              ¿Por qué elegir SAD LAS?
+              ¿Por qué elegir SAD?
             </h2>
             <p className='text-lg text-gray-600 max-w-3xl mx-auto'>
               Nuestra plataforma está diseñada específicamente para optimizar la
@@ -246,7 +233,7 @@ export default function Home() {
             ¿Listo para optimizar tu gestión?
           </h2>
           <p className='text-xl text-blue-100 mb-8 max-w-2xl mx-auto'>
-            Únete a organizaciones que ya confían en SAD LAS para gestionar sus
+            Únete a organizaciones que ya confían en SAD para gestionar sus
             servicios asistenciales domiciliarios de manera eficiente.
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
@@ -255,16 +242,7 @@ export default function Home() {
                 size='lg'
                 className='bg-white text-blue-600 hover:bg-gray-100'
               >
-                🚀 Comenzar Gratis
-              </Button>
-            </Link>
-            <Link href='/dashboard'>
-              <Button
-                size='lg'
-                variant='outline'
-                className='border-white text-white hover:bg-white hover:text-blue-600'
-              >
-                👨‍💼 Panel Administrativo
+                🔐 Iniciar Sesión
               </Button>
             </Link>
           </div>
@@ -280,7 +258,9 @@ export default function Home() {
                 <div className='w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center'>
                   <span className='text-white font-bold text-lg'>SAD</span>
                 </div>
-                <span className='text-xl font-bold'>LAS</span>
+                <span className='text-xl font-bold'>
+                  Sistema de Ayuda a Domicilio
+                </span>
               </div>
               <p className='text-gray-400 mb-4 max-w-md'>
                 Sistema de gestión inteligente para servicios asistenciales
@@ -309,14 +289,6 @@ export default function Home() {
                 </li>
                 <li>
                   <Link
-                    href='/dashboard'
-                    className='hover:text-white transition-colors'
-                  >
-                    • Panel Administrativo
-                  </Link>
-                </li>
-                <li>
-                  <Link
                     href='/test-supabase'
                     className='hover:text-white transition-colors'
                   >
@@ -328,7 +300,7 @@ export default function Home() {
           </div>
           <div className='border-t border-gray-800 mt-8 pt-8 text-center'>
             <p className='text-gray-400'>
-              © 2024 SAD LAS - Sistema de Gestión de Servicios Asistenciales
+              © 2024 SAD - Sistema de Gestión de Servicios Asistenciales
               Domiciliarios
             </p>
           </div>

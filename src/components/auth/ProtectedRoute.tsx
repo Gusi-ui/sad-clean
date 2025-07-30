@@ -8,50 +8,67 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  fallback?: React.ReactNode;
+  requiredRole?: 'admin' | 'worker';
+  redirectTo?: string;
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
+export default function ProtectedRoute({
   children,
-  fallback,
-}) => {
-  const { user, loading } = useAuth();
+  requiredRole,
+  redirectTo,
+}: ProtectedRouteProps) {
+  const { user, loading, getUserRole } = useAuth();
   const router = useRouter();
-  const [isRedirecting, setIsRedirecting] = useState(false);
+  const [roleLoading, setRoleLoading] = useState(true);
+  const [userRole, setUserRole] = useState<'admin' | 'worker' | null>(null);
 
   useEffect(() => {
-    if (!loading && user === null && !isRedirecting) {
-      setIsRedirecting(true);
-      router.push('/auth');
-    }
-  }, [user, loading, router, isRedirecting]);
+    const checkUserRole = async () => {
+      if (!loading) {
+        if (!user) {
+          router.push('/auth');
+          return;
+        }
 
-  if (loading) {
+        if (requiredRole) {
+          const role = await getUserRole();
+          setUserRole(role);
+
+          if (role !== requiredRole) {
+            // Redirigir según el rol del usuario
+            const defaultRedirect =
+              role === 'admin' ? '/dashboard' : '/worker-dashboard';
+            router.push(redirectTo ?? defaultRedirect);
+            return;
+          }
+        }
+
+        setRoleLoading(false);
+      }
+    };
+
+    // eslint-disable-next-line no-void
+    void checkUserRole();
+  }, [user, loading, requiredRole, redirectTo, router, getUserRole]);
+
+  if (loading || roleLoading) {
     return (
-      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
+      <div className='min-h-screen flex items-center justify-center bg-gray-50'>
         <div className='text-center'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto'></div>
-          <p className='mt-4 text-gray-600'>Cargando...</p>
+          <div className='w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
+          <p className='text-gray-600'>Cargando...</p>
         </div>
       </div>
     );
   }
 
-  if (user === null) {
-    if (fallback !== undefined) {
-      return fallback;
-    }
-    return (
-      <div className='min-h-screen bg-gray-50 flex items-center justify-center'>
-        <div className='text-center'>
-          <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto'></div>
-          <p className='mt-4 text-gray-600'>Redirigiendo...</p>
-        </div>
-      </div>
-    );
+  if (!user) {
+    return null; // Ya se está redirigiendo
+  }
+
+  if (requiredRole && userRole !== requiredRole) {
+    return null; // Ya se está redirigiendo
   }
 
   return children;
-};
-
-export default ProtectedRoute;
+}
