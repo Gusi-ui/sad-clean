@@ -1,36 +1,171 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🚀 SAD LAS - Sistema de Gestión de Horas y Asignaciones
 
-## Getting Started
+## 📋 **DESCRIPCIÓN**
 
-First, run the development server:
+Sistema de gestión de horas y asignaciones para trabajadores de servicios asistenciales
+domiciliarios (SAD). Este proyecto está configurado con las mejores prácticas para garantizar código
+limpio y mantenible desde el primer commit.
+
+## 🎯 **OBJETIVO**
+
+Crear un proyecto **100% libre de errores y warnings** desde el inicio, con una estructura sólida y
+configuraciones estrictas que prevengan la acumulación de problemas técnicos.
+
+## 🏗️ **ESTRUCTURA DEL PROYECTO**
+
+```
+sad-las-clean/
+├── src/
+│   ├── app/                    # Next.js App Router
+│   │   ├── auth/              # Rutas de autenticación
+│   │   ├── dashboard/         # Rutas del dashboard
+│   │   ├── workers/           # Gestión de trabajadores
+│   │   ├── users/             # Gestión de usuarios
+│   │   ├── assignments/       # Gestión de asignaciones
+│   │   ├── balances/          # Gestión de balances de horas
+│   │   ├── planning/          # Planificación
+│   │   ├── settings/          # Configuraciones
+│   │   └── globals.css        # Estilos globales
+│   ├── components/            # Componentes React
+│   │   ├── ui/               # Componentes base
+│   │   ├── auth/             # Componentes de autenticación
+│   │   └── layout/           # Componentes de layout
+│   ├── contexts/             # Contextos de React
+│   ├── hooks/                # Custom hooks
+│   ├── lib/                  # Utilidades y configuraciones
+│   ├── types/                # Tipos TypeScript
+│   └── utils/                # Utilidades adicionales
+├── public/                   # Archivos estáticos
+├── .env.local               # Variables de entorno
+├── tailwind.config.ts       # Configuración Tailwind
+├── tsconfig.json            # Configuración TypeScript
+├── eslint.config.mjs        # Configuración ESLint
+├── prettier.config.js       # Configuración Prettier
+└── package.json             # Dependencias y scripts
+```
+
+## 🚀 **INICIO RÁPIDO**
+
+### **1. Configurar variables de entorno**
+
+```bash
+cp env.example .env.local
+```
+
+Editar `.env.local` con tus credenciales de Supabase:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+```
+
+### **2. Instalar dependencias**
+
+```bash
+npm install
+```
+
+### **3. Configurar base de datos**
+
+Ejecutar el script SQL para crear las tablas:
+
+```bash
+# Ejecutar en Supabase SQL Editor
+supabase-setup.sql
+```
+
+### **4. Iniciar desarrollo**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 🔧 **COMANDOS ÚTILES**
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# Desarrollo
+npm run dev              # Servidor de desarrollo
+npm run build            # Construir para producción
+npm run start            # Servidor de producción
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# Calidad de código
+npm run lint             # Verificar linting
+npm run type-check       # Verificar tipos TypeScript
+npm run format           # Formatear código
+npm run format:check     # Verificar formato
+```
 
-## Learn More
+## ✅ **VERIFICACIÓN DE CALIDAD**
 
-To learn more about Next.js, take a look at the following resources:
+### **Checklist Pre-Commit**
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+- [ ] `npm run lint` - 0 errores, 0 warnings
+- [ ] `npm run type-check` - 0 errores
+- [ ] `npm run format:check` - Código formateado
+- [ ] Funcionalidad probada manualmente
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🎨 **PALETA DE COLORES**
 
-## Deploy on Vercel
+### **Colores Principales**
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+- **Primary**: Azul profesional (#3b82f6)
+- **Secondary**: Verde éxito (#22c55e)
+- **Accent**: Naranja atención (#f97316)
+- **Neutral**: Grises (#64748b)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### **Estados**
+
+- **Success**: Verde (#22c55e)
+- **Warning**: Amarillo (#f59e0b)
+- **Error**: Rojo (#ef4444)
+- **Info**: Azul claro (#3b82f6)
+
+## 🎯 **PRINCIPIOS DE CÓDIGO**
+
+1. **TypeScript estricto**: No usar `any`, tipos explícitos
+2. **Componentes puros**: Un componente por archivo
+3. **Imports organizados**: Orden alfabético, separados por tipo
+4. **Nombres descriptivos**: Variables y funciones con nombres claros
+5. **Sin console.log**: Usar sistema de logging apropiado
+6. **Responsive first**: Diseño mobile-first
+7. **Accesibilidad**: Componentes accesibles por defecto
+
+## 🚨 **SOLUCIÓN DE PROBLEMAS**
+
+### **Error: "Cannot find module"**
+
+```bash
+# Limpiar cache
+rm -rf .next node_modules
+npm install
+```
+
+### **Error: "TypeScript compilation failed"**
+
+```bash
+# Verificar tipos
+npm run type-check
+# Corregir errores de tipos
+```
+
+### **Error: "ESLint found problems"**
+
+```bash
+# Corregir automáticamente
+npm run lint:fix
+# Verificar manualmente
+npm run lint
+```
+
+## 🎯 **OBJETIVO FINAL**
+
+Este proyecto está diseñado para ser:
+
+- ✅ **Limpio**: Sin errores ni warnings
+- ✅ **Mantenible**: Código bien estructurado
+- ✅ **Escalable**: Arquitectura modular
+- ✅ **Profesional**: Mejores prácticas aplicadas
+- ✅ **Productivo**: Listo para desarrollo real
+
+**¡Disfruta desarrollando tu aplicación SAD LAS! 🚀**
