@@ -7,9 +7,9 @@ import { AuthProvider } from '@/contexts/AuthContext';
 
 import './globals.css';
 
-const geistSans = Geist({
+const geist = Geist({
   subsets: ['latin'],
-  variable: '--font-geist-sans',
+  variable: '--font-geist',
 });
 
 const geistMono = Geist_Mono({
@@ -18,8 +18,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  description: 'Sistema de gestión de horas y asignaciones SAD LAS',
-  title: 'SAD LAS - Sistema de Gestión',
+  title: 'SAD - Sistema de Ayuda a Domicilio',
+  description:
+    'Sistema de gestión inteligente para servicios asistenciales domiciliarios',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({
@@ -29,9 +33,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang='es'>
-      <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
-      >
+      <body className={`${geist.variable} ${geistMono.variable} font-sans`}>
         <AuthProvider>{children}</AuthProvider>
       </body>
     </html>

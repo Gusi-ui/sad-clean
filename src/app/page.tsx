@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 
 import Link from 'next/link';
@@ -5,6 +7,16 @@ import Link from 'next/link';
 import { Button } from '@/components/ui';
 
 export default function Home() {
+  const handleContactClick = () => {
+    const subject = encodeURIComponent(
+      'Mándanos tus datos y nos pondremosen contacto contigo'
+    );
+    const body = encodeURIComponent(
+      'Hola,\n\nMe interesa conocer más sobre SAD.\n\nSaludos,'
+    );
+    window.location.href = `mailto:info@alamia.es?subject=${subject}&body=${body}`;
+  };
+
   return (
     <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
       {/* Header/Navigation */}
@@ -12,19 +24,62 @@ export default function Home() {
         <nav className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>
           <div className='flex items-center justify-between'>
             <div className='flex items-center space-x-3'>
-              <div className='w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg'>
-                <span className='text-white font-bold text-lg'>SAD</span>
+              <div className='w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden'>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 64 64'
+                  width='40'
+                  height='40'
+                  className='w-full h-full'
+                >
+                  <defs>
+                    <linearGradient
+                      id='headerLogoGradient'
+                      x1='0%'
+                      y1='0%'
+                      x2='100%'
+                      y2='100%'
+                    >
+                      <stop offset='0%' stopColor='#3b82f6' />
+                      <stop offset='100%' stopColor='#22c55e' />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx='32'
+                    cy='32'
+                    r='30'
+                    fill='url(#headerLogoGradient)'
+                  />
+                  <path
+                    d='M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z'
+                    fill='white'
+                    stroke='white'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                  />
+                </svg>
               </div>
-              <span className='text-xl font-bold text-gray-900'>
+              <span className='text-xl font-bold text-gray-900 hidden sm:block'>
                 Sistema de Ayuda a Domicilio
               </span>
+              <span className='text-lg font-bold text-gray-900 sm:hidden'>
+                SAD
+              </span>
             </div>
-            <div className='hidden md:flex items-center space-x-6'>
-              <Link href='/auth'>
+            <div className='flex items-center space-x-4'>
+              <Link href='/auth' className='md:hidden'>
                 <Button size='sm' variant='outline'>
                   Iniciar Sesión
                 </Button>
               </Link>
+              <div className='hidden md:flex items-center space-x-6'>
+                <Link href='/auth'>
+                  <Button size='sm' variant='outline'>
+                    Iniciar Sesión
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
         </nav>
@@ -57,15 +112,15 @@ export default function Home() {
             <div className='relative'>
               <div className='bg-gradient-to-br from-blue-100 to-indigo-100 rounded-3xl p-8 shadow-2xl'>
                 <div className='grid grid-cols-2 gap-4'>
-                  <div className='bg-white rounded-2xl p-6 shadow-lg'>
-                    <div className='text-3xl mb-3'>👥</div>
+                  <div className='bg-white rounded-2xl p-6 shadow-lg flex flex-col items-center justify-center text-center'>
+                    <div className='text-4xl mb-3'>👥</div>
                     <h3 className='font-semibold text-gray-900 mb-2'>
                       Trabajadoras
                     </h3>
                     <p className='text-sm text-gray-600'>Gestión completa</p>
                   </div>
-                  <div className='bg-white rounded-2xl p-6 shadow-lg'>
-                    <div className='text-3xl mb-3'>👤</div>
+                  <div className='bg-white rounded-2xl p-6 shadow-lg flex flex-col items-center justify-center text-center'>
+                    <div className='text-4xl mb-3'>👤</div>
                     <h3 className='font-semibold text-gray-900 mb-2'>
                       Usuarios
                     </h3>
@@ -73,15 +128,15 @@ export default function Home() {
                       Asistencia personalizada
                     </p>
                   </div>
-                  <div className='bg-white rounded-2xl p-6 shadow-lg'>
-                    <div className='text-3xl mb-3'>📅</div>
+                  <div className='bg-white rounded-2xl p-6 shadow-lg flex flex-col items-center justify-center text-center'>
+                    <div className='text-4xl mb-3'>📅</div>
                     <h3 className='font-semibold text-gray-900 mb-2'>
                       Planificación
                     </h3>
                     <p className='text-sm text-gray-600'>Horarios flexibles</p>
                   </div>
-                  <div className='bg-white rounded-2xl p-6 shadow-lg'>
-                    <div className='text-3xl mb-3'>⏰</div>
+                  <div className='bg-white rounded-2xl p-6 shadow-lg flex flex-col items-center justify-center text-center'>
+                    <div className='text-4xl mb-3'>⏰</div>
                     <h3 className='font-semibold text-gray-900 mb-2'>
                       Control
                     </h3>
@@ -110,117 +165,87 @@ export default function Home() {
 
           <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8'>
             {/* Gestión de Trabajadoras */}
-            <div className='bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow'>
-              <div className='w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center mb-6'>
+            <div className='bg-gradient-to-br from-blue-50 to-blue-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow text-center'>
+              <div className='w-16 h-16 bg-blue-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
                 <span className='text-3xl'>👥</span>
               </div>
-              <h3 className='text-xl font-bold text-gray-900 mb-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>
                 Gestión de Trabajadoras
               </h3>
-              <p className='text-gray-600 mb-6'>
+              <p className='text-gray-600 text-sm leading-relaxed'>
                 Administra cuidadoras, auxiliares y enfermeras con perfiles
                 detallados, horarios flexibles y seguimiento de rendimiento.
               </p>
-              <ul className='text-sm text-gray-600 space-y-2'>
-                <li>• Perfiles completos con especializaciones</li>
-                <li>• Gestión de disponibilidad y horarios</li>
-                <li>• Seguimiento de rendimiento y calidad</li>
-              </ul>
             </div>
 
             {/* Gestión de Usuarios */}
-            <div className='bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow'>
-              <div className='w-16 h-16 bg-green-600 rounded-2xl flex items-center justify-center mb-6'>
+            <div className='bg-gradient-to-br from-green-50 to-green-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow text-center'>
+              <div className='w-16 h-16 bg-green-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
                 <span className='text-3xl'>👤</span>
               </div>
-              <h3 className='text-xl font-bold text-gray-900 mb-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>
                 Gestión de Usuarios
               </h3>
-              <p className='text-gray-600 mb-6'>
+              <p className='text-gray-600 text-sm leading-relaxed'>
                 Gestiona usuarios con necesidades específicas, historial médico
                 y contactos de emergencia para atención personalizada.
               </p>
-              <ul className='text-sm text-gray-600 space-y-2'>
-                <li>• Perfiles médicos detallados</li>
-                <li>• Contactos de emergencia</li>
-                <li>• Historial de servicios</li>
-              </ul>
             </div>
 
             {/* Planificación Personalizada */}
-            <div className='bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow'>
-              <div className='w-16 h-16 bg-purple-600 rounded-2xl flex items-center justify-center mb-6'>
+            <div className='bg-gradient-to-br from-purple-50 to-purple-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow text-center'>
+              <div className='w-16 h-16 bg-purple-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
                 <span className='text-3xl'>📅</span>
               </div>
-              <h3 className='text-xl font-bold text-gray-900 mb-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>
                 Planificación Personalizada
               </h3>
-              <p className='text-gray-600 mb-6'>
+              <p className='text-gray-600 text-sm leading-relaxed'>
                 Crea asignaciones inteligentes con horarios flexibles,
                 prioridades y seguimiento en tiempo real.
               </p>
-              <ul className='text-sm text-gray-600 space-y-2'>
-                <li>• Horarios flexibles y adaptables</li>
-                <li>• Sistema de prioridades</li>
-                <li>• Seguimiento en tiempo real</li>
-              </ul>
             </div>
 
             {/* Control de Horas */}
-            <div className='bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow'>
-              <div className='w-16 h-16 bg-orange-600 rounded-2xl flex items-center justify-center mb-6'>
+            <div className='bg-gradient-to-br from-orange-50 to-orange-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow text-center'>
+              <div className='w-16 h-16 bg-orange-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
                 <span className='text-3xl'>⏰</span>
               </div>
-              <h3 className='text-xl font-bold text-gray-900 mb-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>
                 Control de Horas
               </h3>
-              <p className='text-gray-600 mb-6'>
+              <p className='text-gray-600 text-sm leading-relaxed'>
                 Seguimiento preciso de horas trabajadas, balances mensuales y
                 gestión de festivos y vacaciones.
               </p>
-              <ul className='text-sm text-gray-600 space-y-2'>
-                <li>• Control preciso de horas</li>
-                <li>• Balances mensuales</li>
-                <li>• Gestión de festivos</li>
-              </ul>
             </div>
 
             {/* Acceso Seguro */}
-            <div className='bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow'>
-              <div className='w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center mb-6'>
+            <div className='bg-gradient-to-br from-red-50 to-red-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow text-center'>
+              <div className='w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
                 <span className='text-3xl'>🔒</span>
               </div>
-              <h3 className='text-xl font-bold text-gray-900 mb-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>
                 Acceso Seguro
               </h3>
-              <p className='text-gray-600 mb-6'>
+              <p className='text-gray-600 text-sm leading-relaxed'>
                 Sistema de autenticación robusto con roles diferenciados y
                 acceso controlado a la información.
               </p>
-              <ul className='text-sm text-gray-600 space-y-2'>
-                <li>• Roles diferenciados</li>
-                <li>• Acceso controlado</li>
-                <li>• Datos protegidos</li>
-              </ul>
             </div>
 
             {/* Tecnología Moderna */}
-            <div className='bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow'>
-              <div className='w-16 h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-6'>
+            <div className='bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-2xl p-8 shadow-lg hover:shadow-xl transition-shadow text-center'>
+              <div className='w-16 h-16 bg-indigo-500/20 rounded-2xl flex items-center justify-center mx-auto mb-4'>
                 <span className='text-3xl'>💻</span>
               </div>
-              <h3 className='text-xl font-bold text-gray-900 mb-4'>
+              <h3 className='text-xl font-bold text-gray-900 mb-3'>
                 Tecnología Moderna
               </h3>
-              <p className='text-gray-600 mb-6'>
+              <p className='text-gray-600 text-sm leading-relaxed'>
                 Desarrollado con las últimas tecnologías para garantizar
                 rendimiento, seguridad y escalabilidad.
               </p>
-              <ul className='text-sm text-gray-600 space-y-2'>
-                <li>• Interfaz responsive</li>
-                <li>• Actualizaciones automáticas</li>
-                <li>• Soporte técnico</li>
-              </ul>
             </div>
           </div>
         </div>
@@ -233,18 +258,18 @@ export default function Home() {
             ¿Listo para optimizar tu gestión?
           </h2>
           <p className='text-xl text-blue-100 mb-8 max-w-2xl mx-auto'>
-            Únete a organizaciones que ya confían en SAD para gestionar sus
+            Únete a organizaciones que ya confían en nosotros para gestionar sus
             servicios asistenciales domiciliarios de manera eficiente.
           </p>
           <div className='flex flex-col sm:flex-row gap-4 justify-center'>
-            <Link href='/auth'>
-              <Button
-                size='lg'
-                className='bg-white text-blue-600 hover:bg-gray-100'
-              >
-                🔐 Iniciar Sesión
-              </Button>
-            </Link>
+            <Button
+              size='lg'
+              className='bg-blue-500 text-white hover:bg-blue-600 font-bold shadow-lg hover:shadow-xl transition-all duration-200 border-2 border-blue-400'
+              onClick={handleContactClick}
+            >
+              <span className='text-2xl mr-2'>📧</span>
+              Contactar Ahora
+            </Button>
           </div>
         </div>
       </section>
@@ -255,8 +280,41 @@ export default function Home() {
           <div className='grid grid-cols-1 md:grid-cols-4 gap-8'>
             <div className='col-span-1 md:col-span-2'>
               <div className='flex items-center space-x-3 mb-4'>
-                <div className='w-10 h-10 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center'>
-                  <span className='text-white font-bold text-lg'>SAD</span>
+                <div className='w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden'>
+                  <svg
+                    xmlns='http://www.w3.org/2000/svg'
+                    viewBox='0 0 64 64'
+                    width='40'
+                    height='40'
+                    className='w-full h-full'
+                  >
+                    <defs>
+                      <linearGradient
+                        id='footerLogoGradient'
+                        x1='0%'
+                        y1='0%'
+                        x2='100%'
+                        y2='100%'
+                      >
+                        <stop offset='0%' stopColor='#3b82f6' />
+                        <stop offset='100%' stopColor='#22c55e' />
+                      </linearGradient>
+                    </defs>
+                    <circle
+                      cx='32'
+                      cy='32'
+                      r='30'
+                      fill='url(#footerLogoGradient)'
+                    />
+                    <path
+                      d='M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z'
+                      fill='white'
+                      stroke='white'
+                      strokeWidth='2'
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                    />
+                  </svg>
                 </div>
                 <span className='text-xl font-bold'>
                   Sistema de Ayuda a Domicilio
@@ -303,6 +361,7 @@ export default function Home() {
               © 2024 SAD - Sistema de Gestión de Servicios Asistenciales
               Domiciliarios
             </p>
+            <p className='text-gray-400 mt-2'>Hecho con mucho ❤️ por Gusi</p>
           </div>
         </div>
       </footer>
