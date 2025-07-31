@@ -27,5 +27,23 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-echo "✅ Todas las validaciones pasaron correctamente"
-echo "�� Commit permitido"
+# Verificar servidor de desarrollo
+echo "🌐 Verificando servidor de desarrollo..."
+if ! curl -s http://localhost:3000 > /dev/null 2>&1; then
+  echo "⚠️  Advertencia: Servidor de desarrollo no está ejecutándose"
+  echo "💡 Para una verificación completa, ejecuta: npm run dev"
+  echo "📋 Checklist de verificación en navegador:"
+  echo "   - Abrir http://localhost:3000"
+  echo "   - Verificar que la página carga correctamente"
+  echo "   - Probar funcionalidades (botones, formularios, navegación)"
+  echo "   - Verificar responsive design"
+  echo "   - Verificar que no hay errores en consola del navegador"
+  echo ""
+  echo "🔍 Para verificar automáticamente: ./verify-browser.sh"
+else
+  echo "✅ Servidor de desarrollo ejecutándose"
+  echo "🌐 Verifica en navegador: http://localhost:3000"
+fi
+
+echo "✅ Validaciones técnicas completadas"
+echo "🚀 Commit permitido (recuerda probar en navegador)"

@@ -95,7 +95,17 @@ Antes de sugerir código, verifica:
 - [ ] Diseño responsive
 - [ ] Manejo de errores incluido
 
-### **10. CONTEXTO DEL PROYECTO**
+### **10. VERIFICACIÓN EN NAVEGADOR**
+Antes de hacer commit, SIEMPRE sugiere:
+- [ ] **Ejecutar servidor de desarrollo**: `npm run dev`
+- [ ] **Abrir navegador**: `http://localhost:3000`
+- [ ] **Verificar funcionalidad**: Probar botones, formularios, navegación
+- [ ] **Verificar responsive**: Probar en mobile, tablet, desktop
+- [ ] **Verificar accesibilidad**: Navegación por teclado, contraste
+- [ ] **Verificar performance**: Sin lag visible, carga rápida
+- [ ] **Verificar errores**: Sin errores en consola del navegador
+
+### **11. CONTEXTO DEL PROYECTO**
 Este es un sistema de gestión para trabajadores de servicios asistenciales domiciliarios (SAD). Incluye:
 - Gestión de usuarios/workers
 - Asignación de tareas
@@ -103,7 +113,7 @@ Este es un sistema de gestión para trabajadores de servicios asistenciales domi
 - Dashboard de administración
 - Sistema de autenticación
 
-### **11. TECNOLOGÍAS**
+### **12. TECNOLOGÍAS**
 - Next.js 14 (App Router)
 - TypeScript estricto
 - Tailwind CSS
@@ -111,7 +121,7 @@ Este es un sistema de gestión para trabajadores de servicios asistenciales domi
 - ESLint + Prettier
 - Husky + lint-staged
 
-### **12. OBJETIVO**
+### **13. OBJETIVO**
 Mantener un proyecto **100% libre de errores y warnings** desde el inicio.
 
 **¡Recuerda: Calidad sobre velocidad! 🚀**

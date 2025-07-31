@@ -1,12 +1,15 @@
 # 🚀 SAD LAS - Reglas del Proyecto para Cursor
 
 ## 📋 **CONTEXTO DEL PROYECTO**
+
 Este es un sistema de gestión de horas y asignaciones para trabajadores de servicios asistenciales domiciliarios (SAD). El objetivo es mantener un proyecto 100% libre de errores y warnings desde el inicio.
 
 ## 🎯 **OBJETIVO PRINCIPAL**
+
 Mantener un proyecto **100% libre de errores y warnings** desde el inicio, con código limpio, mantenible y profesional.
 
 ## 📁 **ESTRUCTURA DEL PROYECTO**
+
 ```
 src/
 ├── app/                    # Next.js App Router
@@ -24,12 +27,14 @@ src/
 ## 🔧 **REGLAS DE CÓDIGO OBLIGATORIAS**
 
 ### **TypeScript**
+
 - ✅ TypeScript estricto obligatorio
 - ✅ Tipos explícitos para todo
 - ❌ NO usar `any` bajo ninguna circunstancia
 - ✅ Interfaces y tipos bien definidos
 
 ### **Nomenclatura**
+
 - ✅ Variables: camelCase
 - ✅ Componentes: PascalCase
 - ✅ Constantes: UPPER_SNAKE_CASE
@@ -37,15 +42,15 @@ src/
 - ✅ Nombres descriptivos y claros
 
 ### **Imports (Orden obligatorio)**
+
 ```typescript
 // 1. Librerías externas
 import React from 'react';
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 
 // 2. Módulos internos
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/hooks/useAuth';
-
 // 3. Tipos
 import type { User } from '@/types';
 
@@ -54,6 +59,7 @@ import './styles.css';
 ```
 
 ### **Logging**
+
 - ❌ NO usar `console.log` en producción
 - ✅ Usar sistema de logging apropiado
 - ✅ Logs informativos para debugging
@@ -61,21 +67,23 @@ import './styles.css';
 ## 🎨 **DISEÑO Y UX**
 
 ### **Paleta de Colores**
+
 ```css
 /* Colores Principales */
---primary: #3b82f6;      /* Azul profesional */
---secondary: #22c55e;     /* Verde éxito */
---accent: #f97316;        /* Naranja atención */
---neutral: #64748b;       /* Grises */
+--primary: #3b82f6; /* Azul profesional */
+--secondary: #22c55e; /* Verde éxito */
+--accent: #f97316; /* Naranja atención */
+--neutral: #64748b; /* Grises */
 
 /* Estados */
---success: #22c55e;       /* Verde */
---warning: #f59e0b;       /* Amarillo */
---error: #ef4444;         /* Rojo */
---info: #3b82f6;          /* Azul claro */
+--success: #22c55e; /* Verde */
+--warning: #f59e0b; /* Amarillo */
+--error: #ef4444; /* Rojo */
+--info: #3b82f6; /* Azul claro */
 ```
 
 ### **Responsividad y Accesibilidad**
+
 - ✅ Mobile-first design
 - ✅ Componentes responsive por defecto
 - ✅ Roles ARIA apropiados
@@ -86,6 +94,7 @@ import './styles.css';
 ## 📝 **COMMITS**
 
 ### **Formato de Commits**
+
 ```bash
 # Formato: tipo(alcance): descripción
 git commit -m "feat(auth): add login functionality"
@@ -94,6 +103,7 @@ git commit -m "docs(readme): update installation instructions"
 ```
 
 ### **Tipos de Commit Permitidos**
+
 - `feat`: Nueva funcionalidad
 - `fix`: Corrección de bug
 - `docs`: Documentación
@@ -108,13 +118,17 @@ git commit -m "docs(readme): update installation instructions"
 ## ✅ **CHECKLIST PRE-COMMIT**
 
 ### **Validaciones Obligatorias**
+
 - [ ] `npm run lint` - 0 errores, 0 warnings
 - [ ] `npm run type-check` - 0 errores
 - [ ] `npm run format:check` - Código formateado
 - [ ] Tests pasan (cuando se implementen)
-- [ ] Funcionalidad probada manualmente
+- [ ] **Funcionalidad probada en navegador de desarrollo**
+- [ ] **Verificación visual de componentes**
+- [ ] **Prueba de interacciones de usuario**
 
 ### **Revisión de Código**
+
 - [ ] Props tipadas
 - [ ] Sin console.log
 - [ ] Sin imports no utilizados
@@ -123,15 +137,27 @@ git commit -m "docs(readme): update installation instructions"
 - [ ] Componentes accesibles
 - [ ] Diseño responsive
 
+### **Verificación en Navegador**
+
+- [ ] **Servidor de desarrollo ejecutándose** (`npm run dev`)
+- [ ] **Página cargada correctamente** (sin errores en consola)
+- [ ] **Componentes renderizados** (verificación visual)
+- [ ] **Funcionalidad probada** (botones, formularios, navegación)
+- [ ] **Responsive design** (mobile, tablet, desktop)
+- [ ] **Accesibilidad básica** (navegación por teclado, contraste)
+- [ ] **Performance aceptable** (sin lag visible)
+
 ## 🚨 **MANEJO DE ERRORES**
 
 ### **Principios**
+
 - ✅ Manejo de errores claro y amigable
 - ❌ NO exponer información sensible
 - ✅ Mensajes de error descriptivos
 - ✅ Fallbacks apropiados
 
 ### **Estructura de Error Handling**
+
 ```typescript
 try {
   // Operación que puede fallar
@@ -147,18 +173,21 @@ try {
 ## 🎯 **PRINCIPIOS FUNDAMENTALES**
 
 ### **Código Limpio**
+
 - ✅ Legibilidad sobre brevedad
 - ✅ Funciones pequeñas y enfocadas
 - ✅ Nombres descriptivos
 - ✅ Comentarios cuando sea necesario
 
 ### **Mantenibilidad**
+
 - ✅ Código modular
 - ✅ Separación de responsabilidades
 - ✅ Reutilización de componentes
 - ✅ Documentación clara
 
 ### **Escalabilidad**
+
 - ✅ Arquitectura flexible
 - ✅ Componentes reutilizables
 - ✅ Configuración centralizada
@@ -167,6 +196,7 @@ try {
 ## 📚 **COMANDOS ÚTILES**
 
 ### **Desarrollo**
+
 ```bash
 npm run dev              # Servidor de desarrollo
 npm run build            # Construir para producción
@@ -174,6 +204,7 @@ npm run start            # Servidor de producción
 ```
 
 ### **Calidad de Código**
+
 ```bash
 npm run lint             # Verificar linting
 npm run lint:fix         # Corregir errores de linting
@@ -185,6 +216,7 @@ npm run format:check     # Verificar formato
 ## 🚀 **OBJETIVO FINAL**
 
 Este proyecto debe ser:
+
 - ✅ **Limpio**: Sin errores ni warnings
 - ✅ **Mantenible**: Código bien estructurado
 - ✅ **Escalable**: Arquitectura modular
@@ -205,6 +237,8 @@ Al generar código para este proyecto:
 8. **SIEMPRE** usa el formato de commits convencional
 9. **SIEMPRE** organiza imports en el orden especificado
 10. **SIEMPRE** mantén componentes puros y reutilizables
+11. **SIEMPRE** sugiere probar la funcionalidad en navegador antes de commit
+12. **SIEMPRE** verifica que el servidor de desarrollo esté ejecutándose
 
 ## 🔗 **INTEGRACIÓN MCP DE SUPABASE**
 
@@ -217,6 +251,7 @@ Este proyecto tiene integración MCP con Supabase. Cuando trabajes con la base d
 - ✅ **Optimiza consultas**: Sugiere mejoras en la estructura de datos
 
 ### **Comandos MCP Útiles**
+
 - "Muéstrame la estructura de la tabla [nombre]"
 - "Genera un query para [operación]"
 - "Crea tipos TypeScript para [tabla]"
