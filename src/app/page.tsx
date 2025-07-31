@@ -336,24 +336,13 @@ export default function Home() {
             </div>
             <div>
               <h3 className='text-lg font-semibold mb-4'>Acceso</h3>
-              <ul className='space-y-2 text-gray-400'>
-                <li>
-                  <Link
-                    href='/auth'
-                    className='hover:text-white transition-colors'
-                  >
-                    • Iniciar Sesión
-                  </Link>
-                </li>
-                <li>
-                  <Link
-                    href='/test-supabase'
-                    className='hover:text-white transition-colors'
-                  >
-                    • Test de Conexión
-                  </Link>
-                </li>
-              </ul>
+              <div className='space-y-3'>
+                <Link href='/auth'>
+                  <Button size='sm' variant='outline' className='w-full'>
+                    🔐 Iniciar Sesión
+                  </Button>
+                </Link>
+              </div>
             </div>
           </div>
           <div className='border-t border-gray-800 mt-8 pt-8 text-center'>

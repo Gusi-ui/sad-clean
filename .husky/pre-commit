@@ -1,4 +1,31 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
-npx lint-staged
+echo "🔍 Ejecutando validaciones pre-commit..."
+
+# Verificar tipos TypeScript
+echo "📝 Verificando tipos TypeScript..."
+npm run type-check
+if [ $? -ne 0 ]; then
+  echo "❌ Error: TypeScript compilation failed"
+  exit 1
+fi
+
+# Verificar linting
+echo "🔧 Verificando linting..."
+npm run lint
+if [ $? -ne 0 ]; then
+  echo "❌ Error: ESLint found problems"
+  exit 1
+fi
+
+# Verificar formato
+echo "🎨 Verificando formato..."
+npm run format:check
+if [ $? -ne 0 ]; then
+  echo "❌ Error: Prettier found problems"
+  exit 1
+fi
+
+echo "✅ Todas las validaciones pasaron correctamente"
+echo "�� Commit permitido"

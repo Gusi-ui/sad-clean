@@ -1,0 +1,117 @@
+# 🚀 SAD LAS - Configuración Local para Cursor
+
+## 🎯 **INSTRUCCIONES ESPECÍFICAS PARA CURSOR**
+
+Cuando trabajes en este proyecto SAD LAS, SIEMPRE sigue estas reglas:
+
+### **1. ESTRUCTURA DE ARCHIVOS**
+- ✅ Respeta la estructura de carpetas definida
+- ✅ Un componente por archivo
+- ✅ Usa las carpetas correctas: `components/ui/`, `components/forms/`, `hooks/`, `types/`, etc.
+
+### **2. TYPESCRIPT ESTRICTO**
+- ✅ SIEMPRE usa tipos explícitos
+- ❌ NUNCA uses `any`
+- ✅ Define interfaces para props y datos
+- ✅ Usa tipos de Supabase cuando estén disponibles
+
+### **3. COMPONENTES REACT**
+```typescript
+// Formato obligatorio para componentes
+import React from 'react';
+import { cn } from '@/lib/utils';
+
+interface ComponentProps {
+  // Props tipadas
+}
+
+export const Component: React.FC<ComponentProps> = ({ prop1, prop2 }) => {
+  // Lógica del componente
+  return (
+    <div className="...">
+      {/* JSX */}
+    </div>
+  );
+};
+```
+
+### **4. PALETA DE COLORES**
+```css
+/* Usa SIEMPRE estos colores */
+--primary: #3b82f6;      /* Azul profesional */
+--secondary: #22c55e;     /* Verde éxito */
+--accent: #f97316;        /* Naranja atención */
+--neutral: #64748b;       /* Grises */
+--success: #22c55e;       /* Verde */
+--warning: #f59e0b;       /* Amarillo */
+--error: #ef4444;         /* Rojo */
+--info: #3b82f6;          /* Azul claro */
+```
+
+### **5. DISEÑO RESPONSIVE**
+- ✅ Mobile-first design
+- ✅ Usa Tailwind CSS classes
+- ✅ Breakpoints: sm, md, lg, xl, 2xl
+- ✅ Componentes accesibles
+
+### **6. MANEJO DE ERRORES**
+```typescript
+// SIEMPRE incluye manejo de errores
+try {
+  // Operación
+} catch (error) {
+  console.error('Error:', error);
+  // Mostrar mensaje amigable al usuario
+}
+```
+
+### **7. IMPORTS ORGANIZADOS**
+```typescript
+// 1. Librerías externas
+import React from 'react';
+import { useState, useEffect } from 'react';
+
+// 2. Módulos internos
+import { Button } from '@/components/ui/button';
+import { useAuth } from '@/hooks/useAuth';
+
+// 3. Tipos
+import type { User } from '@/types';
+
+// 4. Estilos
+import './styles.css';
+```
+
+### **8. COMMITS**
+- ✅ Usa formato convencional: `tipo(alcance): descripción`
+- ✅ Tipos: feat, fix, docs, style, refactor, perf, test, build, ci, chore
+
+### **9. VALIDACIONES OBLIGATORIAS**
+Antes de sugerir código, verifica:
+- [ ] No hay errores de TypeScript
+- [ ] No hay console.log en producción
+- [ ] Imports organizados
+- [ ] Componentes accesibles
+- [ ] Diseño responsive
+- [ ] Manejo de errores incluido
+
+### **10. CONTEXTO DEL PROYECTO**
+Este es un sistema de gestión para trabajadores de servicios asistenciales domiciliarios (SAD). Incluye:
+- Gestión de usuarios/workers
+- Asignación de tareas
+- Control de horas trabajadas
+- Dashboard de administración
+- Sistema de autenticación
+
+### **11. TECNOLOGÍAS**
+- Next.js 14 (App Router)
+- TypeScript estricto
+- Tailwind CSS
+- Supabase (BD + Auth)
+- ESLint + Prettier
+- Husky + lint-staged
+
+### **12. OBJETIVO**
+Mantener un proyecto **100% libre de errores y warnings** desde el inicio.
+
+**¡Recuerda: Calidad sobre velocidad! 🚀**
