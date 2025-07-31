@@ -8,7 +8,7 @@ import { useAuth } from '@/contexts/AuthContext';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
-  requiredRole?: 'admin' | 'worker';
+  requiredRole?: 'super_admin' | 'admin' | 'worker';
   redirectTo?: string;
 }
 
@@ -20,7 +20,9 @@ export default function ProtectedRoute({
   const { user, loading, getUserRole } = useAuth();
   const router = useRouter();
   const [roleLoading, setRoleLoading] = useState(true);
-  const [userRole, setUserRole] = useState<'admin' | 'worker' | null>(null);
+  const [userRole, setUserRole] = useState<
+    'super_admin' | 'admin' | 'worker' | null
+  >(null);
 
   useEffect(() => {
     const checkUserRole = async () => {
@@ -36,8 +38,16 @@ export default function ProtectedRoute({
 
           if (role !== requiredRole) {
             // Redirigir según el rol del usuario
-            const defaultRedirect =
-              role === 'admin' ? '/dashboard' : '/worker-dashboard';
+            let defaultRedirect = '/dashboard';
+
+            if (role === 'super_admin') {
+              defaultRedirect = '/super-dashboard';
+            } else if (role === 'admin') {
+              defaultRedirect = '/dashboard';
+            } else if (role === 'worker') {
+              defaultRedirect = '/worker-dashboard';
+            }
+
             router.push(redirectTo ?? defaultRedirect);
             return;
           }

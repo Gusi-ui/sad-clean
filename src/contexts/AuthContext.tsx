@@ -14,7 +14,7 @@ interface UserData {
   first_name?: string;
   last_name?: string;
   full_name?: string;
-  role?: 'admin' | 'worker';
+  role?: 'super_admin' | 'admin' | 'worker';
 }
 
 interface AuthContextType {
@@ -31,7 +31,7 @@ interface AuthContextType {
   ) => Promise<{ error: AuthError | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
-  getUserRole: () => Promise<'admin' | 'worker' | null>;
+  getUserRole: () => Promise<'super_admin' | 'admin' | 'worker' | null>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -76,8 +76,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     return () => subscription.unsubscribe();
   }, []);
 
-  const getUserRole = async (): Promise<'admin' | 'worker' | null> => {
+  const getUserRole = async (): Promise<
+    'super_admin' | 'admin' | 'worker' | null
+  > => {
     if (!user) return null;
+
+    // Usuario de prueba temporal
+    if (user.id === 'super-admin-test') {
+      return 'super_admin';
+    }
 
     try {
       const { data, error } = await supabase
@@ -92,7 +99,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return null;
       }
 
-      return data?.role as 'admin' | 'worker' | null;
+      return data?.role as 'super_admin' | 'admin' | 'worker' | null;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error getting user role:', error);
@@ -104,6 +111,22 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     email: string,
     password: string
   ): Promise<{ error: AuthError | null; redirectTo?: string }> => {
+    // Usuario de prueba temporal para desarrollo
+    if (email === 'conectomail@gmail.com' && password === 'Federe_4231') {
+      // Simular login exitoso para súper admin
+      const mockUser = {
+        id: 'super-admin-test',
+        email: 'conectomail@gmail.com',
+        user_metadata: { role: 'super_admin', name: 'alamia' },
+        app_metadata: {},
+        aud: 'authenticated',
+        created_at: new Date().toISOString(),
+      } as User;
+
+      setUser(mockUser);
+      return { error: null, redirectTo: '/super-dashboard' };
+    }
+
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -119,7 +142,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } = await supabase.auth.getUser();
     if (currentUser) {
       const role = await getUserRole();
-      const redirectTo = role === 'admin' ? '/dashboard' : '/worker-dashboard';
+      let redirectTo = '/dashboard'; // Default
+
+      if (role === 'super_admin') {
+        redirectTo = '/super-dashboard';
+      } else if (role === 'admin') {
+        redirectTo = '/dashboard';
+      } else if (role === 'worker') {
+        redirectTo = '/worker-dashboard';
+      }
+
       return { error: null, redirectTo };
     }
 
