@@ -1,9 +1,9 @@
-import { supabase } from './database';
+import { type Worker, supabase } from './database';
 
 /**
  * Consulta todos los workers de la base de datos
  */
-export const getAllWorkers = async () => {
+export const getAllWorkers = async (): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
       .from('workers')
@@ -27,7 +27,7 @@ export const getAllWorkers = async () => {
 /**
  * Consulta workers activos
  */
-export const getActiveWorkers = async () => {
+export const getActiveWorkers = async (): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
       .from('workers')
@@ -54,7 +54,7 @@ export const getActiveWorkers = async () => {
  */
 export const getWorkersByType = async (
   workerType: 'cuidadora' | 'auxiliar' | 'enfermera'
-) => {
+): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
       .from('workers')
@@ -77,10 +77,19 @@ export const getWorkersByType = async (
   }
 };
 
+interface WorkersStats {
+  total: number;
+  active: number;
+  inactive: number;
+  cuidadoras: number;
+  auxiliares: number;
+  enfermeras: number;
+}
+
 /**
  * Obtiene estadísticas de workers
  */
-export const getWorkersStats = async () => {
+export const getWorkersStats = async (): Promise<WorkersStats> => {
   try {
     const { data, error } = await supabase
       .from('workers')
@@ -118,7 +127,7 @@ export const getWorkersStats = async () => {
 /**
  * Busca workers por nombre o email
  */
-export const searchWorkers = async (searchTerm: string) => {
+export const searchWorkers = async (searchTerm: string): Promise<Worker[]> => {
   try {
     const { data, error } = await supabase
       .from('workers')
@@ -146,7 +155,7 @@ export const searchWorkers = async (searchTerm: string) => {
 /**
  * Obtiene un worker por ID
  */
-export const getWorkerById = async (id: string) => {
+export const getWorkerById = async (id: string): Promise<Worker | null> => {
   try {
     const { data, error } = await supabase
       .from('workers')

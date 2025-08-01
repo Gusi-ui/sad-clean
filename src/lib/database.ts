@@ -4,7 +4,6 @@ import type { Database } from '@/types/supabase';
 
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '';
 const supabaseKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
-
 export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
 // Tipos basados en el esquema real de Supabase
@@ -182,6 +181,13 @@ export const updateAssignment = async (
   return data;
 };
 
+interface WorkerStats {
+  totalHours: number;
+  completedTasks: number;
+  totalTasks: number;
+  completionRate: number;
+}
+
 /**
  * Obtiene estadísticas de un worker
  */
@@ -189,7 +195,7 @@ export const getWorkerStats = async (
   workerId: string,
   startDate: string,
   endDate: string
-) => {
+): Promise<WorkerStats> => {
   const { data, error } = await supabase
     .from('assignments')
     .select('weekly_hours, status')
@@ -203,10 +209,12 @@ export const getWorkerStats = async (
     throw error;
   }
 
-  const totalHours = (data ?? []).reduce(
-    (sum, assignment) => sum + (assignment.weekly_hours ?? 0),
-    0
-  );
+  const totalHours = (data ?? []).reduce((sum, assignment) => {
+    if (typeof assignment.weekly_hours === 'number') {
+      return sum + assignment.weekly_hours;
+    }
+    return sum;
+  }, 0);
   const completedTasks = (data ?? []).filter(
     (a) => a.status === 'completed'
   ).length;

@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/database';
 
 export default function TestSupabase() {
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(

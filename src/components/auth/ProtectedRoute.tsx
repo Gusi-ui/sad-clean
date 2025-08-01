@@ -36,7 +36,12 @@ export default function ProtectedRoute({
           const role = await getUserRole();
           setUserRole(role);
 
-          if (role !== requiredRole) {
+          // Permitir que super_admin acceda a páginas de admin
+          const hasAccess =
+            role === requiredRole ||
+            (role === 'super_admin' && requiredRole === 'admin');
+
+          if (!hasAccess) {
             // Redirigir según el rol del usuario
             let defaultRedirect = '/dashboard';
 
@@ -76,8 +81,15 @@ export default function ProtectedRoute({
     return null; // Ya se está redirigiendo
   }
 
-  if (requiredRole && userRole !== requiredRole) {
-    return null; // Ya se está redirigiendo
+  if (requiredRole) {
+    // Permitir que super_admin acceda a páginas de admin
+    const hasAccess =
+      userRole === requiredRole ||
+      (userRole === 'super_admin' && requiredRole === 'admin');
+
+    if (!hasAccess) {
+      return null; // Ya se está redirigiendo
+    }
   }
 
   return children;

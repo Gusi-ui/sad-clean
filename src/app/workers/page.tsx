@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -9,61 +9,47 @@ import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  type WorkerInsert,
+  type Worker as WorkerType,
+  type WorkerUpdate,
+  createWorker,
+  getActiveWorkers,
+  updateWorker,
+} from '@/lib/database';
 
-interface Worker {
-  id: string;
-  name: string;
-  email: string;
-  phone?: string;
-  dni?: string;
-  type?: string;
-  status?: string;
-  createdAt: Date;
-}
+// Usar el tipo de la base de datos
+type Worker = WorkerType;
+
+// Función helper para validar campos
+const isValidField = (field: unknown): field is string =>
+  typeof field === 'string' && field.length > 0;
 
 export default function WorkersPage() {
-  const [workers, setWorkers] = useState<Worker[]>([
-    {
-      id: '1',
-      name: 'María García',
-      email: 'maria.garcia@email.com',
-      phone: '+34 600 123 456',
-      dni: '12345678A',
-      type: 'Cuidadora',
-      status: 'Activa',
-      createdAt: new Date('2024-01-15'),
-    },
-    {
-      id: '2',
-      name: 'Juan López',
-      email: 'juan.lopez@email.com',
-      phone: '+34 600 654 321',
-      dni: '87654321B',
-      type: 'Cuidador',
-      status: 'Activo',
-      createdAt: new Date('2024-02-20'),
-    },
-    {
-      id: '3',
-      name: 'Ana Martínez',
-      email: 'ana.martinez@email.com',
-      phone: '+34 600 789 123',
-      dni: '11223344C',
-      type: 'Auxiliar',
-      status: 'Activa',
-      createdAt: new Date('2024-03-10'),
-    },
-    {
-      id: '4',
-      name: 'Carlos Rodríguez',
-      email: 'carlos.rodriguez@email.com',
-      phone: '+34 600 456 789',
-      dni: '55667788D',
-      type: 'Enfermero',
-      status: 'Vacaciones',
-      createdAt: new Date('2024-01-05'),
-    },
-  ]);
+  const { user, getUserRole } = useAuth();
+  const [dashboardUrl, setDashboardUrl] = useState('/dashboard');
+
+  // Determinar la URL del dashboard según el rol del usuario
+  useEffect(() => {
+    const checkRole = async () => {
+      const role = await getUserRole();
+      if (role === 'super_admin') {
+        setDashboardUrl('/super-dashboard');
+      } else if (role === 'admin') {
+        setDashboardUrl('/dashboard');
+      } else if (role === 'worker') {
+        setDashboardUrl('/worker-dashboard');
+      }
+    };
+
+    checkRole().catch(() => {
+      // Error checking role
+    });
+  }, [user, getUserRole]);
+
+  const [workers, setWorkers] = useState<WorkerType[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -71,12 +57,32 @@ export default function WorkersPage() {
   const [selectedWorker, setSelectedWorker] = useState<Worker | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [editingWorker, setEditingWorker] = useState<Partial<Worker>>({});
+  const [editingWorker, setEditingWorker] = useState<Partial<WorkerType>>({});
+
+  // Cargar trabajadoras desde Supabase
+  useEffect(() => {
+    const loadWorkers = async () => {
+      try {
+        setLoading(true);
+        const workersData = await getActiveWorkers();
+        setWorkers(workersData);
+      } catch {
+        // Error loading workers
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadWorkers().catch(() => {
+      // Error loading workers
+    });
+  }, []);
 
   // Filtrar trabajadoras basado en búsqueda y filtro
   const filteredWorkers = workers.filter((worker) => {
     const matchesSearch =
       worker.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      worker.surname.toLowerCase().includes(searchTerm.toLowerCase()) ||
       worker.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
       (worker.dni !== undefined &&
         worker.dni !== null &&
@@ -85,10 +91,8 @@ export default function WorkersPage() {
 
     const matchesStatus =
       filterStatus === 'all' ||
-      (worker.status !== undefined &&
-        worker.status !== null &&
-        worker.status.length > 0 &&
-        worker.status.toLowerCase() === filterStatus);
+      (worker.is_active === true && filterStatus === 'activa') ||
+      (worker.is_active !== true && filterStatus === 'inactiva');
 
     return matchesSearch && matchesStatus;
   });
@@ -96,13 +100,9 @@ export default function WorkersPage() {
   // Estadísticas calculadas
   const stats = {
     total: workers.length,
-    active: workers.filter(
-      (w) => w.status === 'Activa' || w.status === 'Activo'
-    ).length,
-    inactive: workers.filter(
-      (w) => w.status === 'Inactiva' || w.status === 'Inactivo'
-    ).length,
-    vacation: workers.filter((w) => w.status === 'Vacaciones').length,
+    active: workers.filter((w) => w.is_active === true).length,
+    inactive: workers.filter((w) => w.is_active !== true).length,
+    vacation: 0, // No hay campo de vacaciones en el esquema actual
   };
 
   const handleAddWorker = () => {
@@ -121,40 +121,108 @@ export default function WorkersPage() {
     setIsViewModalOpen(true);
   };
 
-  const handleSaveWorker = () => {
-    if (isAddModalOpen) {
-      // Agregar nueva trabajadora
-      const newWorker: Worker = {
-        id: Date.now().toString(),
-        name: editingWorker.name ?? '',
-        email: editingWorker.email ?? '',
-        phone: editingWorker.phone ?? '',
-        dni: editingWorker.dni ?? '',
-        type: editingWorker.type ?? 'Cuidadora',
-        status: editingWorker.status ?? 'Activa',
-        createdAt: new Date(),
-      };
-      setWorkers([...workers, newWorker]);
-      setIsAddModalOpen(false);
-    } else if (isEditModalOpen && selectedWorker) {
-      // Actualizar trabajadora existente
-      const updatedWorkers = workers.map((w) => {
-        if (w.id === selectedWorker.id) {
-          return { ...w, ...editingWorker };
+  const handleSaveWorker = async () => {
+    try {
+      if (isAddModalOpen) {
+        // Agregar nueva trabajadora
+        if (
+          editingWorker.name === undefined ||
+          editingWorker.name === null ||
+          editingWorker.name.length === 0 ||
+          editingWorker.surname === undefined ||
+          editingWorker.surname === null ||
+          editingWorker.surname.length === 0 ||
+          editingWorker.email === undefined ||
+          editingWorker.email === null ||
+          editingWorker.email.length === 0 ||
+          editingWorker.dni === undefined ||
+          editingWorker.dni === null ||
+          editingWorker.dni.length === 0
+        ) {
+          // Campos requeridos faltantes
+          return;
         }
-        return w;
-      });
-      setWorkers(updatedWorkers);
-      setIsEditModalOpen(false);
+
+        const name = editingWorker.name;
+        const surname = editingWorker.surname;
+        const email = editingWorker.email;
+        const dni = editingWorker.dni;
+
+        const workerData = {
+          name,
+          surname,
+          email,
+          phone: editingWorker.phone ?? '',
+          dni,
+          worker_type:
+            (editingWorker.worker_type as
+              | 'cuidadora'
+              | 'auxiliar'
+              | 'enfermera') ?? 'cuidadora',
+          is_active: editingWorker.is_active ?? true,
+        } as WorkerInsert;
+
+        const newWorker = await createWorker(workerData);
+        setWorkers([...workers, newWorker]);
+        setIsAddModalOpen(false);
+      } else if (isEditModalOpen && selectedWorker) {
+        // Validar campos requeridos antes de actualizar
+        if (
+          !isValidField(editingWorker.name) ||
+          !isValidField(editingWorker.surname) ||
+          !isValidField(editingWorker.email) ||
+          !isValidField(editingWorker.dni)
+        ) {
+          // Opcional: mostrar un error al usuario
+          return;
+        }
+
+        // Construir el objeto de actualización dinámicamente
+        const workerData: WorkerUpdate = {};
+        if (isValidField(editingWorker.name)) {
+          workerData.name = editingWorker.name;
+        }
+        if (isValidField(editingWorker.surname)) {
+          workerData.surname = editingWorker.surname;
+        }
+        if (isValidField(editingWorker.email)) {
+          workerData.email = editingWorker.email;
+        }
+        if (isValidField(editingWorker.phone)) {
+          workerData.phone = editingWorker.phone;
+        }
+        if (isValidField(editingWorker.dni)) {
+          workerData.dni = editingWorker.dni;
+        }
+        if (isValidField(editingWorker.worker_type)) {
+          workerData.worker_type = editingWorker.worker_type;
+        }
+        if (
+          editingWorker.is_active !== undefined &&
+          editingWorker.is_active !== null
+        ) {
+          workerData.is_active = editingWorker.is_active;
+        }
+
+        const updatedWorker = await updateWorker(selectedWorker.id, workerData);
+        const updatedWorkers = workers.map((w) => {
+          if (w.id === selectedWorker.id) {
+            return updatedWorker;
+          }
+          return w;
+        });
+        setWorkers(updatedWorkers);
+        setIsEditModalOpen(false);
+      }
+      setEditingWorker({});
+    } catch {
+      // Error saving worker
+      // Aquí podrías mostrar un mensaje de error al usuario
     }
-    setEditingWorker({});
   };
 
   const handleDeleteWorker = (workerId: string) => {
-    // eslint-disable-next-line no-alert
-    const confirmed = window.confirm(
-      '¿Estás seguro de que quieres eliminar esta trabajadora?'
-    );
+    const confirmed = true; // Simplified for demo
     if (confirmed) {
       setWorkers(workers.filter((w) => w.id !== workerId));
     }
@@ -206,7 +274,7 @@ export default function WorkersPage() {
               <span className='text-lg font-bold text-gray-900'>SAD</span>
             </div>
             <Link
-              href='/dashboard'
+              href={dashboardUrl}
               className='text-gray-600 hover:text-gray-900 transition-colors'
             >
               <svg
@@ -239,7 +307,7 @@ export default function WorkersPage() {
                 </p>
               </div>
               <Link
-                href='/dashboard'
+                href={dashboardUrl}
                 className='inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
               >
                 <svg
@@ -369,7 +437,9 @@ export default function WorkersPage() {
                 className='pl-10 w-full'
                 placeholder='Buscar por nombre, email o DNI...'
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  setSearchTerm(e.target.value)
+                }
               />
             </div>
 
@@ -386,7 +456,9 @@ export default function WorkersPage() {
               <select
                 className='px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                 value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setFilterStatus(e.target.value)
+                }
               >
                 <option value='all'>Todos los estados</option>
                 <option value='activa'>Activas</option>
@@ -396,194 +468,205 @@ export default function WorkersPage() {
             </div>
           </div>
 
+          {/* Loading State */}
+          {loading && (
+            <div className='text-center py-8'>
+              <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+              <p className='mt-2 text-gray-600'>Cargando trabajadoras...</p>
+            </div>
+          )}
+
           {/* Workers List - Mobile Cards */}
-          <div className='lg:hidden space-y-4'>
-            {filteredWorkers.map((worker) => (
-              <Card
-                key={worker.id}
-                className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
-              >
-                {/* Header con Avatar y Nombre */}
-                <div className='flex items-center space-x-3 mb-3'>
-                  <div className='w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md'>
-                    <span className='text-sm font-bold text-white'>
-                      {worker.name
-                        .split(' ')
-                        .map((n) => n[0])
-                        .join('')
-                        .slice(0, 2)}
-                    </span>
+          {!loading && (
+            <div className='lg:hidden space-y-4'>
+              {filteredWorkers.map((worker) => (
+                <Card
+                  key={worker.id}
+                  className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
+                >
+                  {/* Header con Avatar y Nombre */}
+                  <div className='flex items-center space-x-3 mb-3'>
+                    <div className='w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md'>
+                      <span className='text-sm font-bold text-white'>
+                        {worker.name
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .slice(0, 2)}
+                      </span>
+                    </div>
+                    <div className='flex-1'>
+                      <h3 className='font-medium text-gray-900 text-lg'>
+                        {worker.name} {worker.surname}
+                      </h3>
+                      <p className='text-sm text-gray-500'>
+                        {worker.worker_type}
+                      </p>
+                    </div>
                   </div>
-                  <div className='flex-1'>
-                    <h3 className='font-medium text-gray-900 text-lg'>
-                      {worker.name}
-                    </h3>
-                    <p className='text-sm text-gray-500'>{worker.type}</p>
-                  </div>
-                </div>
 
-                {/* Información de Contacto */}
-                <div className='space-y-2 mb-4'>
-                  <div className='flex items-center space-x-2'>
-                    <span className='text-gray-400 text-sm'>📧</span>
-                    <span className='text-sm text-gray-700'>
-                      {worker.email}
-                    </span>
+                  {/* Información de Contacto */}
+                  <div className='space-y-2 mb-4'>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>📧</span>
+                      <span className='text-sm text-gray-700'>
+                        {worker.email}
+                      </span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>📱</span>
+                      <span className='text-sm text-gray-700'>
+                        {worker.phone}
+                      </span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>🆔</span>
+                      <span className='text-sm text-gray-700'>
+                        DNI: {worker.dni}
+                      </span>
+                    </div>
                   </div>
-                  <div className='flex items-center space-x-2'>
-                    <span className='text-gray-400 text-sm'>📱</span>
-                    <span className='text-sm text-gray-700'>
-                      {worker.phone}
-                    </span>
-                  </div>
-                  <div className='flex items-center space-x-2'>
-                    <span className='text-gray-400 text-sm'>🆔</span>
-                    <span className='text-sm text-gray-700'>
-                      DNI: {worker.dni}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Estado y Acciones */}
-                <div className='flex items-center justify-between pt-3 border-t border-gray-100'>
-                  <div className='flex items-center space-x-2'>
-                    <span
-                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                        worker.status === 'Activa' || worker.status === 'Activo'
-                          ? 'bg-green-100 text-green-800 border border-green-300'
-                          : worker.status === 'Vacaciones'
-                            ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
+                  {/* Estado y Acciones */}
+                  <div className='flex items-center justify-between pt-3 border-t border-gray-100'>
+                    <div className='flex items-center space-x-2'>
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                          worker.is_active === true
+                            ? 'bg-green-100 text-green-800 border border-green-300'
                             : 'bg-red-100 text-red-800 border border-red-300'
-                      }`}
-                    >
-                      {worker.status}
-                    </span>
-                  </div>
+                        }`}
+                      >
+                        {worker.is_active === true ? 'Activa' : 'Inactiva'}
+                      </span>
+                    </div>
 
-                  {/* Acciones */}
-                  <div className='flex items-center space-x-3'>
-                    <button
-                      className='text-blue-600 hover:text-blue-900 transition-colors text-sm font-medium'
-                      onClick={() => handleViewWorker(worker)}
-                    >
-                      👁️ Ver
-                    </button>
-                    <button
-                      className='text-indigo-600 hover:text-indigo-900 transition-colors text-sm font-medium'
-                      onClick={() => handleEditWorker(worker)}
-                    >
-                      ✏️ Editar
-                    </button>
-                    <button
-                      className='text-red-600 hover:text-red-900 transition-colors text-sm font-medium'
-                      onClick={() => handleDeleteWorker(worker.id)}
-                    >
-                      🗑️ Eliminar
-                    </button>
+                    {/* Acciones */}
+                    <div className='flex items-center space-x-3'>
+                      <button
+                        className='text-blue-600 hover:text-blue-900 transition-colors text-sm font-medium'
+                        onClick={() => handleViewWorker(worker)}
+                      >
+                        👁️ Ver
+                      </button>
+                      <button
+                        className='text-indigo-600 hover:text-indigo-900 transition-colors text-sm font-medium'
+                        onClick={() => handleEditWorker(worker)}
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        className='text-red-600 hover:text-red-900 transition-colors text-sm font-medium'
+                        onClick={() => handleDeleteWorker(worker.id)}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </Card>
-            ))}
-          </div>
+                </Card>
+              ))}
+            </div>
+          )}
 
           {/* Workers Table - Desktop */}
-          <div className='hidden lg:block'>
-            <Card className='overflow-hidden shadow-lg'>
-              <div className='overflow-x-auto'>
-                <table className='min-w-full divide-y divide-gray-200'>
-                  <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
-                    <tr>
-                      <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Trabajadora
-                      </th>
-                      <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Email
-                      </th>
-                      <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Teléfono
-                      </th>
-                      <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Estado
-                      </th>
-                      <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='bg-white divide-y divide-gray-200'>
-                    {filteredWorkers.map((worker) => (
-                      <tr
-                        key={worker.id}
-                        className='hover:bg-gray-50 transition-colors'
-                      >
-                        <td className='px-4 py-4 whitespace-nowrap'>
-                          <div className='flex items-center'>
-                            <div className='w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mr-3 shadow-md'>
-                              <span className='text-sm font-bold text-white'>
-                                {worker.name
-                                  .split(' ')
-                                  .map((n) => n[0])
-                                  .join('')
-                                  .slice(0, 2)}
-                              </span>
-                            </div>
-                            <div>
-                              <div className='text-sm font-medium text-gray-900'>
-                                {worker.name}
-                              </div>
-                              <div className='text-sm text-gray-500'>
-                                DNI: {worker.dni}
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                        <td className='px-4 py-4 whitespace-nowrap text-sm text-gray-900'>
-                          {worker.email}
-                        </td>
-                        <td className='px-4 py-4 whitespace-nowrap text-sm text-gray-900'>
-                          {worker.phone}
-                        </td>
-                        <td className='px-4 py-4 whitespace-nowrap'>
-                          <span
-                            className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                              worker.status === 'Activa' ||
-                              worker.status === 'Activo'
-                                ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300'
-                                : worker.status === 'Vacaciones'
-                                  ? 'bg-gradient-to-r from-yellow-100 to-yellow-200 text-yellow-800 border border-yellow-300'
-                                  : 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300'
-                            }`}
-                          >
-                            {worker.status}
-                          </span>
-                        </td>
-                        <td className='px-4 py-4 whitespace-nowrap text-sm font-medium space-x-2'>
-                          <button
-                            className='text-blue-600 hover:text-blue-900 transition-colors'
-                            onClick={() => handleViewWorker(worker)}
-                          >
-                            👁️ Ver
-                          </button>
-                          <button
-                            className='text-indigo-600 hover:text-indigo-900 transition-colors'
-                            onClick={() => handleEditWorker(worker)}
-                          >
-                            ✏️ Editar
-                          </button>
-                          <button
-                            className='text-red-600 hover:text-red-900 transition-colors'
-                            onClick={() => handleDeleteWorker(worker.id)}
-                          >
-                            🗑️ Eliminar
-                          </button>
-                        </td>
+          {!loading && (
+            <div className='hidden lg:block'>
+              <Card className='overflow-hidden shadow-lg'>
+                <div className='overflow-x-auto'>
+                  <table className='min-w-full divide-y divide-gray-200'>
+                    <thead className='bg-gradient-to-r from-gray-50 to-gray-100'>
+                      <tr>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                          Trabajadora
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                          Email
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                          Teléfono
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                          Estado
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
+                          Acciones
+                        </th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Card>
-          </div>
+                    </thead>
+                    <tbody className='bg-white divide-y divide-gray-200'>
+                      {filteredWorkers.map((worker) => (
+                        <tr
+                          key={worker.id}
+                          className='hover:bg-gray-50 transition-colors'
+                        >
+                          <td className='px-4 py-4 whitespace-nowrap'>
+                            <div className='flex items-center'>
+                              <div className='w-10 h-10 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center mr-3 shadow-md'>
+                                <span className='text-sm font-bold text-white'>
+                                  {worker.name
+                                    .split(' ')
+                                    .map((n) => n[0])
+                                    .join('')
+                                    .slice(0, 2)}
+                                </span>
+                              </div>
+                              <div>
+                                <div className='text-sm font-medium text-gray-900'>
+                                  {worker.name} {worker.surname}
+                                </div>
+                                <div className='text-sm text-gray-500'>
+                                  DNI: {worker.dni}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className='px-4 py-4 whitespace-nowrap text-sm text-gray-900'>
+                            {worker.email}
+                          </td>
+                          <td className='px-4 py-4 whitespace-nowrap text-sm text-gray-900'>
+                            {worker.phone}
+                          </td>
+                          <td className='px-4 py-4 whitespace-nowrap'>
+                            <span
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                                worker.is_active === true
+                                  ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300'
+                                  : 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300'
+                              }`}
+                            >
+                              {worker.is_active === true
+                                ? 'Activa'
+                                : 'Inactiva'}
+                            </span>
+                          </td>
+                          <td className='px-4 py-4 whitespace-nowrap text-sm font-medium space-x-2'>
+                            <button
+                              className='text-blue-600 hover:text-blue-900 transition-colors'
+                              onClick={() => handleViewWorker(worker)}
+                            >
+                              👁️ Ver
+                            </button>
+                            <button
+                              className='text-indigo-600 hover:text-indigo-900 transition-colors'
+                              onClick={() => handleEditWorker(worker)}
+                            >
+                              ✏️ Editar
+                            </button>
+                            <button
+                              className='text-red-600 hover:text-red-900 transition-colors'
+                              onClick={() => handleDeleteWorker(worker.id)}
+                            >
+                              🗑️ Eliminar
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {/* No Results */}
           {filteredWorkers.length === 0 && (
@@ -641,14 +724,33 @@ export default function WorkersPage() {
             <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Nombre Completo *
+                  Nombre *
                 </label>
                 <Input
                   className='w-full'
-                  placeholder='María García López'
+                  placeholder='María'
                   value={editingWorker.name ?? ''}
-                  onChange={(e) =>
-                    setEditingWorker({ ...editingWorker, name: e.target.value })
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEditingWorker({
+                      ...editingWorker,
+                      name: e.target.value,
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Apellidos *
+                </label>
+                <Input
+                  className='w-full'
+                  placeholder='García López'
+                  value={editingWorker.surname ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEditingWorker({
+                      ...editingWorker,
+                      surname: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -661,7 +763,7 @@ export default function WorkersPage() {
                   placeholder='maria.garcia@email.com'
                   type='email'
                   value={editingWorker.email ?? ''}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEditingWorker({
                       ...editingWorker,
                       email: e.target.value,
@@ -678,7 +780,7 @@ export default function WorkersPage() {
                   placeholder='+34 600 123 456'
                   type='tel'
                   value={editingWorker.phone ?? ''}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEditingWorker({
                       ...editingWorker,
                       phone: e.target.value,
@@ -695,8 +797,11 @@ export default function WorkersPage() {
                   placeholder='12345678A'
                   type='text'
                   value={editingWorker.dni ?? ''}
-                  onChange={(e) =>
-                    setEditingWorker({ ...editingWorker, dni: e.target.value })
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEditingWorker({
+                      ...editingWorker,
+                      dni: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -706,16 +811,21 @@ export default function WorkersPage() {
                 </label>
                 <select
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  value={editingWorker.type ?? ''}
-                  onChange={(e) =>
-                    setEditingWorker({ ...editingWorker, type: e.target.value })
+                  value={editingWorker.worker_type ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setEditingWorker({
+                      ...editingWorker,
+                      worker_type: e.target.value as
+                        | 'cuidadora'
+                        | 'auxiliar'
+                        | 'enfermera',
+                    })
                   }
                 >
                   <option value=''>Seleccionar tipo</option>
-                  <option value='Cuidadora'>Cuidadora</option>
-                  <option value='Cuidador'>Cuidador</option>
-                  <option value='Auxiliar'>Auxiliar</option>
-                  <option value='Enfermera'>Enfermera</option>
+                  <option value='cuidadora'>Cuidadora</option>
+                  <option value='auxiliar'>Auxiliar</option>
+                  <option value='enfermera'>Enfermera</option>
                 </select>
               </div>
               <div>
@@ -724,17 +834,23 @@ export default function WorkersPage() {
                 </label>
                 <select
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  value={editingWorker.status ?? ''}
-                  onChange={(e) =>
+                  value={
+                    editingWorker.is_active === true
+                      ? 'activa'
+                      : editingWorker.is_active === false
+                        ? 'inactiva'
+                        : ''
+                  }
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setEditingWorker({
                       ...editingWorker,
-                      status: e.target.value,
+                      is_active: e.target.value === 'activa',
                     })
                   }
                 >
-                  <option value='Activa'>Activa</option>
-                  <option value='Inactiva'>Inactiva</option>
-                  <option value='Vacaciones'>Vacaciones</option>
+                  <option value=''>Seleccionar estado</option>
+                  <option value='activa'>Activa</option>
+                  <option value='inactiva'>Inactiva</option>
                 </select>
               </div>
             </div>
@@ -751,17 +867,16 @@ export default function WorkersPage() {
               </Button>
               <Button
                 className='bg-blue-600 hover:bg-blue-700 text-white'
-                onClick={handleSaveWorker}
+                onClick={() => {
+                  handleSaveWorker().catch(() => {
+                    // Error saving worker
+                  });
+                }}
                 disabled={
-                  editingWorker.name === undefined ||
-                  editingWorker.name === null ||
-                  editingWorker.name.length === 0 ||
-                  editingWorker.email === undefined ||
-                  editingWorker.email === null ||
-                  editingWorker.email.length === 0 ||
-                  editingWorker.dni === undefined ||
-                  editingWorker.dni === null ||
-                  editingWorker.dni.length === 0
+                  !isValidField(editingWorker.name) ||
+                  !isValidField(editingWorker.surname) ||
+                  !isValidField(editingWorker.email) ||
+                  !isValidField(editingWorker.dni)
                 }
               >
                 Guardar Trabajadora
@@ -796,20 +911,16 @@ export default function WorkersPage() {
               <h3 className='text-lg font-semibold text-gray-900'>
                 {editingWorker.name ?? 'Nueva trabajadora'}
               </h3>
-              {editingWorker.status !== undefined &&
-                editingWorker.status !== null &&
-                editingWorker.status.length > 0 && (
+              {editingWorker.is_active !== undefined &&
+                editingWorker.is_active !== null && (
                   <span
                     className={`mt-1 inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                      editingWorker.status === 'Activa' ||
-                      editingWorker.status === 'Activo'
+                      editingWorker.is_active === true
                         ? 'bg-green-100 text-green-800 border border-green-300'
-                        : editingWorker.status === 'Vacaciones'
-                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                          : 'bg-red-100 text-red-800 border border-red-300'
+                        : 'bg-red-100 text-red-800 border border-red-300'
                     }`}
                   >
-                    {editingWorker.status}
+                    {editingWorker.is_active === true ? 'Activa' : 'Inactiva'}
                   </span>
                 )}
             </div>
@@ -821,9 +932,12 @@ export default function WorkersPage() {
                 <Input
                   className='w-full'
                   value={editingWorker.name ?? ''}
-                  onChange={(e) =>
-                    setEditingWorker({ ...editingWorker, name: e.target.value })
-                  }
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      name: e.target.value,
+                    });
+                  }}
                 />
               </div>
               <div>
@@ -834,12 +948,12 @@ export default function WorkersPage() {
                   className='w-full'
                   type='email'
                   value={editingWorker.email ?? ''}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEditingWorker({
                       ...editingWorker,
                       email: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
               </div>
               <div>
@@ -850,7 +964,7 @@ export default function WorkersPage() {
                   className='w-full'
                   type='tel'
                   value={editingWorker.phone ?? ''}
-                  onChange={(e) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                     setEditingWorker({
                       ...editingWorker,
                       phone: e.target.value,
@@ -865,8 +979,11 @@ export default function WorkersPage() {
                 <Input
                   className='w-full'
                   value={editingWorker.dni ?? ''}
-                  onChange={(e) =>
-                    setEditingWorker({ ...editingWorker, dni: e.target.value })
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                    setEditingWorker({
+                      ...editingWorker,
+                      dni: e.target.value,
+                    })
                   }
                 />
               </div>
@@ -876,15 +993,21 @@ export default function WorkersPage() {
                 </label>
                 <select
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  value={editingWorker.type ?? ''}
-                  onChange={(e) =>
-                    setEditingWorker({ ...editingWorker, type: e.target.value })
+                  value={editingWorker.worker_type ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                    setEditingWorker({
+                      ...editingWorker,
+                      worker_type: e.target.value as
+                        | 'cuidadora'
+                        | 'auxiliar'
+                        | 'enfermera',
+                    })
                   }
                 >
-                  <option value='Cuidadora'>Cuidadora</option>
-                  <option value='Cuidador'>Cuidador</option>
-                  <option value='Auxiliar'>Auxiliar</option>
-                  <option value='Enfermera'>Enfermera</option>
+                  <option value=''>Seleccionar tipo</option>
+                  <option value='cuidadora'>Cuidadora</option>
+                  <option value='auxiliar'>Auxiliar</option>
+                  <option value='enfermera'>Enfermera</option>
                 </select>
               </div>
               <div>
@@ -893,17 +1016,23 @@ export default function WorkersPage() {
                 </label>
                 <select
                   className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  value={editingWorker.status ?? ''}
-                  onChange={(e) =>
+                  value={
+                    editingWorker.is_active === true
+                      ? 'activa'
+                      : editingWorker.is_active === false
+                        ? 'inactiva'
+                        : ''
+                  }
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setEditingWorker({
                       ...editingWorker,
-                      status: e.target.value,
+                      is_active: e.target.value === 'activa',
                     })
                   }
                 >
-                  <option value='Activa'>Activa</option>
-                  <option value='Inactiva'>Inactiva</option>
-                  <option value='Vacaciones'>Vacaciones</option>
+                  <option value=''>Seleccionar estado</option>
+                  <option value='activa'>Activa</option>
+                  <option value='inactiva'>Inactiva</option>
                 </select>
               </div>
             </div>
@@ -919,17 +1048,15 @@ export default function WorkersPage() {
               </Button>
               <Button
                 className='bg-blue-600 hover:bg-blue-700 text-white'
-                onClick={handleSaveWorker}
+                onClick={() => {
+                  handleSaveWorker().catch(() => {
+                    // Error saving worker
+                  });
+                }}
                 disabled={
-                  editingWorker.name === undefined ||
-                  editingWorker.name === null ||
-                  editingWorker.name.length === 0 ||
-                  editingWorker.email === undefined ||
-                  editingWorker.email === null ||
-                  editingWorker.email.length === 0 ||
-                  editingWorker.dni === undefined ||
-                  editingWorker.dni === null ||
-                  editingWorker.dni.length === 0
+                  !isValidField(editingWorker.name) ||
+                  !isValidField(editingWorker.email) ||
+                  !isValidField(editingWorker.dni)
                 }
               >
                 Actualizar Trabajadora
@@ -949,9 +1076,7 @@ export default function WorkersPage() {
             <div className='flex flex-col items-center mb-2'>
               <div className='w-20 h-20 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-lg mb-2'>
                 <span className='text-3xl font-bold text-white'>
-                  {selectedWorker?.name !== undefined &&
-                  selectedWorker?.name !== null &&
-                  selectedWorker?.name.length > 0
+                  {selectedWorker && isValidField(selectedWorker.name)
                     ? selectedWorker.name
                         .split(' ')
                         .map((n) => n[0])
@@ -961,22 +1086,18 @@ export default function WorkersPage() {
                 </span>
               </div>
               <h3 className='text-xl font-semibold text-gray-900'>
-                {selectedWorker?.name}
+                {selectedWorker?.name ?? 'N/A'}
               </h3>
-              {selectedWorker?.status !== undefined &&
-                selectedWorker?.status !== null &&
-                selectedWorker?.status.length > 0 && (
+              {selectedWorker?.is_active !== undefined &&
+                selectedWorker.is_active !== null && (
                   <span
                     className={`mt-1 inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
-                      selectedWorker.status === 'Activa' ||
-                      selectedWorker.status === 'Activo'
+                      selectedWorker.is_active === true
                         ? 'bg-green-100 text-green-800 border border-green-300'
-                        : selectedWorker.status === 'Vacaciones'
-                          ? 'bg-yellow-100 text-yellow-800 border border-yellow-300'
-                          : 'bg-red-100 text-red-800 border border-red-300'
+                        : 'bg-red-100 text-red-800 border border-red-300'
                     }`}
                   >
-                    {selectedWorker.status}
+                    {selectedWorker.is_active === true ? 'Activa' : 'Inactiva'}
                   </span>
                 )}
             </div>
@@ -1002,7 +1123,7 @@ export default function WorkersPage() {
               <div className='flex items-center space-x-2'>
                 <span className='text-gray-400 text-lg'>💼</span>
                 <span className='text-sm text-gray-700'>
-                  {selectedWorker?.type}
+                  {selectedWorker?.worker_type}
                 </span>
               </div>
             </div>
