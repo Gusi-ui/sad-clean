@@ -517,7 +517,7 @@ export default function WorkersPage() {
 
           {/* Workers List - Mobile Cards */}
           {!loading && (
-            <div className='lg:hidden space-y-4'>
+            <div className='md:hidden space-y-4'>
               {filteredWorkers.map((worker) => (
                 <Card
                   key={worker.id}
@@ -608,6 +608,90 @@ export default function WorkersPage() {
                       >
                         🗑️ Eliminar
                       </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Workers List - Tablet Hybrid Layout */}
+          {!loading && (
+            <div className='hidden md:block lg:hidden space-y-3'>
+              {filteredWorkers.map((worker) => (
+                <Card
+                  key={worker.id}
+                  className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
+                >
+                  <div className='flex items-center gap-6'>
+                    {/* Avatar y información principal */}
+                    <div className='flex items-center space-x-4 flex-1'>
+                      <div className='w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0'>
+                        <span className='text-base font-bold text-white'>
+                          {worker.name
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .slice(0, 2)}
+                        </span>
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <h3 className='text-base font-semibold text-gray-900 mb-1'>
+                          {worker.name} {worker.surname}
+                        </h3>
+                        <p className='text-sm text-gray-600 mb-1'>
+                          {worker.worker_type}
+                        </p>
+                        <div className='flex flex-wrap items-center gap-3 text-sm text-gray-600'>
+                          <span>📧 {worker.email}</span>
+                          <span>📱 {worker.phone}</span>
+                          <span>🆔 {worker.dni}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Estado y acciones */}
+                    <div className='flex flex-col items-center gap-3 min-w-0'>
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                          worker.is_active === true
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300'
+                        }`}
+                      >
+                        {worker.is_active === true ? 'Activa' : 'Inactiva'}
+                      </span>
+
+                      <div className='flex space-x-2'>
+                        <button
+                          className='px-3 py-1 text-xs text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors whitespace-nowrap'
+                          onClick={() => handleViewWorker(worker)}
+                        >
+                          👁️ Ver
+                        </button>
+                        <button
+                          className='px-3 py-1 text-xs text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded transition-colors whitespace-nowrap'
+                          onClick={() => handleEditWorker(worker)}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          className='px-3 py-1 text-xs text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors whitespace-nowrap'
+                          onClick={() => {
+                            handleDeleteWorker(worker.id ?? 0).catch(
+                              (deleteError) => {
+                                // eslint-disable-next-line no-console
+                                console.error(
+                                  'Error deleting worker:',
+                                  deleteError
+                                );
+                              }
+                            );
+                          }}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </Card>

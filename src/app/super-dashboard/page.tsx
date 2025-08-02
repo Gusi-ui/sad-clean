@@ -10,12 +10,34 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
-import { createAdmin, getAdmins, resetAdminPassword } from '@/lib/admin-query';
+import {
+  createAdmin,
+  deleteAdmin,
+  getAdmins,
+  resetAdminPassword,
+} from '@/lib/admin-query';
 import type { User as AdminUser } from '@/types';
 
 export default function SuperDashboardPage() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+
+  // Funciones de navegación
+  const handleNavigateToWorkers = (): void => {
+    router.push('/workers');
+  };
+
+  const handleNavigateToUsers = (): void => {
+    router.push('/users');
+  };
+
+  const handleScrollToAdminsList = (): void => {
+    const adminsList = document.getElementById('admins-list');
+    if (adminsList !== null && adminsList !== undefined) {
+      adminsList.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   const [userName, setUserName] = useState<string>('');
   const [greeting, setGreeting] = useState<string>('');
   const [admins, setAdmins] = useState<AdminUser[]>([]);
@@ -28,10 +50,23 @@ export default function SuperDashboardPage() {
     password: '',
     confirmPassword: '',
   });
+  const [isDeleteConfirmModalOpen, setIsDeleteConfirmModalOpen] =
+    useState(false);
+  const [selectedAdminForDelete, setSelectedAdminForDelete] =
+    useState<AdminUser | null>(null);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [newAdmin, setNewAdmin] = useState({
     email: '',
     password: '',
     name: '',
+    phone: '',
+  });
+
+  const [validationErrors, setValidationErrors] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    password: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -119,23 +154,101 @@ export default function SuperDashboardPage() {
     router.push('/');
   };
 
+  // Funciones de validación
+  const validateName = (name: string): string => {
+    if (name.trim() === '') {
+      return 'El nombre es obligatorio';
+    }
+    if (name.trim().length < 2) {
+      return 'El nombre debe tener al menos 2 caracteres';
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(name.trim())) {
+      return 'El nombre solo puede contener letras y espacios';
+    }
+    return '';
+  };
+
+  const validateEmail = (email: string): string => {
+    if (email.trim() === '') {
+      return 'El email es obligatorio';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return 'Formato de email inválido';
+    }
+    return '';
+  };
+
+  const validatePhone = (phone: string): string => {
+    if (phone.trim() === '') {
+      return 'El teléfono es obligatorio';
+    }
+    const phoneRegex =
+      /^[67]\d{8}$|^[89]\d{8}$|^\+34[67]\d{8}$|^\+34[89]\d{8}$/;
+    if (!phoneRegex.test(phone.trim().replace(/\s/g, ''))) {
+      return 'Formato de teléfono inválido (ej: 612345678 o +34612345678)';
+    }
+    return '';
+  };
+
+  const validatePassword = (password: string): string => {
+    if (password === '') {
+      return 'La contraseña es obligatoria';
+    }
+    if (password.length < 6) {
+      return 'La contraseña debe tener al menos 6 caracteres';
+    }
+    if (!/(?=.*[a-z])/.test(password)) {
+      return 'La contraseña debe contener al menos una letra minúscula';
+    }
+    if (!/(?=.*[A-Z])/.test(password)) {
+      return 'La contraseña debe contener al menos una letra mayúscula';
+    }
+    if (!/(?=.*\d)/.test(password)) {
+      return 'La contraseña debe contener al menos un número';
+    }
+    return '';
+  };
+
+  const validateForm = (): boolean => {
+    const nameError = validateName(newAdmin.name);
+    const emailError = validateEmail(newAdmin.email);
+    const phoneError = validatePhone(newAdmin.phone);
+    const passwordError = validatePassword(newAdmin.password);
+
+    setValidationErrors({
+      name: nameError,
+      email: emailError,
+      phone: phoneError,
+      password: passwordError,
+    });
+
+    return (
+      nameError === '' &&
+      emailError === '' &&
+      phoneError === '' &&
+      passwordError === ''
+    );
+  };
+
   const handleCreateAdmin = async () => {
     setError(null);
     setSuccessMessage(null);
 
-    if (!newAdmin.name || !newAdmin.email || !newAdmin.password) {
-      setError('Todos los campos son obligatorios.');
+    // Validar formulario
+    if (!validateForm()) {
+      setError('Por favor, corrige los errores en el formulario.');
       return;
     }
 
     setLoading(true);
     try {
       const newAdminUser = await createAdmin({
-        email: newAdmin.email,
+        email: newAdmin.email.trim(),
         password: newAdmin.password,
-        name: newAdmin.name,
+        name: newAdmin.name.trim(),
         surname: '',
-        phone: '',
+        phone: newAdmin.phone.trim(),
         address: '',
         postal_code: '',
         city: '',
@@ -150,7 +263,8 @@ export default function SuperDashboardPage() {
       setAdmins([...admins, newAdminUser]);
       setSuccessMessage('¡Administrador creado con éxito!');
       setIsCreateAdminModalOpen(false);
-      setNewAdmin({ email: '', password: '', name: '' });
+      setNewAdmin({ email: '', password: '', name: '', phone: '' });
+      setValidationErrors({ name: '', email: '', phone: '', password: '' });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
@@ -206,6 +320,49 @@ export default function SuperDashboardPage() {
       setError(`Error al crear el administrador: ${errorMessage}`);
       // eslint-disable-next-line no-console
       console.error('Error creating admin:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteAdmin = async () => {
+    if (!selectedAdminForDelete) return;
+
+    setError(null);
+    setSuccessMessage(null);
+
+    // Validar confirmación de texto
+    if (deleteConfirmText !== 'ELIMINAR') {
+      setError('Debes escribir exactamente "ELIMINAR" para confirmar.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await deleteAdmin(
+        selectedAdminForDelete.id,
+        selectedAdminForDelete.email ?? ''
+      );
+
+      if (result.success) {
+        // Actualizar la lista de administradores
+        const updatedAdmins = admins.filter(
+          (admin) => admin.id !== selectedAdminForDelete.id
+        );
+        setAdmins(updatedAdmins);
+        setSuccessMessage(result.message);
+        setIsDeleteConfirmModalOpen(false);
+        setSelectedAdminForDelete(null);
+        setDeleteConfirmText('');
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+      setError(`Error al eliminar el administrador: ${errorMessage}`);
+      // eslint-disable-next-line no-console
+      console.error('Error deleting admin:', err);
     } finally {
       setLoading(false);
     }
@@ -349,85 +506,96 @@ export default function SuperDashboardPage() {
             </div>
           )}
 
-          {/* Estadísticas - Mobile First */}
-          <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8'>
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+          {/* Estadísticas - Triple Layout Optimizado */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 lg:gap-6 mb-8'>
+            <div className='bg-white rounded-2xl shadow-lg p-4 md:p-5 lg:p-6 border border-gray-100'>
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='flex-1'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-2'>
                     Súper Admin
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                  <p className='text-xl md:text-2xl font-bold text-gray-900'>
                     1
                   </p>
-                  <p className='text-xs text-purple-600 mt-1'>Tú</p>
+                  <p className='text-xs md:text-sm text-purple-600 mt-1 font-medium'>
+                    Tú
+                  </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>👑</span>
+                <div className='w-10 h-10 md:w-12 md:h-12 bg-purple-100 rounded-xl flex items-center justify-center ml-3'>
+                  <span className='text-xl md:text-2xl'>👑</span>
                 </div>
               </div>
             </div>
 
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+            <button
+              onClick={handleScrollToAdminsList}
+              className='bg-white hover:bg-blue-50 active:bg-blue-100 rounded-2xl shadow-lg hover:shadow-xl p-4 md:p-5 lg:p-6 border border-gray-100 hover:border-blue-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='flex-1 text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-2'>
                     Administradores
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                  <p className='text-xl md:text-2xl font-bold text-gray-900'>
                     {admins.length}
                   </p>
-                  <p className='text-xs text-blue-600 mt-1'>
-                    +{admins.length} creados
+                  <p className='text-xs md:text-sm text-blue-600 mt-1 font-medium'>
+                    {admins.length > 0 ? `${admins.length} activos` : 'Ninguno'}
                   </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>👥</span>
+                <div className='w-10 h-10 md:w-12 md:h-12 bg-blue-100 rounded-xl flex items-center justify-center ml-3'>
+                  <span className='text-xl md:text-2xl'>👥</span>
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+            <button
+              onClick={handleNavigateToWorkers}
+              className='bg-white hover:bg-green-50 active:bg-green-100 rounded-2xl shadow-lg hover:shadow-xl p-4 md:p-5 lg:p-6 border border-gray-100 hover:border-green-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='flex-1 text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-2'>
                     Trabajadoras
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                  <p className='text-xl md:text-2xl font-bold text-gray-900'>
                     0
                   </p>
-                  <p className='text-xs text-green-600 mt-1'>
-                    Listo para agregar
+                  <p className='text-xs md:text-sm text-green-600 mt-1 font-medium'>
+                    Gestionar trabajadoras
                   </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-green-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>👷</span>
+                <div className='w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center ml-3'>
+                  <span className='text-xl md:text-2xl'>👷</span>
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+            <button
+              onClick={handleNavigateToUsers}
+              className='bg-white hover:bg-orange-50 active:bg-orange-100 rounded-2xl shadow-lg hover:shadow-xl p-4 md:p-5 lg:p-6 border border-gray-100 hover:border-orange-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='flex-1 text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-2'>
                     Usuarios
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                  <p className='text-xl md:text-2xl font-bold text-gray-900'>
                     0
                   </p>
-                  <p className='text-xs text-orange-600 mt-1'>
-                    Listo para agregar
+                  <p className='text-xs md:text-sm text-orange-600 mt-1 font-medium'>
+                    Gestionar usuarios
                   </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-orange-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>👤</span>
+                <div className='w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-xl flex items-center justify-center ml-3'>
+                  <span className='text-xl md:text-2xl'>👤</span>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
 
-          {/* Navegación Principal - Mobile First */}
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-8'>
+          {/* Navegación Principal - Triple Layout Optimizado */}
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 mb-8'>
             <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-100'>
               <h2 className='text-lg lg:text-xl font-bold text-gray-900 mb-4'>
                 🚀 Acciones Rápidas
@@ -552,7 +720,10 @@ export default function SuperDashboardPage() {
               </div>
             </div>
 
-            <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-100'>
+            <div
+              id='admins-list'
+              className='bg-white rounded-2xl shadow-lg p-6 border border-gray-100'
+            >
               <h2 className='text-lg lg:text-xl font-bold text-gray-900 mb-4'>
                 👑 Administradores del Sistema
               </h2>
@@ -560,57 +731,206 @@ export default function SuperDashboardPage() {
                 {admins.map((admin) => (
                   <div
                     key={admin.id}
-                    className='flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200'
+                    className='bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200 p-5 lg:p-6'
                   >
-                    <div
-                      className='w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden'
-                      style={{
-                        minWidth: '2.5rem',
-                        minHeight: '2.5rem',
-                        maxWidth: '2.5rem',
-                        maxHeight: '2.5rem',
-                      }}
-                    >
-                      <span
-                        className='text-white text-xs font-bold leading-none flex items-center justify-center'
-                        style={{ lineHeight: '1' }}
-                      >
-                        {admin.name
-                          ? admin.name
-                              .split(' ')
-                              .filter(Boolean)
-                              .map((n) => n[0])
-                              .join('')
-                              .toUpperCase()
-                              .slice(0, 2)
-                          : '👤'}
-                      </span>
+                    {/* Mobile: Layout vertical (0-767px) */}
+                    <div className='md:hidden space-y-4'>
+                      {/* Avatar y información principal */}
+                      <div className='flex items-center space-x-4'>
+                        <div className='w-16 h-16 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg'>
+                          <span className='text-white text-lg font-bold leading-none'>
+                            {admin.name
+                              ? admin.name
+                                  .split(' ')
+                                  .filter(Boolean)
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2)
+                              : '👤'}
+                          </span>
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <h3 className='text-lg font-semibold text-gray-900 mb-1'>
+                            {admin.name}
+                          </h3>
+                          <p className='text-sm text-gray-600 break-all'>
+                            {admin.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Meta información mobile */}
+                      <div className='flex flex-wrap items-center gap-3'>
+                        <span className='inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800'>
+                          Administrador
+                        </span>
+                        <span className='text-xs text-gray-500'>
+                          Creado:{' '}
+                          {new Date(admin.created_at).toLocaleDateString(
+                            'es-ES'
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Botones mobile */}
+                      <div className='flex space-x-3'>
+                        <button
+                          onClick={() => {
+                            setSelectedAdminForReset(admin);
+                            setIsResetPasswordModalOpen(true);
+                          }}
+                          className='flex-1 py-3 px-4 text-sm bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-lg font-medium transition-colors duration-200'
+                          title='Resetear contraseña'
+                        >
+                          🔑 Resetear Password
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAdminForDelete(admin);
+                            setIsDeleteConfirmModalOpen(true);
+                          }}
+                          className='flex-1 py-3 px-4 text-sm bg-red-100 hover:bg-red-200 text-red-800 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200'
+                          title='Eliminar administrador'
+                          disabled={admin.email === 'conectomail@gmail.com'}
+                        >
+                          {admin.email === 'conectomail@gmail.com'
+                            ? '🔒 Protegido'
+                            : '🗑️ Eliminar'}
+                        </button>
+                      </div>
                     </div>
-                    <div className='flex-1'>
-                      <p className='text-sm font-medium text-gray-900'>
-                        {admin.name}
-                      </p>
-                      <p className='text-xs text-gray-600'>{admin.email}</p>
+
+                    {/* Tablet: Layout híbrido (768px-1023px) */}
+                    <div className='hidden md:flex lg:hidden items-center gap-4'>
+                      {/* Avatar y información principal */}
+                      <div className='flex items-center space-x-4 flex-1'>
+                        <div className='w-14 h-14 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg'>
+                          <span className='text-white text-base font-bold leading-none'>
+                            {admin.name
+                              ? admin.name
+                                  .split(' ')
+                                  .filter(Boolean)
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2)
+                              : '👤'}
+                          </span>
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <h3 className='text-base font-semibold text-gray-900 mb-1'>
+                            {admin.name}
+                          </h3>
+                          <p className='text-sm text-gray-600 break-all mb-2'>
+                            {admin.email}
+                          </p>
+                          <div className='flex items-center gap-3'>
+                            <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800'>
+                              Administrador
+                            </span>
+                            <span className='text-xs text-gray-500'>
+                              {new Date(admin.created_at).toLocaleDateString(
+                                'es-ES'
+                              )}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Botones tablet */}
+                      <div className='flex space-x-2 min-w-0'>
+                        <button
+                          onClick={() => {
+                            setSelectedAdminForReset(admin);
+                            setIsResetPasswordModalOpen(true);
+                          }}
+                          className='px-4 py-2 text-sm bg-orange-100 hover:bg-orange-200 text-orange-800 rounded-lg font-medium transition-colors duration-200 whitespace-nowrap'
+                          title='Resetear contraseña'
+                        >
+                          🔑 Resetear
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAdminForDelete(admin);
+                            setIsDeleteConfirmModalOpen(true);
+                          }}
+                          className='px-4 py-2 text-sm bg-red-100 hover:bg-red-200 text-red-800 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 whitespace-nowrap'
+                          title='Eliminar administrador'
+                          disabled={admin.email === 'conectomail@gmail.com'}
+                        >
+                          {admin.email === 'conectomail@gmail.com'
+                            ? '🔒 Protegido'
+                            : '🗑️ Eliminar'}
+                        </button>
+                      </div>
                     </div>
-                    <div className='flex flex-col items-end min-w-0'>
-                      <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800'>
-                        Administrador
-                      </span>
-                      <span className='text-xs text-gray-500 mt-1 text-right'>
-                        {new Date(admin.created_at).toLocaleDateString()}
-                      </span>
-                    </div>
-                    <div className='ml-2'>
-                      <button
-                        onClick={() => {
-                          setSelectedAdminForReset(admin);
-                          setIsResetPasswordModalOpen(true);
-                        }}
-                        className='text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 px-2 py-1 rounded'
-                        title='Resetear contraseña'
-                      >
-                        🔑 Reset
-                      </button>
+
+                    {/* Desktop: Layout horizontal */}
+                    <div className='hidden lg:flex lg:items-center lg:gap-6'>
+                      {/* Avatar y información principal */}
+                      <div className='flex items-center space-x-4 flex-1'>
+                        <div className='w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center overflow-hidden flex-shrink-0 shadow-lg'>
+                          <span className='text-white text-sm font-bold leading-none'>
+                            {admin.name
+                              ? admin.name
+                                  .split(' ')
+                                  .filter(Boolean)
+                                  .map((n) => n[0])
+                                  .join('')
+                                  .toUpperCase()
+                                  .slice(0, 2)
+                              : '👤'}
+                          </span>
+                        </div>
+                        <div className='flex-1 min-w-0'>
+                          <h3 className='text-base font-semibold text-gray-900 mb-1'>
+                            {admin.name}
+                          </h3>
+                          <p className='text-sm text-gray-600 break-all'>
+                            {admin.email}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Meta información desktop */}
+                      <div className='flex flex-col items-center text-center min-w-0'>
+                        <span className='inline-flex px-3 py-1 text-xs font-semibold rounded-full bg-blue-100 text-blue-800 mb-1'>
+                          Administrador
+                        </span>
+                        <span className='text-xs text-gray-500 whitespace-nowrap'>
+                          {new Date(admin.created_at).toLocaleDateString(
+                            'es-ES'
+                          )}
+                        </span>
+                      </div>
+
+                      {/* Botones desktop */}
+                      <div className='flex flex-col space-y-2 min-w-0'>
+                        <button
+                          onClick={() => {
+                            setSelectedAdminForReset(admin);
+                            setIsResetPasswordModalOpen(true);
+                          }}
+                          className='px-3 py-2 text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 rounded font-medium transition-colors duration-200 whitespace-nowrap'
+                          title='Resetear contraseña'
+                        >
+                          🔑 Resetear
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedAdminForDelete(admin);
+                            setIsDeleteConfirmModalOpen(true);
+                          }}
+                          className='px-3 py-2 text-xs bg-red-100 hover:bg-red-200 text-red-800 rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-200 whitespace-nowrap'
+                          title='Eliminar administrador'
+                          disabled={admin.email === 'conectomail@gmail.com'}
+                        >
+                          {admin.email === 'conectomail@gmail.com'
+                            ? '🔒 Protegido'
+                            : '🗑️ Eliminar'}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -627,46 +947,60 @@ export default function SuperDashboardPage() {
             </div>
           </div>
 
-          {/* Navegación Secundaria - Visible en Móvil y Desktop */}
+          {/* Navegación Secundaria - Triple Layout Optimizado */}
           <div className='block'>
-            <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-100'>
-              <h2 className='text-lg lg:text-xl font-bold text-gray-900 mb-4'>
+            <div className='bg-white rounded-2xl shadow-lg p-4 md:p-5 lg:p-6 border border-gray-100'>
+              <h2 className='text-base md:text-lg lg:text-xl font-bold text-gray-900 mb-4'>
                 🔧 Herramientas Adicionales
               </h2>
-              <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
+              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4'>
                 <Link href='/planning' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
                     <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>📅</span>
-                      <p className='font-medium text-gray-900'>Planificación</p>
-                      <p className='text-sm text-gray-600'>Servicios</p>
+                      <span className='text-xl md:text-2xl mb-2 block'>📅</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Planificación
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>
+                        Servicios
+                      </p>
                     </div>
                   </div>
                 </Link>
                 <Link href='/balances' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
                     <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>⏰</span>
-                      <p className='font-medium text-gray-900'>Balances</p>
-                      <p className='text-sm text-gray-600'>Horas</p>
+                      <span className='text-xl md:text-2xl mb-2 block'>⏰</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Balances
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>Horas</p>
                     </div>
                   </div>
                 </Link>
                 <Link href='/assignments' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
                     <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>📋</span>
-                      <p className='font-medium text-gray-900'>Asignaciones</p>
-                      <p className='text-sm text-gray-600'>Ver todas</p>
+                      <span className='text-xl md:text-2xl mb-2 block'>📋</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Asignaciones
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>
+                        Ver todas
+                      </p>
                     </div>
                   </div>
                 </Link>
                 <Link href='/settings' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
                     <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>⚙️</span>
-                      <p className='font-medium text-gray-900'>Configuración</p>
-                      <p className='text-sm text-gray-600'>Ajustes</p>
+                      <span className='text-xl md:text-2xl mb-2 block'>⚙️</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Configuración
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>
+                        Ajustes
+                      </p>
                     </div>
                   </div>
                 </Link>
@@ -690,70 +1024,215 @@ export default function SuperDashboardPage() {
           </footer>
         </div>
 
-        {/* Create Admin Modal */}
+        {/* Create Admin Modal - Mejorado con validaciones y triple layout */}
         <Modal
           isOpen={isCreateAdminModalOpen}
-          onClose={() => setIsCreateAdminModalOpen(false)}
-          title='Crear Nuevo Administrador'
+          onClose={() => {
+            setIsCreateAdminModalOpen(false);
+            setNewAdmin({ email: '', password: '', name: '', phone: '' });
+            setValidationErrors({
+              name: '',
+              email: '',
+              phone: '',
+              password: '',
+            });
+          }}
+          title='👑 Crear Nuevo Administrador'
           size='md'
         >
-          <div className='space-y-4'>
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Nombre Completo *
-              </label>
-              <Input
-                className='w-full'
-                placeholder='Nombre del administrador'
-                value={newAdmin.name}
-                onChange={(e) =>
-                  setNewAdmin({ ...newAdmin, name: e.target.value })
-                }
-              />
+          <div className='space-y-4 md:space-y-5'>
+            {/* Información explicativa */}
+            <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4'>
+              <div className='flex items-start space-x-2'>
+                <span className='text-blue-600 text-lg md:text-xl flex-shrink-0'>
+                  ℹ️
+                </span>
+                <div>
+                  <p className='text-sm md:text-base text-blue-800 font-medium'>
+                    Nuevo Administrador del Sistema
+                  </p>
+                  <p className='text-xs md:text-sm text-blue-700 mt-1'>
+                    Los administradores pueden gestionar trabajadoras, usuarios
+                    y generar reportes del sistema.
+                  </p>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Email *
-              </label>
-              <Input
-                className='w-full'
-                type='email'
-                placeholder='admin@empresa.com'
-                value={newAdmin.email}
-                onChange={(e) =>
-                  setNewAdmin({ ...newAdmin, email: e.target.value })
-                }
-              />
+            {/* Formulario con validaciones */}
+            <div className='space-y-4'>
+              {/* Campo Nombre */}
+              <div>
+                <label className='block text-sm md:text-base font-medium text-gray-700 mb-2'>
+                  <span className='flex items-center space-x-2'>
+                    <span className='text-purple-600'>👤</span>
+                    <span>Nombre Completo *</span>
+                  </span>
+                </label>
+                <Input
+                  className={`w-full transition-colors duration-200 ${
+                    validationErrors.name !== ''
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200'
+                  }`}
+                  placeholder='Ej: María García López'
+                  value={newAdmin.name}
+                  onChange={(e) => {
+                    setNewAdmin({ ...newAdmin, name: e.target.value });
+                    // Validación en tiempo real
+                    const nameError = validateName(e.target.value);
+                    setValidationErrors({
+                      ...validationErrors,
+                      name: nameError,
+                    });
+                  }}
+                />
+                {validationErrors.name !== '' && (
+                  <p className='mt-1 text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{validationErrors.name}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Campo Email */}
+              <div>
+                <label className='block text-sm md:text-base font-medium text-gray-700 mb-2'>
+                  <span className='flex items-center space-x-2'>
+                    <span className='text-blue-600'>📧</span>
+                    <span>Email Corporativo *</span>
+                  </span>
+                </label>
+                <Input
+                  className={`w-full transition-colors duration-200 ${
+                    validationErrors.email !== ''
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200'
+                  }`}
+                  type='email'
+                  placeholder='admin@empresa.com'
+                  value={newAdmin.email}
+                  onChange={(e) => {
+                    setNewAdmin({ ...newAdmin, email: e.target.value });
+                    // Validación en tiempo real
+                    const emailError = validateEmail(e.target.value);
+                    setValidationErrors({
+                      ...validationErrors,
+                      email: emailError,
+                    });
+                  }}
+                />
+                {validationErrors.email !== '' && (
+                  <p className='mt-1 text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{validationErrors.email}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Campo Teléfono */}
+              <div>
+                <label className='block text-sm md:text-base font-medium text-gray-700 mb-2'>
+                  <span className='flex items-center space-x-2'>
+                    <span className='text-green-600'>📱</span>
+                    <span>Teléfono de Contacto *</span>
+                  </span>
+                </label>
+                <Input
+                  className={`w-full transition-colors duration-200 ${
+                    validationErrors.phone !== ''
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200'
+                  }`}
+                  type='tel'
+                  placeholder='612345678 o +34612345678'
+                  value={newAdmin.phone}
+                  onChange={(e) => {
+                    setNewAdmin({ ...newAdmin, phone: e.target.value });
+                    // Validación en tiempo real
+                    const phoneError = validatePhone(e.target.value);
+                    setValidationErrors({
+                      ...validationErrors,
+                      phone: phoneError,
+                    });
+                  }}
+                />
+                {validationErrors.phone !== '' && (
+                  <p className='mt-1 text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{validationErrors.phone}</span>
+                  </p>
+                )}
+              </div>
+
+              {/* Campo Contraseña */}
+              <div>
+                <label className='block text-sm md:text-base font-medium text-gray-700 mb-2'>
+                  <span className='flex items-center space-x-2'>
+                    <span className='text-orange-600'>🔐</span>
+                    <span>Contraseña Segura *</span>
+                  </span>
+                </label>
+                <Input
+                  className={`w-full transition-colors duration-200 ${
+                    validationErrors.password !== ''
+                      ? 'border-red-300 focus:border-red-500 focus:ring-red-200'
+                      : 'border-gray-300 focus:border-purple-500 focus:ring-purple-200'
+                  }`}
+                  type='password'
+                  placeholder='Mínimo 6 caracteres con mayúscula y número'
+                  value={newAdmin.password}
+                  onChange={(e) => {
+                    setNewAdmin({ ...newAdmin, password: e.target.value });
+                    // Validación en tiempo real
+                    const passwordError = validatePassword(e.target.value);
+                    setValidationErrors({
+                      ...validationErrors,
+                      password: passwordError,
+                    });
+                  }}
+                />
+                {validationErrors.password !== '' && (
+                  <p className='mt-1 text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{validationErrors.password}</span>
+                  </p>
+                )}
+                {/* Indicador de fortaleza de contraseña */}
+                {newAdmin.password !== '' &&
+                  validationErrors.password === '' && (
+                    <p className='mt-1 text-xs md:text-sm text-green-600 flex items-center space-x-1'>
+                      <span>✅</span>
+                      <span>Contraseña válida</span>
+                    </p>
+                  )}
+              </div>
             </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Contraseña *
-              </label>
-              <Input
-                className='w-full'
-                type='password'
-                placeholder='Contraseña segura'
-                value={newAdmin.password}
-                onChange={(e) =>
-                  setNewAdmin({ ...newAdmin, password: e.target.value })
-                }
-              />
-            </div>
-
-            <div className='flex justify-end space-x-3 pt-4'>
+            {/* Botones - Responsive layout */}
+            <div className='flex flex-col md:flex-row md:justify-end space-y-3 md:space-y-0 md:space-x-3 pt-4 md:pt-6 border-t border-gray-200'>
               <Button
                 variant='outline'
+                className='w-full md:w-auto py-3 md:py-2 text-sm md:text-base'
                 onClick={() => {
                   setIsCreateAdminModalOpen(false);
-                  setNewAdmin({ email: '', password: '', name: '' });
+                  setNewAdmin({ email: '', password: '', name: '', phone: '' });
+                  setValidationErrors({
+                    name: '',
+                    email: '',
+                    phone: '',
+                    password: '',
+                  });
                 }}
+                disabled={loading}
               >
-                Cancelar
+                <span className='flex items-center justify-center space-x-2'>
+                  <span>❌</span>
+                  <span>Cancelar</span>
+                </span>
               </Button>
               <Button
-                className='bg-purple-600 hover:bg-purple-700 text-white'
+                className='w-full md:w-auto bg-purple-600 hover:bg-purple-700 text-white py-3 md:py-2 text-sm md:text-base font-medium transition-colors duration-200'
                 onClick={() => {
                   handleCreateAdmin().catch((createAdminError) => {
                     // eslint-disable-next-line no-console
@@ -764,10 +1243,27 @@ export default function SuperDashboardPage() {
                   loading ||
                   newAdmin.name === '' ||
                   newAdmin.email === '' ||
-                  newAdmin.password === ''
+                  newAdmin.phone === '' ||
+                  newAdmin.password === '' ||
+                  validationErrors.name !== '' ||
+                  validationErrors.email !== '' ||
+                  validationErrors.phone !== '' ||
+                  validationErrors.password !== ''
                 }
               >
-                {loading ? 'Creando...' : 'Crear Administrador'}
+                <span className='flex items-center justify-center space-x-2'>
+                  {loading ? (
+                    <>
+                      <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+                      <span>Creando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>👑</span>
+                      <span>Crear Administrador</span>
+                    </>
+                  )}
+                </span>
               </Button>
             </div>
           </div>
@@ -868,6 +1364,119 @@ export default function SuperDashboardPage() {
             </div>
           </div>
         </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          isOpen={isDeleteConfirmModalOpen}
+          onClose={() => {
+            setIsDeleteConfirmModalOpen(false);
+            setSelectedAdminForDelete(null);
+            setDeleteConfirmText('');
+          }}
+          title={`Eliminar Administrador - ${selectedAdminForDelete?.name}`}
+          size='md'
+        >
+          <div className='space-y-4'>
+            <div className='bg-red-50 border border-red-200 text-red-800 rounded-lg p-4 text-sm'>
+              <div className='flex items-start space-x-2'>
+                <span className='text-lg'>⚠️</span>
+                <div>
+                  <strong>¡ATENCIÓN! Esta acción es irreversible.</strong>
+                  <p className='mt-1'>
+                    Estás a punto de eliminar permanentemente al administrador:
+                  </p>
+                  <p className='mt-1 font-medium'>
+                    📧 {selectedAdminForDelete?.email}
+                  </p>
+                  <p className='mt-2'>
+                    • Se eliminará completamente del sistema
+                    <br />
+                    • No podrá volver a acceder con estas credenciales
+                    <br />• Esta acción NO se puede deshacer
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Para confirmar, escribe exactamente:{' '}
+                <span className='font-bold text-red-600'>ELIMINAR</span>
+              </label>
+              <Input
+                type='text'
+                className='w-full'
+                placeholder='Escribe: ELIMINAR'
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value)}
+              />
+            </div>
+
+            {error !== null && error !== undefined && (
+              <div className='bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm'>
+                {error}
+              </div>
+            )}
+
+            {successMessage !== null && successMessage !== undefined && (
+              <div className='bg-green-50 border border-green-200 text-green-600 rounded-lg p-3 text-sm'>
+                {successMessage}
+              </div>
+            )}
+
+            <div className='flex justify-end space-x-3 pt-4'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setIsDeleteConfirmModalOpen(false);
+                  setSelectedAdminForDelete(null);
+                  setDeleteConfirmText('');
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className='bg-red-600 hover:bg-red-700 text-white'
+                onClick={() => {
+                  handleDeleteAdmin().catch((deleteError) => {
+                    // eslint-disable-next-line no-console
+                    console.error('Error deleting admin:', deleteError);
+                  });
+                }}
+                disabled={
+                  loading ||
+                  deleteConfirmText !== 'ELIMINAR' ||
+                  selectedAdminForDelete?.email === 'conectomail@gmail.com'
+                }
+              >
+                {loading ? 'Eliminando...' : '🗑️ Eliminar Definitivamente'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* FAB - Floating Action Button para Mobile */}
+        <div className='lg:hidden fixed bottom-6 right-6 z-50'>
+          <button
+            onClick={() => setIsCreateAdminModalOpen(true)}
+            className='w-14 h-14 bg-purple-600 hover:bg-purple-700 text-white rounded-full shadow-lg hover:shadow-xl transform hover:scale-105 transition-all duration-200 flex items-center justify-center'
+            title='Crear Administrador'
+          >
+            <svg
+              className='w-6 h-6'
+              fill='none'
+              stroke='currentColor'
+              viewBox='0 0 24 24'
+            >
+              <path
+                strokeLinecap='round'
+                strokeLinejoin='round'
+                strokeWidth={2}
+                d='M12 6v6m0 0v6m0-6h6m-6 0H6'
+              />
+            </svg>
+          </button>
+        </div>
       </div>
     </ProtectedRoute>
   );

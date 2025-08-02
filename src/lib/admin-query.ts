@@ -155,3 +155,96 @@ export const resetAdminPassword = async (
     };
   }
 };
+
+/**
+ * Elimina un administrador del sistema de forma segura.
+ * Borra tanto de Supabase Auth como de la tabla auth_users.
+ * Incluye validaciones para prevenir borrados accidentales.
+ *
+ * @param userId - ID del usuario administrador a eliminar
+ * @param userEmail - Email del usuario para validación adicional
+ * @returns Confirmación de éxito o error
+ */
+export const deleteAdmin = async (
+  userId: string,
+  userEmail: string
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    // Validación de seguridad: No permitir borrar al super admin
+    if (userEmail === 'conectomail@gmail.com') {
+      return {
+        success: false,
+        message: 'No se puede eliminar al Super Administrador del sistema',
+      };
+    }
+
+    // Validar que el usuario existe y es administrador
+    const { data: userData, error: userError } =
+      await supabaseAdmin.auth.admin.getUserById(userId);
+
+    if (
+      userError !== null ||
+      userData.user === null ||
+      userData.user === undefined
+    ) {
+      return {
+        success: false,
+        message: 'Usuario no encontrado en el sistema',
+      };
+    }
+
+    // Verificar que es administrador
+    const userRole = userData.user.user_metadata?.['role'] as
+      | string
+      | undefined;
+    if (userRole !== 'admin') {
+      return {
+        success: false,
+        message: 'Solo se pueden eliminar usuarios con rol de administrador',
+      };
+    }
+
+    // Paso 1: Eliminar de la tabla auth_users
+    const { error: dbError } = await supabaseAdmin
+      .from('auth_users')
+      .delete()
+      .eq('id', userId);
+
+    if (dbError) {
+      throw new Error(
+        `Error al eliminar de la tabla auth_users: ${dbError.message}`
+      );
+    }
+
+    // Paso 2: Eliminar de Supabase Auth
+    const { error: authError } =
+      await supabaseAdmin.auth.admin.deleteUser(userId);
+
+    if (authError) {
+      // Si falla el borrado en Auth, intentar restaurar en auth_users
+      // (Este es un caso edge, pero es buena práctica)
+      await supabaseAdmin.from('auth_users').insert({
+        id: userId,
+        email: userEmail,
+        role: 'admin',
+      });
+
+      throw new Error(
+        `Error al eliminar de Supabase Auth: ${authError.message}`
+      );
+    }
+
+    return {
+      success: true,
+      message: `Administrador ${userEmail} eliminado exitosamente`,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : 'Error desconocido al eliminar administrador',
+    };
+  }
+};

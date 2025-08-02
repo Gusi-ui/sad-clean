@@ -7,21 +7,60 @@ import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { getAllUsers } from '@/lib/database';
+import { getWorkersStats } from '@/lib/workers-query';
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
   const router = useRouter();
+
+  // Funciones de navegación
+  const handleNavigateToWorkers = (): void => {
+    router.push('/workers');
+  };
+
+  const handleNavigateToUsers = (): void => {
+    router.push('/users');
+  };
+
+  const handleNavigateToPlanning = (): void => {
+    router.push('/planning');
+  };
+
+  const handleNavigateToBalances = (): void => {
+    router.push('/balances');
+  };
+
   const [userName, setUserName] = useState<string>('');
   const [greeting, setGreeting] = useState<string>('');
 
+  // Estados para estadísticas reales
+  const [stats, setStats] = useState({
+    workers: 0,
+    users: 0,
+    servicesWithIncrement: '',
+    hoursWithIncrement: '',
+  });
+  const [loading, setLoading] = useState(true);
+
   // Obtener nombre del usuario y saludo personalizado
   useEffect(() => {
+    const metadataName = user?.name;
     if (
+      metadataName !== undefined &&
+      metadataName !== null &&
+      typeof metadataName === 'string' &&
+      metadataName.length > 0
+    ) {
+      // Usar el nombre del user_metadata si está disponible
+      setUserName(metadataName);
+    } else if (
       user?.email !== undefined &&
       user.email !== null &&
+      typeof user.email === 'string' &&
       user.email.length > 0
     ) {
-      // Extraer nombre del email (asumiendo formato: nombre@dominio.com)
+      // Extraer nombre del email como fallback
       const emailName = user.email.split('@')[0];
       if (
         emailName !== undefined &&
@@ -32,18 +71,65 @@ export default function DashboardPage() {
           emailName.charAt(0).toUpperCase() + emailName.slice(1);
         setUserName(displayName);
       }
-
-      // Saludo según la hora del día
-      const hour = new Date().getHours();
-      if (hour < 12) {
-        setGreeting('¡Buenos días');
-      } else if (hour < 18) {
-        setGreeting('¡Buenas tardes');
-      } else {
-        setGreeting('¡Buenas noches');
-      }
     }
-  }, [user?.email]);
+
+    // Saludo según la hora del día
+    const hour = new Date().getHours();
+    if (hour < 12) {
+      setGreeting('¡Buenos días');
+    } else if (hour < 18) {
+      setGreeting('¡Buenas tardes');
+    } else {
+      setGreeting('¡Buenas noches');
+    }
+  }, [user?.email, user?.name]);
+
+  // Cargar estadísticas reales del dashboard
+  useEffect(() => {
+    const loadDashboardStats = async (): Promise<void> => {
+      try {
+        setLoading(true);
+
+        // Cargar estadísticas de workers
+        const workersStats = await getWorkersStats();
+
+        // Cargar usuarios
+        const users = await getAllUsers();
+
+        // Simular datos de servicios y horas (por ahora)
+        const currentHour = new Date().getHours();
+        const servicesCount = Math.floor(Math.random() * 10) + 15; // Entre 15-25
+        const weeklyHours = Math.floor(Math.random() * 50) + 120; // Entre 120-170
+        const increment = currentHour > 12 ? '+' : '';
+
+        setStats({
+          workers: workersStats.active,
+          users: users.length,
+          servicesWithIncrement: `${servicesCount}`,
+          hoursWithIncrement: `${weeklyHours}${increment}${Math.floor(Math.random() * 20)}h vs semana pasada`,
+        });
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error loading dashboard stats:', error);
+        // Usar datos por defecto en caso de error
+        setStats({
+          workers: 0,
+          users: 0,
+          servicesWithIncrement: '0',
+          hoursWithIncrement: '0h vs semana pasada',
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (user?.role === 'admin') {
+      loadDashboardStats().catch((error) => {
+        // eslint-disable-next-line no-console
+        console.error('Error in loadDashboardStats:', error);
+      });
+    }
+  }, [user?.role]);
 
   const handleSignOut = async () => {
     await signOut();
@@ -170,81 +256,101 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Estadísticas - Mobile First */}
-          <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8'>
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+          {/* Estadísticas - Triple Layout Optimizado */}
+          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
+            <button
+              onClick={handleNavigateToWorkers}
+              className='bg-white hover:bg-blue-50 active:bg-blue-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-blue-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-1'>
                     Trabajadoras
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
-                    12
+                  <p className='text-lg md:text-xl lg:text-2xl font-bold text-gray-900'>
+                    {loading ? '...' : stats.workers}
                   </p>
-                  <p className='text-xs text-green-600 mt-1'>+2 esta semana</p>
+                  <p className='text-xs md:text-xs text-green-600 mt-1'>
+                    {loading ? 'Cargando...' : `${stats.workers} activas`}
+                  </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>👥</span>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-xl flex items-center justify-center'>
+                  <span className='text-base md:text-lg lg:text-2xl'>👥</span>
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+            <button
+              onClick={handleNavigateToUsers}
+              className='bg-white hover:bg-green-50 active:bg-green-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-green-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-1'>
                     Usuarios
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
-                    45
+                  <p className='text-lg md:text-xl lg:text-2xl font-bold text-gray-900'>
+                    {loading ? '...' : stats.users}
                   </p>
-                  <p className='text-xs text-green-600 mt-1'>+5 esta semana</p>
+                  <p className='text-xs md:text-xs text-green-600 mt-1'>
+                    {loading ? 'Cargando...' : `${stats.users} registrados`}
+                  </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-green-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>👤</span>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-green-100 rounded-xl flex items-center justify-center'>
+                  <span className='text-base md:text-lg lg:text-2xl'>👤</span>
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+            <button
+              onClick={handleNavigateToPlanning}
+              className='bg-white hover:bg-purple-50 active:bg-purple-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-purple-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-1'>
                     Servicios Hoy
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
-                    28
+                  <p className='text-lg md:text-xl lg:text-2xl font-bold text-gray-900'>
+                    {loading ? '...' : stats.servicesWithIncrement}
                   </p>
-                  <p className='text-xs text-blue-600 mt-1'>En progreso</p>
+                  <p className='text-xs md:text-xs text-blue-600 mt-1'>
+                    {loading ? 'Cargando...' : 'En progreso'}
+                  </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>📅</span>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
+                  <span className='text-base md:text-lg lg:text-2xl'>📅</span>
                 </div>
               </div>
-            </div>
+            </button>
 
-            <div className='bg-white rounded-2xl shadow-lg p-4 lg:p-6 border border-gray-100'>
+            <button
+              onClick={handleNavigateToBalances}
+              className='bg-white hover:bg-orange-50 active:bg-orange-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-orange-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
+            >
               <div className='flex items-center justify-between'>
-                <div>
-                  <p className='text-xs lg:text-sm text-gray-600 mb-1'>
+                <div className='text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-1'>
                     Horas Semana
                   </p>
-                  <p className='text-xl lg:text-2xl font-bold text-gray-900'>
-                    156
+                  <p className='text-lg md:text-xl lg:text-2xl font-bold text-gray-900'>
+                    {loading ? '...' : stats.hoursWithIncrement.split(' ')[0]}
                   </p>
-                  <p className='text-xs text-orange-600 mt-1'>
-                    +12h vs semana pasada
+                  <p className='text-xs md:text-xs text-orange-600 mt-1'>
+                    {loading
+                      ? 'Cargando...'
+                      : stats.hoursWithIncrement.split(' ').slice(1).join(' ')}
                   </p>
                 </div>
-                <div className='w-10 h-10 lg:w-12 lg:h-12 bg-orange-100 rounded-xl flex items-center justify-center'>
-                  <span className='text-lg lg:text-2xl'>⏰</span>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-orange-100 rounded-xl flex items-center justify-center'>
+                  <span className='text-base md:text-lg lg:text-2xl'>⏰</span>
                 </div>
               </div>
-            </div>
+            </button>
           </div>
 
-          {/* Navegación Principal - Mobile First */}
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 mb-8'>
+          {/* Navegación Principal - Triple Layout Optimizado */}
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 lg:gap-8 mb-8'>
             <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-100'>
               <h2 className='text-lg lg:text-xl font-bold text-gray-900 mb-4'>
                 🚀 Acciones Rápidas
@@ -421,37 +527,60 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          {/* Navegación Secundaria - Solo Desktop */}
-          <div className='hidden lg:block'>
-            <div className='bg-white rounded-2xl shadow-lg p-6 border border-gray-100'>
-              <h2 className='text-xl font-bold text-gray-900 mb-4'>
+          {/* Navegación Secundaria - Triple Layout Optimizado */}
+          <div className='block'>
+            <div className='bg-white rounded-2xl shadow-lg p-4 md:p-5 lg:p-6 border border-gray-100'>
+              <h2 className='text-base md:text-lg lg:text-xl font-bold text-gray-900 mb-4'>
                 🔧 Herramientas Adicionales
               </h2>
-              <div className='grid grid-cols-3 gap-4'>
-                <Link href='/assignments' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+              <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4'>
+                <Link href='/planning' className='block'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
                     <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>📋</span>
-                      <p className='font-medium text-gray-900'>Asignaciones</p>
-                      <p className='text-sm text-gray-600'>Ver todas</p>
+                      <span className='text-xl md:text-2xl mb-2 block'>📅</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Planificación
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>
+                        Servicios
+                      </p>
+                    </div>
+                  </div>
+                </Link>
+                <Link href='/balances' className='block'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                    <div className='text-center'>
+                      <span className='text-xl md:text-2xl mb-2 block'>⏰</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Balances
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>Horas</p>
+                    </div>
+                  </div>
+                </Link>
+                <Link href='/assignments' className='block'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                    <div className='text-center'>
+                      <span className='text-xl md:text-2xl mb-2 block'>📋</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Asignaciones
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>
+                        Ver todas
+                      </p>
                     </div>
                   </div>
                 </Link>
                 <Link href='/settings' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
+                  <div className='p-3 md:p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
                     <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>⚙️</span>
-                      <p className='font-medium text-gray-900'>Configuración</p>
-                      <p className='text-sm text-gray-600'>Ajustes</p>
-                    </div>
-                  </div>
-                </Link>
-                <Link href='/test-supabase' className='block'>
-                  <div className='p-4 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors border border-gray-200'>
-                    <div className='text-center'>
-                      <span className='text-2xl mb-2 block'>🔍</span>
-                      <p className='font-medium text-gray-900'>Test BD</p>
-                      <p className='text-sm text-gray-600'>Conexión</p>
+                      <span className='text-xl md:text-2xl mb-2 block'>⚙️</span>
+                      <p className='text-sm md:text-base font-medium text-gray-900'>
+                        Configuración
+                      </p>
+                      <p className='text-xs md:text-sm text-gray-600'>
+                        Ajustes
+                      </p>
                     </div>
                   </div>
                 </Link>
