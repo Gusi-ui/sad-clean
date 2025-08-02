@@ -43,7 +43,7 @@ export default function DashboardPage() {
         setGreeting('¡Buenas noches');
       }
     }
-  }, [user]);
+  }, [user?.email]);
 
   const handleSignOut = async () => {
     await signOut();

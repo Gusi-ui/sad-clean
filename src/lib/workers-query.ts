@@ -1,4 +1,6 @@
-import { type Worker, supabase } from './database';
+import type { Worker, WorkerInsert } from '@/types';
+
+import { supabase } from './database';
 
 /**
  * Consulta todos los workers de la base de datos
@@ -16,7 +18,7 @@ export const getAllWorkers = async (): Promise<Worker[]> => {
       throw error;
     }
 
-    return data ?? [];
+    return (data ?? []) as Worker[];
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error in getAllWorkers:', error);
@@ -41,7 +43,7 @@ export const getActiveWorkers = async (): Promise<Worker[]> => {
       throw error;
     }
 
-    return data ?? [];
+    return (data ?? []) as Worker[];
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error in getActiveWorkers:', error);
@@ -69,7 +71,7 @@ export const getWorkersByType = async (
       throw error;
     }
 
-    return data ?? [];
+    return (data ?? []) as Worker[];
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error in getWorkersByType:', error);
@@ -144,7 +146,7 @@ export const searchWorkers = async (searchTerm: string): Promise<Worker[]> => {
       throw error;
     }
 
-    return data ?? [];
+    return (data ?? []) as Worker[];
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error in searchWorkers:', error);
@@ -169,10 +171,77 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
       throw error;
     }
 
-    return data;
+    return data as Worker;
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Error in getWorkerById:', error);
+    throw error;
+  }
+};
+
+/**
+ * Actualiza los datos de un worker por ID
+ */
+export const updateWorker = async (
+  id: string,
+  updates: Partial<Worker>
+): Promise<Worker | null> => {
+  try {
+    const { data, error } = await supabase
+      .from('workers')
+      .update(updates)
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error updating worker:', error);
+      throw error;
+    }
+
+    return data as Worker;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error in updateWorker:', error);
+    throw error;
+  }
+};
+
+/**
+ * Crea un nuevo worker
+ */
+export const createWorker = async (worker: WorkerInsert): Promise<Worker> => {
+  const { data, error } = await supabase
+    .from('workers')
+    .insert(worker)
+    .select()
+    .single();
+
+  if (error !== null) {
+    // eslint-disable-next-line no-console
+    console.error('Error creating worker:', error);
+    throw error;
+  }
+
+  return data as Worker;
+};
+
+/**
+ * Elimina un worker por ID
+ */
+export const deleteWorker = async (id: string): Promise<void> => {
+  try {
+    const { error } = await supabase.from('workers').delete().eq('id', id);
+
+    if (error) {
+      // eslint-disable-next-line no-console
+      console.error('Error deleting worker:', error);
+      throw error;
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error in deleteWorker:', error);
     throw error;
   }
 };

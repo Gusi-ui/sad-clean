@@ -10,14 +10,8 @@ import Button from '@/components/ui/Button';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
-
-interface AdminUser {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin';
-  created_at: string;
-}
+import { createAdmin, getAdmins, resetAdminPassword } from '@/lib/admin-query';
+import type { User as AdminUser } from '@/types';
 
 export default function SuperDashboardPage() {
   const { user, signOut } = useAuth();
@@ -26,16 +20,43 @@ export default function SuperDashboardPage() {
   const [greeting, setGreeting] = useState<string>('');
   const [admins, setAdmins] = useState<AdminUser[]>([]);
   const [isCreateAdminModalOpen, setIsCreateAdminModalOpen] = useState(false);
+  const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] =
+    useState(false);
+  const [selectedAdminForReset, setSelectedAdminForReset] =
+    useState<AdminUser | null>(null);
+  const [resetPasswordData, setResetPasswordData] = useState({
+    password: '',
+    confirmPassword: '',
+  });
   const [newAdmin, setNewAdmin] = useState({
     email: '',
     password: '',
     name: '',
   });
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Limpiar mensajes después de un tiempo
+  useEffect(() => {
+    if (error !== null && error !== undefined) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [error]);
+
+  useEffect(() => {
+    if (successMessage !== null && successMessage !== undefined) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [successMessage]);
 
   // Obtener nombre del usuario y saludo personalizado
   useEffect(() => {
-    const metadataName = user?.user_metadata?.['name'] as string | undefined;
+    const metadataName = user?.name;
     if (
       metadataName !== undefined &&
       metadataName !== null &&
@@ -76,9 +97,21 @@ export default function SuperDashboardPage() {
 
   // Cargar administradores existentes
   useEffect(() => {
-    // Implementar carga desde Supabase en futuras versiones
-    // Por ahora, mantener solo el súper administrador actual
-    setAdmins([]);
+    const fetchAdmins = async () => {
+      try {
+        const adminUsers = await getAdmins();
+        setAdmins(adminUsers);
+      } catch (err) {
+        setError('No se pudieron cargar los administradores.');
+        // eslint-disable-next-line no-console
+        console.error(err);
+      }
+    };
+
+    fetchAdmins().catch((err) => {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching admins:', err);
+    });
   }, []);
 
   const handleSignOut = async () => {
@@ -86,24 +119,93 @@ export default function SuperDashboardPage() {
     router.push('/');
   };
 
-  const handleCreateAdmin = () => {
+  const handleCreateAdmin = async () => {
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!newAdmin.name || !newAdmin.email || !newAdmin.password) {
+      setError('Todos los campos son obligatorios.');
+      return;
+    }
+
     setLoading(true);
     try {
-      // Implementar creación en Supabase
-      const newAdminUser: AdminUser = {
-        id: Date.now().toString(),
+      const newAdminUser = await createAdmin({
         email: newAdmin.email,
+        password: newAdmin.password,
         name: newAdmin.name,
-        role: 'admin',
-        created_at: new Date().toISOString(),
-      };
+        surname: '',
+        phone: '',
+        address: '',
+        postal_code: '',
+        city: '',
+        medical_conditions: [],
+        emergency_contact: {
+          name: '',
+          phone: '',
+          relationship: '',
+        },
+      });
 
       setAdmins([...admins, newAdminUser]);
+      setSuccessMessage('¡Administrador creado con éxito!');
       setIsCreateAdminModalOpen(false);
       setNewAdmin({ email: '', password: '', name: '' });
-    } catch (error) {
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+      setError(`Error al crear el administrador: ${errorMessage}`);
       // eslint-disable-next-line no-console
-      console.error('Error creating admin:', error);
+      console.error('Error creating admin:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!selectedAdminForReset) return;
+
+    setError(null);
+    setSuccessMessage(null);
+
+    if (!resetPasswordData.password || !resetPasswordData.confirmPassword) {
+      setError('Todos los campos son obligatorios.');
+      return;
+    }
+
+    if (resetPasswordData.password !== resetPasswordData.confirmPassword) {
+      setError('Las contraseñas no coinciden.');
+      return;
+    }
+
+    if (resetPasswordData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres.');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await resetAdminPassword(
+        selectedAdminForReset.id,
+        resetPasswordData.password
+      );
+
+      if (result.success) {
+        setSuccessMessage(
+          `Contraseña actualizada para ${selectedAdminForReset.name}`
+        );
+        setIsResetPasswordModalOpen(false);
+        setSelectedAdminForReset(null);
+        setResetPasswordData({ password: '', confirmPassword: '' });
+      } else {
+        setError(result.message);
+      }
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+      setError(`Error al crear el administrador: ${errorMessage}`);
+      // eslint-disable-next-line no-console
+      console.error('Error creating admin:', err);
     } finally {
       setLoading(false);
     }
@@ -156,9 +258,9 @@ export default function SuperDashboardPage() {
             </div>
             <button
               onClick={() => {
-                handleSignOut().catch((error) => {
+                handleSignOut().catch((signOutError) => {
                   // eslint-disable-next-line no-console
-                  console.error('Error signing out:', error);
+                  console.error('Error signing out:', signOutError);
                 });
               }}
               className='text-gray-600 hover:text-gray-900 transition-colors'
@@ -209,9 +311,9 @@ export default function SuperDashboardPage() {
                 </Button>
                 <button
                   onClick={() => {
-                    handleSignOut().catch((error) => {
+                    handleSignOut().catch((signOutError) => {
                       // eslint-disable-next-line no-console
-                      console.error('Error signing out:', error);
+                      console.error('Error signing out:', signOutError);
                     });
                   }}
                   className='flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors'
@@ -234,6 +336,18 @@ export default function SuperDashboardPage() {
               </div>
             </div>
           </div>
+
+          {/* Mensajes de Error y Éxito */}
+          {error !== null && error !== undefined && (
+            <div className='mb-4 rounded-lg bg-red-100 p-4 text-center text-sm text-red-700'>
+              {error}
+            </div>
+          )}
+          {successMessage !== null && successMessage !== undefined && (
+            <div className='mb-4 rounded-lg bg-green-100 p-4 text-center text-sm text-green-700'>
+              {successMessage}
+            </div>
+          )}
 
           {/* Estadísticas - Mobile First */}
           <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8'>
@@ -486,6 +600,18 @@ export default function SuperDashboardPage() {
                         {new Date(admin.created_at).toLocaleDateString()}
                       </span>
                     </div>
+                    <div className='ml-2'>
+                      <button
+                        onClick={() => {
+                          setSelectedAdminForReset(admin);
+                          setIsResetPasswordModalOpen(true);
+                        }}
+                        className='text-xs bg-orange-100 hover:bg-orange-200 text-orange-800 px-2 py-1 rounded'
+                        title='Resetear contraseña'
+                      >
+                        🔑 Reset
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -628,15 +754,116 @@ export default function SuperDashboardPage() {
               </Button>
               <Button
                 className='bg-purple-600 hover:bg-purple-700 text-white'
-                onClick={handleCreateAdmin}
+                onClick={() => {
+                  handleCreateAdmin().catch((createAdminError) => {
+                    // eslint-disable-next-line no-console
+                    console.error('Error creating admin:', createAdminError);
+                  });
+                }}
                 disabled={
                   loading ||
-                  !newAdmin.name ||
-                  !newAdmin.email ||
-                  !newAdmin.password
+                  newAdmin.name === '' ||
+                  newAdmin.email === '' ||
+                  newAdmin.password === ''
                 }
               >
                 {loading ? 'Creando...' : 'Crear Administrador'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Reset Password Modal */}
+        <Modal
+          isOpen={isResetPasswordModalOpen}
+          onClose={() => {
+            setIsResetPasswordModalOpen(false);
+            setSelectedAdminForReset(null);
+            setResetPasswordData({ password: '', confirmPassword: '' });
+          }}
+          title={`Resetear Contraseña - ${selectedAdminForReset?.name}`}
+          size='md'
+        >
+          <div className='space-y-4'>
+            <div className='bg-orange-50 border border-orange-200 text-orange-800 rounded-lg p-3 text-sm'>
+              <strong>Atención:</strong> Esto cambiará la contraseña de{' '}
+              <strong>{selectedAdminForReset?.email}</strong> inmediatamente.
+            </div>
+
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Nueva Contraseña *
+              </label>
+              <Input
+                type='password'
+                className='w-full'
+                placeholder='Mínimo 6 caracteres'
+                value={resetPasswordData.password}
+                onChange={(e) =>
+                  setResetPasswordData({
+                    ...resetPasswordData,
+                    password: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Confirmar Contraseña *
+              </label>
+              <Input
+                type='password'
+                className='w-full'
+                placeholder='Repetir contraseña'
+                value={resetPasswordData.confirmPassword}
+                onChange={(e) =>
+                  setResetPasswordData({
+                    ...resetPasswordData,
+                    confirmPassword: e.target.value,
+                  })
+                }
+              />
+            </div>
+
+            {error !== null && error !== undefined && (
+              <div className='bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm'>
+                {error}
+              </div>
+            )}
+
+            {successMessage !== null && successMessage !== undefined && (
+              <div className='bg-green-50 border border-green-200 text-green-600 rounded-lg p-3 text-sm'>
+                {successMessage}
+              </div>
+            )}
+
+            <div className='flex justify-end space-x-3 pt-4'>
+              <Button
+                variant='outline'
+                onClick={() => {
+                  setIsResetPasswordModalOpen(false);
+                  setSelectedAdminForReset(null);
+                  setResetPasswordData({ password: '', confirmPassword: '' });
+                }}
+              >
+                Cancelar
+              </Button>
+              <Button
+                className='bg-orange-600 hover:bg-orange-700 text-white'
+                onClick={() => {
+                  handleResetPassword().catch((resetError) => {
+                    // eslint-disable-next-line no-console
+                    console.error('Error resetting password:', resetError);
+                  });
+                }}
+                disabled={
+                  loading ||
+                  resetPasswordData.password === '' ||
+                  resetPasswordData.confirmPassword === ''
+                }
+              >
+                {loading ? 'Reseteando...' : 'Resetear Contraseña'}
               </Button>
             </div>
           </div>

@@ -69,48 +69,6 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
 };
 
 /**
- * Crea un nuevo worker
- */
-export const createWorker = async (worker: WorkerInsert): Promise<Worker> => {
-  const { data, error } = await supabase
-    .from('workers')
-    .insert(worker)
-    .select()
-    .single();
-
-  if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating worker:', error);
-    throw error;
-  }
-
-  return data;
-};
-
-/**
- * Actualiza un worker
- */
-export const updateWorker = async (
-  id: string,
-  updates: WorkerUpdate
-): Promise<Worker> => {
-  const { data, error } = await supabase
-    .from('workers')
-    .update(updates)
-    .eq('id', id)
-    .select()
-    .single();
-
-  if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error updating worker:', error);
-    throw error;
-  }
-
-  return data;
-};
-
-/**
  * Obtiene asignaciones de un worker
  */
 export const getWorkerAssignments = async (

@@ -11,13 +11,12 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  type WorkerInsert,
-  type Worker as WorkerType,
-  type WorkerUpdate,
   createWorker,
+  deleteWorker,
   getActiveWorkers,
   updateWorker,
-} from '@/lib/database';
+} from '@/lib/workers-query';
+import type { WorkerInsert, Worker as WorkerType, WorkerUpdate } from '@/types';
 
 // Usar el tipo de la base de datos
 type Worker = WorkerType;
@@ -27,26 +26,19 @@ const isValidField = (field: unknown): field is string =>
   typeof field === 'string' && field.length > 0;
 
 export default function WorkersPage() {
-  const { user, getUserRole } = useAuth();
+  const { user } = useAuth();
   const [dashboardUrl, setDashboardUrl] = useState('/dashboard');
 
   // Determinar la URL del dashboard según el rol del usuario
   useEffect(() => {
-    const checkRole = async () => {
-      const role = await getUserRole();
-      if (role === 'super_admin') {
-        setDashboardUrl('/super-dashboard');
-      } else if (role === 'admin') {
-        setDashboardUrl('/dashboard');
-      } else if (role === 'worker') {
-        setDashboardUrl('/worker-dashboard');
-      }
-    };
-
-    checkRole().catch(() => {
-      // Error checking role
-    });
-  }, [user, getUserRole]);
+    if (user?.role === 'super_admin') {
+      setDashboardUrl('/super-dashboard');
+    } else if (user?.role === 'admin') {
+      setDashboardUrl('/dashboard');
+    } else if (user?.role === 'worker') {
+      setDashboardUrl('/worker-dashboard');
+    }
+  }, [user?.role]);
 
   const [workers, setWorkers] = useState<WorkerType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -58,6 +50,25 @@ export default function WorkersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingWorker, setEditingWorker] = useState<Partial<WorkerType>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Limpiar mensajes después de un tiempo
+  useEffect(() => {
+    if (error !== null && error !== undefined) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [error]);
+
+  useEffect(() => {
+    if (successMessage !== null && successMessage !== undefined) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [successMessage]);
 
   // Cargar trabajadoras desde Supabase
   useEffect(() => {
@@ -165,6 +176,7 @@ export default function WorkersPage() {
         const newWorker = await createWorker(workerData);
         setWorkers([...workers, newWorker]);
         setIsAddModalOpen(false);
+        setSuccessMessage('Trabajadora creada con éxito.');
       } else if (isEditModalOpen && selectedWorker) {
         // Validar campos requeridos antes de actualizar
         if (
@@ -173,7 +185,7 @@ export default function WorkersPage() {
           !isValidField(editingWorker.email) ||
           !isValidField(editingWorker.dni)
         ) {
-          // Opcional: mostrar un error al usuario
+          setError('Los campos marcados con * son obligatorios.');
           return;
         }
 
@@ -205,26 +217,41 @@ export default function WorkersPage() {
         }
 
         const updatedWorker = await updateWorker(selectedWorker.id, workerData);
-        const updatedWorkers = workers.map((w) => {
-          if (w.id === selectedWorker.id) {
-            return updatedWorker;
-          }
-          return w;
-        });
-        setWorkers(updatedWorkers);
-        setIsEditModalOpen(false);
+        if (updatedWorker) {
+          const updatedWorkers = workers.map((w) => {
+            if (w.id === selectedWorker.id) {
+              return updatedWorker;
+            }
+            return w;
+          });
+          setWorkers(updatedWorkers);
+          setIsEditModalOpen(false);
+          setSuccessMessage('Trabajadora actualizada con éxito.');
+        }
       }
       setEditingWorker({});
-    } catch {
-      // Error saving worker
-      // Aquí podrías mostrar un mensaje de error al usuario
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+      setError(`Error al guardar: ${errorMessage}`);
     }
   };
 
-  const handleDeleteWorker = (workerId: string) => {
-    const confirmed = true; // Simplified for demo
+  const handleDeleteWorker = async (workerId: string) => {
+    // eslint-disable-next-line no-alert
+    const confirmed = window.confirm(
+      '¿Estás seguro de que deseas eliminar a esta trabajadora? Esta acción no se puede deshacer.'
+    );
     if (confirmed) {
-      setWorkers(workers.filter((w) => w.id !== workerId));
+      try {
+        await deleteWorker(workerId);
+        setWorkers(workers.filter((w) => w.id !== workerId));
+        setSuccessMessage('Trabajadora eliminada con éxito.');
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+        setError(`Error al eliminar: ${errorMessage}`);
+      }
     }
   };
 
@@ -337,6 +364,18 @@ export default function WorkersPage() {
               Administra el equipo de servicios asistenciales
             </p>
           </div>
+
+          {/* Mensajes de Éxito y Error */}
+          {successMessage !== null && successMessage !== undefined && (
+            <div className='mb-4 rounded-lg bg-green-100 p-4 text-center text-sm text-green-700'>
+              {successMessage}
+            </div>
+          )}
+          {error !== null && error !== undefined && (
+            <div className='mb-4 rounded-lg bg-red-100 p-4 text-center text-sm text-red-700'>
+              {error}
+            </div>
+          )}
 
           {/* Stats Cards */}
           <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
@@ -557,7 +596,15 @@ export default function WorkersPage() {
                       </button>
                       <button
                         className='text-red-600 hover:text-red-900 transition-colors text-sm font-medium'
-                        onClick={() => handleDeleteWorker(worker.id)}
+                        onClick={() => {
+                          handleDeleteWorker(worker.id).catch((deleteError) => {
+                            // eslint-disable-next-line no-console
+                            console.error(
+                              'Error deleting worker:',
+                              deleteError
+                            );
+                          });
+                        }}
                       >
                         🗑️ Eliminar
                       </button>
@@ -654,7 +701,17 @@ export default function WorkersPage() {
                             </button>
                             <button
                               className='text-red-600 hover:text-red-900 transition-colors'
-                              onClick={() => handleDeleteWorker(worker.id)}
+                              onClick={() => {
+                                handleDeleteWorker(worker.id).catch(
+                                  (deleteError) => {
+                                    // eslint-disable-next-line no-console
+                                    console.error(
+                                      'Error deleting worker:',
+                                      deleteError
+                                    );
+                                  }
+                                );
+                              }}
                             >
                               🗑️ Eliminar
                             </button>

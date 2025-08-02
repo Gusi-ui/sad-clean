@@ -14,6 +14,15 @@ export interface AuthUser {
   updated_at: string;
 }
 
+// Alias para compatibilidad con AuthContext
+export interface AppUser {
+  id: string;
+  email: string;
+  name: string;
+  role: 'super_admin' | 'admin' | 'worker' | null;
+  user_metadata?: { [key: string]: string | number | boolean | null };
+}
+
 export interface LoginCredentials {
   email: string;
   password: string;
@@ -54,6 +63,10 @@ export interface CreateWorkerData {
 export interface UpdateWorkerData extends Partial<CreateWorkerData> {
   is_active?: boolean;
 }
+
+// Aliases para compatibilidad
+export type WorkerInsert = CreateWorkerData;
+export type WorkerUpdate = UpdateWorkerData;
 
 // ============================================================================
 // TIPOS DE USUARIO/CLIENTE
@@ -97,9 +110,18 @@ export interface CreateUserData {
   };
 }
 
+// Tipo específico para crear administradores que incluye contraseña
+export interface CreateAdminData extends Omit<CreateUserData, 'client_code'> {
+  password: string;
+}
+
 export interface UpdateUserData extends Partial<CreateUserData> {
   is_active?: boolean;
 }
+
+// Alias para compatibilidad
+export type UserInsert = CreateUserData;
+export type AdminInsert = CreateAdminData;
 
 // ============================================================================
 // TIPOS DE ASIGNACIÓN
