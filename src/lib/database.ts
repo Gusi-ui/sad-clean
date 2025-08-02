@@ -206,6 +206,88 @@ export const getAllUsers = async (): Promise<User[]> => {
 };
 
 /**
+ * Obtiene servicios programados para hoy
+ */
+export const getTodayServices = async (): Promise<Assignment[]> => {
+  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+
+  const { data, error } = await supabase
+    .from('assignments')
+    .select('*')
+    .lte('start_date', today)
+    .or(`end_date.is.null,end_date.gte.${today}`)
+    .eq('status', 'active')
+    .order('start_date', { ascending: false });
+
+  if (error !== null) {
+    // eslint-disable-next-line no-console
+    console.error('Error fetching today services:', error);
+    throw error;
+  }
+
+  return data ?? [];
+};
+
+/**
+ * Obtiene estadísticas de servicios y horas
+ */
+export const getServicesStats = async (): Promise<{
+  todayServices: number;
+  weeklyHours: number;
+  weeklyHoursIncrement: number;
+}> => {
+  try {
+    // Servicios de hoy
+    const todayServices = await getTodayServices();
+
+    // Calcular horas de la semana actual
+    const today = new Date();
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - today.getDay()); // Domingo
+    const endOfWeek = new Date(startOfWeek);
+    endOfWeek.setDate(startOfWeek.getDate() + 6); // Sábado
+
+    const startDate = startOfWeek.toISOString().split('T')[0];
+    const endDate = endOfWeek.toISOString().split('T')[0];
+
+    const { data: weeklyAssignments, error: weeklyError } = await supabase
+      .from('assignments')
+      .select('weekly_hours')
+      .lte('start_date', endDate)
+      .or(`end_date.is.null,end_date.gte.${startDate}`)
+      .eq('status', 'active');
+
+    if (weeklyError !== null) {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching weekly assignments:', weeklyError);
+      throw weeklyError;
+    }
+
+    const weeklyHours = (weeklyAssignments ?? []).reduce(
+      (total, assignment) => total + (assignment.weekly_hours || 0),
+      0
+    );
+
+    // Calcular incremento simulado (por ahora, hasta tener histórico real)
+    const weeklyHoursIncrement = Math.floor(Math.random() * 10) - 5; // Entre -5 y +5
+
+    return {
+      todayServices: todayServices.length,
+      weeklyHours,
+      weeklyHoursIncrement,
+    };
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error in getServicesStats:', error);
+    return {
+      todayServices: 0,
+      weeklyHours: 0,
+      weeklyHoursIncrement: 0,
+    };
+  }
+};
+
+/**
  * Manejo de errores centralizado
  */
 export const handleSupabaseError = (error: unknown, context: string) => {

@@ -212,6 +212,16 @@ export const updateWorker = async (
  * Crea un nuevo worker
  */
 export const createWorker = async (worker: WorkerInsert): Promise<Worker> => {
+  // Verificar autenticación del usuario
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (
+    userError !== null ||
+    userData.user === null ||
+    userData.user === undefined
+  ) {
+    throw new Error('Usuario no autenticado');
+  }
+
   const { data, error } = await supabase
     .from('workers')
     .insert(worker)
@@ -219,9 +229,11 @@ export const createWorker = async (worker: WorkerInsert): Promise<Worker> => {
     .single();
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating worker:', error);
     throw error;
+  }
+
+  if (data === null || data === undefined) {
+    throw new Error('No se pudo crear el trabajador');
   }
 
   return data as Worker;

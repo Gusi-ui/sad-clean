@@ -25,6 +25,7 @@ type Worker = WorkerType;
 const isValidField = (field: unknown): field is string =>
   typeof field === 'string' && field.length > 0;
 
+/* eslint-disable react/jsx-closing-tag-location */
 export default function WorkersPage() {
   const { user } = useAuth();
   const [dashboardUrl, setDashboardUrl] = useState('/dashboard');
@@ -42,6 +43,7 @@ export default function WorkersPage() {
 
   const [workers, setWorkers] = useState<WorkerType[]>([]);
   const [loading, setLoading] = useState(true);
+  const [savingWorker, setSavingWorker] = useState(false);
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -52,6 +54,121 @@ export default function WorkersPage() {
   const [editingWorker, setEditingWorker] = useState<Partial<WorkerType>>({});
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estados para modal de confirmación de eliminación
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [workerToDelete, setWorkerToDelete] = useState<Worker | null>(null);
+  const [deletingWorker, setDeletingWorker] = useState(false);
+
+  // Estados para validaciones del formulario de crear trabajadora
+  const [workerValidationErrors, setWorkerValidationErrors] = useState({
+    name: '',
+    surname: '',
+    email: '',
+    phone: '',
+    dni: '',
+  });
+
+  // Funciones de validación para trabajadoras
+  const validateWorkerName = (name: string): string => {
+    if (name.trim().length === 0) {
+      return 'El nombre es obligatorio';
+    }
+    if (name.trim().length < 2) {
+      return 'El nombre debe tener al menos 2 caracteres';
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(name.trim())) {
+      return 'El nombre solo puede contener letras y espacios';
+    }
+    return '';
+  };
+
+  const validateWorkerSurname = (surname: string): string => {
+    if (surname.trim().length === 0) {
+      return 'Los apellidos son obligatorios';
+    }
+    if (surname.trim().length < 2) {
+      return 'Los apellidos deben tener al menos 2 caracteres';
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(surname.trim())) {
+      return 'Los apellidos solo pueden contener letras y espacios';
+    }
+    return '';
+  };
+
+  const validateWorkerEmail = (email: string): string => {
+    if (email.trim().length === 0) {
+      return 'El email es obligatorio';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return 'Formato de email inválido';
+    }
+    return '';
+  };
+
+  const validateWorkerPhone = (phone: string): string => {
+    if (phone.trim().length === 0) {
+      return ''; // Teléfono es opcional
+    }
+    const phoneRegex =
+      /^[67]\d{8}$|^[89]\d{8}$|^\+34[67]\d{8}$|^\+34[89]\d{8}$/;
+    if (!phoneRegex.test(phone.trim().replace(/\s/g, ''))) {
+      return 'Formato de teléfono inválido (ej: 612345678 o +34612345678)';
+    }
+    return '';
+  };
+
+  const validateWorkerDni = (dni: string): string => {
+    if (dni.trim().length === 0) {
+      return 'El DNI es obligatorio';
+    }
+
+    const dniRegex = /^[0-9]{8}[TRWAGMYFPDXBNJZSQVHLCKE]$/i;
+    if (!dniRegex.test(dni.trim())) {
+      return 'Formato de DNI inválido (ej: 12345678A)';
+    }
+
+    // Validar letra del DNI
+    const dniNumber = dni.trim().slice(0, 8);
+    const dniLetter = dni.trim().slice(8).toUpperCase();
+    const letters = 'TRWAGMYFPDXBNJZSQVHLCKE';
+
+    const expectedLetter = letters[parseInt(dniNumber) % 23];
+
+    if (dniLetter !== expectedLetter) {
+      return 'La letra del DNI no es correcta';
+    }
+
+    return '';
+  };
+
+  const validateWorkerForm = (): boolean => {
+    const nameError = validateWorkerName(editingWorker.name ?? '');
+    const surnameError = validateWorkerSurname(editingWorker.surname ?? '');
+    const emailError = validateWorkerEmail(editingWorker.email ?? '');
+    const phoneError = validateWorkerPhone(editingWorker.phone ?? '');
+    const dniError = validateWorkerDni(editingWorker.dni ?? '');
+
+    setWorkerValidationErrors({
+      name: nameError,
+      surname: surnameError,
+      email: emailError,
+      phone: phoneError,
+      dni: dniError,
+    });
+
+    const isValid =
+      nameError === '' &&
+      surnameError === '' &&
+      emailError === '' &&
+      phoneError === '' &&
+      dniError === '';
+
+    return isValid;
+  };
+
+  // validateWorkerForm definida (sin log para evitar infinite re-renders)
 
   // Limpiar mensajes después de un tiempo
   useEffect(() => {
@@ -117,7 +234,17 @@ export default function WorkersPage() {
   };
 
   const handleAddWorker = () => {
+    // Limpiar todos los estados antes de abrir el modal
     setEditingWorker({});
+    setWorkerValidationErrors({
+      name: '',
+      surname: '',
+      email: '',
+      phone: '',
+      dni: '',
+    });
+    setError(null);
+    setSavingWorker(false);
     setIsAddModalOpen(true);
   };
 
@@ -133,49 +260,38 @@ export default function WorkersPage() {
   };
 
   const handleSaveWorker = async () => {
+    setSavingWorker(true);
+
     try {
       if (isAddModalOpen) {
-        // Agregar nueva trabajadora
-        if (
-          editingWorker.name === undefined ||
-          editingWorker.name === null ||
-          editingWorker.name.length === 0 ||
-          editingWorker.surname === undefined ||
-          editingWorker.surname === null ||
-          editingWorker.surname.length === 0 ||
-          editingWorker.email === undefined ||
-          editingWorker.email === null ||
-          editingWorker.email.length === 0 ||
-          editingWorker.dni === undefined ||
-          editingWorker.dni === null ||
-          editingWorker.dni.length === 0
-        ) {
-          // Campos requeridos faltantes
+        // Validar formulario antes de enviar
+        if (!validateWorkerForm()) {
+          setError('Por favor, corrige los errores en el formulario.');
+          setSavingWorker(false);
           return;
         }
 
-        const name = editingWorker.name;
-        const surname = editingWorker.surname;
-        const email = editingWorker.email;
-        const dni = editingWorker.dni;
-
         const workerData = {
-          name,
-          surname,
-          email,
-          phone: editingWorker.phone ?? '',
-          dni,
-          worker_type:
-            (editingWorker.worker_type as
-              | 'cuidadora'
-              | 'auxiliar'
-              | 'enfermera') ?? 'cuidadora',
+          name: editingWorker.name?.trim() ?? '',
+          surname: editingWorker.surname?.trim() ?? '',
+          email: editingWorker.email?.trim() ?? '',
+          phone: editingWorker.phone?.trim() ?? '',
+          dni: editingWorker.dni?.trim() ?? '',
+          worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
         } as WorkerInsert;
 
         const newWorker = await createWorker(workerData);
         setWorkers([...workers, newWorker]);
         setIsAddModalOpen(false);
+        setEditingWorker({});
+        setWorkerValidationErrors({
+          name: '',
+          surname: '',
+          email: '',
+          phone: '',
+          dni: '',
+        });
         setSuccessMessage('Trabajadora creada con éxito.');
       } else if (isEditModalOpen && selectedWorker) {
         // Validar campos requeridos antes de actualizar
@@ -186,6 +302,7 @@ export default function WorkersPage() {
           !isValidField(editingWorker.dni)
         ) {
           setError('Los campos marcados con * son obligatorios.');
+          setSavingWorker(false);
           return;
         }
 
@@ -234,24 +351,39 @@ export default function WorkersPage() {
       const errorMessage =
         err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
       setError(`Error al guardar: ${errorMessage}`);
+    } finally {
+      setSavingWorker(false);
     }
   };
 
-  const handleDeleteWorker = async (workerId: string) => {
-    // eslint-disable-next-line no-alert
-    const confirmed = window.confirm(
-      '¿Estás seguro de que deseas eliminar a esta trabajadora? Esta acción no se puede deshacer.'
-    );
-    if (confirmed) {
-      try {
-        await deleteWorker(workerId);
-        setWorkers(workers.filter((w) => w.id !== workerId));
-        setSuccessMessage('Trabajadora eliminada con éxito.');
-      } catch (err) {
-        const errorMessage =
-          err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
-        setError(`Error al eliminar: ${errorMessage}`);
-      }
+  // Función para abrir modal de confirmación de eliminación
+  const handleDeleteWorkerConfirm = (worker: Worker) => {
+    setWorkerToDelete(worker);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Función para cerrar modal de eliminación
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setWorkerToDelete(null);
+    setDeletingWorker(false);
+  };
+
+  // Función para ejecutar la eliminación
+  const handleDeleteWorker = async () => {
+    if (workerToDelete === null) return;
+
+    setDeletingWorker(true);
+    try {
+      await deleteWorker(workerToDelete.id);
+      setWorkers(workers.filter((w) => w.id !== workerToDelete.id));
+      setSuccessMessage('Trabajadora eliminada con éxito.');
+      handleDeleteModalClose();
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
+      setError(`Error al eliminar: ${errorMessage}`);
+      setDeletingWorker(false);
     }
   };
 
@@ -596,15 +728,7 @@ export default function WorkersPage() {
                       </button>
                       <button
                         className='text-red-600 hover:text-red-900 transition-colors text-sm font-medium'
-                        onClick={() => {
-                          handleDeleteWorker(worker.id).catch((deleteError) => {
-                            // eslint-disable-next-line no-console
-                            console.error(
-                              'Error deleting worker:',
-                              deleteError
-                            );
-                          });
-                        }}
+                        onClick={() => handleDeleteWorkerConfirm(worker)}
                       >
                         🗑️ Eliminar
                       </button>
@@ -677,17 +801,7 @@ export default function WorkersPage() {
                         </button>
                         <button
                           className='px-3 py-1 text-xs text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors whitespace-nowrap'
-                          onClick={() => {
-                            handleDeleteWorker(worker.id ?? 0).catch(
-                              (deleteError) => {
-                                // eslint-disable-next-line no-console
-                                console.error(
-                                  'Error deleting worker:',
-                                  deleteError
-                                );
-                              }
-                            );
-                          }}
+                          onClick={() => handleDeleteWorkerConfirm(worker)}
                         >
                           🗑️ Eliminar
                         </button>
@@ -785,17 +899,7 @@ export default function WorkersPage() {
                             </button>
                             <button
                               className='text-red-600 hover:text-red-900 transition-colors'
-                              onClick={() => {
-                                handleDeleteWorker(worker.id).catch(
-                                  (deleteError) => {
-                                    // eslint-disable-next-line no-console
-                                    console.error(
-                                      'Error deleting worker:',
-                                      deleteError
-                                    );
-                                  }
-                                );
-                              }}
+                              onClick={() => handleDeleteWorkerConfirm(worker)}
                             >
                               🗑️ Eliminar
                             </button>
@@ -857,130 +961,205 @@ export default function WorkersPage() {
         {/* Add Worker Modal */}
         <Modal
           isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          title='Agregar Nueva Trabajadora'
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setEditingWorker({});
+            setWorkerValidationErrors({
+              name: '',
+              surname: '',
+              email: '',
+              phone: '',
+              dni: '',
+            });
+            setError(null);
+            setSavingWorker(false);
+          }}
+          title='👷‍♀️ Agregar Nueva Trabajadora'
           size='lg'
         >
-          <div className='space-y-4'>
-            <div className='grid grid-cols-1 sm:grid-cols-2 gap-4'>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Nombre *
+          <div className='space-y-4 md:space-y-6'>
+            {/* Banner informativo */}
+            <div className='bg-blue-50 border border-blue-200 rounded-lg p-3 md:p-4'>
+              <div className='flex items-start space-x-2'>
+                <span className='text-blue-600 text-lg md:text-xl flex-shrink-0'>
+                  ℹ️
+                </span>
+                <div>
+                  <p className='text-sm md:text-base text-blue-800 font-medium'>
+                    Nueva Trabajadora del Sistema
+                  </p>
+                  <p className='text-xs md:text-sm text-blue-700 mt-1'>
+                    Las trabajadoras pueden gestionar servicios asistenciales
+                    domiciliarios y registrar sus actividades.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Formulario responsive */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6'>
+              {/* Nombre */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                  <span className='text-blue-600'>👤</span>
+                  <span>Nombre *</span>
                 </label>
                 <Input
-                  className='w-full'
-                  placeholder='María'
+                  className={`w-full ${
+                    workerValidationErrors.name !== ''
+                      ? 'border-red-300 focus:border-red-500'
+                      : 'border-gray-300 focus:border-blue-500'
+                  }`}
+                  placeholder='María Carmen'
                   value={editingWorker.name ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEditingWorker({
                       ...editingWorker,
                       name: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {workerValidationErrors.name !== '' && (
+                  <p className='text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{workerValidationErrors.name}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Apellidos *
+
+              {/* Apellidos */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                  <span className='text-blue-600'>👤</span>
+                  <span>Apellidos *</span>
                 </label>
                 <Input
-                  className='w-full'
+                  className={`w-full ${
+                    workerValidationErrors.surname !== ''
+                      ? 'border-red-300 focus:border-red-500'
+                      : 'border-gray-300 focus:border-blue-500'
+                  }`}
                   placeholder='García López'
                   value={editingWorker.surname ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEditingWorker({
                       ...editingWorker,
                       surname: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {workerValidationErrors.surname !== '' && (
+                  <p className='text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{workerValidationErrors.surname}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Email *
+
+              {/* Email */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                  <span className='text-blue-600'>📧</span>
+                  <span>Email *</span>
                 </label>
                 <Input
-                  className='w-full'
+                  className={`w-full ${
+                    workerValidationErrors.email !== ''
+                      ? 'border-red-300 focus:border-red-500'
+                      : 'border-gray-300 focus:border-blue-500'
+                  }`}
                   placeholder='maria.garcia@email.com'
                   type='email'
                   value={editingWorker.email ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEditingWorker({
                       ...editingWorker,
                       email: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {workerValidationErrors.email !== '' && (
+                  <p className='text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{workerValidationErrors.email}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Teléfono
+
+              {/* Teléfono */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                  <span className='text-blue-600'>📱</span>
+                  <span>Teléfono</span>
                 </label>
                 <Input
-                  className='w-full'
-                  placeholder='+34 600 123 456'
+                  className={`w-full ${
+                    workerValidationErrors.phone !== ''
+                      ? 'border-red-300 focus:border-red-500'
+                      : 'border-gray-300 focus:border-blue-500'
+                  }`}
+                  placeholder='612345678 o +34612345678'
                   type='tel'
                   value={editingWorker.phone ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEditingWorker({
                       ...editingWorker,
                       phone: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {workerValidationErrors.phone !== '' && (
+                  <p className='text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{workerValidationErrors.phone}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  DNI *
+
+              {/* DNI */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                  <span className='text-blue-600'>🆔</span>
+                  <span>DNI *</span>
                 </label>
                 <Input
-                  className='w-full'
+                  className={`w-full ${
+                    workerValidationErrors.dni !== ''
+                      ? 'border-red-300 focus:border-red-500'
+                      : 'border-gray-300 focus:border-blue-500'
+                  }`}
                   placeholder='12345678A'
                   type='text'
                   value={editingWorker.dni ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     setEditingWorker({
                       ...editingWorker,
                       dni: e.target.value,
-                    })
-                  }
+                    });
+                  }}
                 />
+                {workerValidationErrors.dni !== '' && (
+                  <p className='text-xs md:text-sm text-red-600 flex items-center space-x-1'>
+                    <span>⚠️</span>
+                    <span>{workerValidationErrors.dni}</span>
+                  </p>
+                )}
               </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Tipo de Trabajadora
+
+              {/* Estado */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                  <span className='text-blue-600'>⚡</span>
+                  <span>Estado</span>
                 </label>
                 <select
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                  value={editingWorker.worker_type ?? ''}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
-                    setEditingWorker({
-                      ...editingWorker,
-                      worker_type: e.target.value as
-                        | 'cuidadora'
-                        | 'auxiliar'
-                        | 'enfermera',
-                    })
-                  }
-                >
-                  <option value=''>Seleccionar tipo</option>
-                  <option value='cuidadora'>Cuidadora</option>
-                  <option value='auxiliar'>Auxiliar</option>
-                  <option value='enfermera'>Enfermera</option>
-                </select>
-              </div>
-              <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Estado
-                </label>
-                <select
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className='w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base'
                   value={
                     editingWorker.is_active === true
                       ? 'activa'
                       : editingWorker.is_active === false
                         ? 'inactiva'
-                        : ''
+                        : 'activa'
                   }
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setEditingWorker({
@@ -989,38 +1168,81 @@ export default function WorkersPage() {
                     })
                   }
                 >
-                  <option value=''>Seleccionar estado</option>
-                  <option value='activa'>Activa</option>
-                  <option value='inactiva'>Inactiva</option>
+                  <option value='activa'>✅ Activa</option>
+                  <option value='inactiva'>❌ Inactiva</option>
                 </select>
               </div>
             </div>
 
-            <div className='flex justify-end space-x-3 pt-4'>
+            {/* Botones de acción */}
+            <div className='flex flex-col md:flex-row justify-end space-y-3 md:space-y-0 md:space-x-3 pt-4 md:pt-6'>
               <Button
                 variant='outline'
+                className='w-full md:w-auto py-3 md:py-2 text-sm md:text-base'
                 onClick={() => {
                   setIsAddModalOpen(false);
                   setEditingWorker({});
+                  setWorkerValidationErrors({
+                    name: '',
+                    surname: '',
+                    email: '',
+                    phone: '',
+                    dni: '',
+                  });
+                  setError(null);
+                  setSavingWorker(false);
                 }}
               >
-                Cancelar
+                ❌ Cancelar
               </Button>
               <Button
-                className='bg-blue-600 hover:bg-blue-700 text-white'
+                className={`w-full md:w-auto py-3 md:py-2 text-sm md:text-base bg-blue-600 hover:bg-blue-700 text-white ${
+                  savingWorker ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
                 onClick={() => {
                   handleSaveWorker().catch(() => {
                     // Error saving worker
                   });
                 }}
                 disabled={
-                  !isValidField(editingWorker.name) ||
-                  !isValidField(editingWorker.surname) ||
-                  !isValidField(editingWorker.email) ||
-                  !isValidField(editingWorker.dni)
+                  savingWorker ||
+                  workerValidationErrors.name !== '' ||
+                  workerValidationErrors.surname !== '' ||
+                  workerValidationErrors.email !== '' ||
+                  workerValidationErrors.phone !== '' ||
+                  workerValidationErrors.dni !== '' ||
+                  (editingWorker.name ?? '').trim() === '' ||
+                  (editingWorker.surname ?? '').trim() === '' ||
+                  (editingWorker.email ?? '').trim() === '' ||
+                  (editingWorker.dni ?? '').trim() === ''
                 }
               >
-                Guardar Trabajadora
+                {savingWorker ? (
+                  <>
+                    <svg
+                      className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                    >
+                      <circle
+                        className='opacity-25'
+                        cx='12'
+                        cy='12'
+                        r='10'
+                        stroke='currentColor'
+                        strokeWidth='4'
+                      ></circle>
+                      <path
+                        className='opacity-75'
+                        fill='currentColor'
+                        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                      ></path>
+                    </svg>
+                    Guardando...
+                  </>
+                ) : (
+                  '👷‍♀️ Crear Trabajadora'
+                )}
               </Button>
             </div>
           </div>
@@ -1040,7 +1262,7 @@ export default function WorkersPage() {
                 <span className='text-2xl font-bold text-white'>
                   {editingWorker.name !== undefined &&
                   editingWorker.name !== null &&
-                  editingWorker.name.length > 0
+                  editingWorker.name.trim().length > 0
                     ? editingWorker.name
                         .split(' ')
                         .map((n) => n[0])
@@ -1183,6 +1405,8 @@ export default function WorkersPage() {
                 onClick={() => {
                   setIsEditModalOpen(false);
                   setEditingWorker({});
+                  setError(null);
+                  setSavingWorker(false);
                 }}
               >
                 Cancelar
@@ -1274,6 +1498,130 @@ export default function WorkersPage() {
                 onClick={() => setIsViewModalOpen(false)}
               >
                 Cerrar
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Modal de Confirmación de Eliminación */}
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={handleDeleteModalClose}
+          title='Confirmar Eliminación'
+          size='md'
+        >
+          <div className='space-y-6'>
+            {/* Mensaje de advertencia */}
+            <div className='bg-red-50 border border-red-200 rounded-lg p-4'>
+              <div className='flex items-center mb-3'>
+                <div className='flex-shrink-0'>
+                  <svg
+                    className='h-5 w-5 text-red-400'
+                    viewBox='0 0 20 20'
+                    fill='currentColor'
+                  >
+                    <path
+                      fillRule='evenodd'
+                      d='M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z'
+                      clipRule='evenodd'
+                    />
+                  </svg>
+                </div>
+                <h3 className='ml-3 text-sm font-medium text-red-800'>
+                  ⚠️ Acción Irreversible
+                </h3>
+              </div>
+              <p className='text-sm text-red-700'>
+                Esta acción no se puede deshacer. La trabajadora será eliminada
+                permanentemente del sistema.
+              </p>
+            </div>
+
+            {/* Información de la trabajadora */}
+            {workerToDelete && (
+              <div className='bg-gray-50 rounded-lg p-4'>
+                <div className='flex items-center space-x-4'>
+                  <div className='w-12 h-12 bg-gradient-to-br from-red-400 to-red-600 rounded-full flex items-center justify-center shadow-lg'>
+                    <span className='text-lg font-bold text-white'>
+                      {workerToDelete.name?.charAt(0) ?? '?'}
+                      {workerToDelete.surname?.charAt(0) ?? '?'}
+                    </span>
+                  </div>
+                  <div>
+                    <h4 className='text-lg font-semibold text-gray-900'>
+                      {workerToDelete.name} {workerToDelete.surname}
+                    </h4>
+                    <p className='text-sm text-gray-600'>
+                      {workerToDelete.email}
+                    </p>
+                    <p className='text-xs text-gray-500'>
+                      DNI: {workerToDelete.dni}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Pregunta de confirmación */}
+            <div className='text-center'>
+              <p className='text-gray-900 font-medium mb-2'>
+                ¿Estás seguro de que deseas eliminar a esta trabajadora?
+              </p>
+              <p className='text-sm text-gray-600'>
+                Esta acción eliminará permanentemente todos los datos asociados.
+              </p>
+            </div>
+
+            {/* Botones de acción */}
+            <div className='flex flex-col-reverse sm:flex-row sm:justify-end space-y-2 space-y-reverse sm:space-y-0 sm:space-x-3'>
+              <Button
+                variant='outline'
+                onClick={handleDeleteModalClose}
+                disabled={deletingWorker}
+                className='w-full sm:w-auto'
+              >
+                Cancelar
+              </Button>
+              <Button
+                variant='danger'
+                onClick={() => {
+                  handleDeleteWorker().catch((deleteError) => {
+                    // eslint-disable-next-line no-console
+                    console.error(
+                      'Error al eliminar trabajadora:',
+                      deleteError
+                    );
+                  });
+                }}
+                disabled={deletingWorker}
+                className='w-full sm:w-auto'
+              >
+                {deletingWorker ? (
+                  <>
+                    <svg
+                      className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                    >
+                      <circle
+                        className='opacity-25'
+                        cx='12'
+                        cy='12'
+                        r='10'
+                        stroke='currentColor'
+                        strokeWidth='4'
+                      ></circle>
+                      <path
+                        className='opacity-75'
+                        fill='currentColor'
+                        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                      ></path>
+                    </svg>
+                    Eliminando...
+                  </>
+                ) : (
+                  '🗑️ Eliminar Definitivamente'
+                )}
               </Button>
             </div>
           </div>

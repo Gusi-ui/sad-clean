@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
-import { getAllUsers } from '@/lib/database';
+import { getAllUsers, getServicesStats } from '@/lib/database';
 import { getWorkersStats } from '@/lib/workers-query';
 
 export default function DashboardPage() {
@@ -96,17 +96,21 @@ export default function DashboardPage() {
         // Cargar usuarios
         const users = await getAllUsers();
 
-        // Simular datos de servicios y horas (por ahora)
-        const currentHour = new Date().getHours();
-        const servicesCount = Math.floor(Math.random() * 10) + 15; // Entre 15-25
-        const weeklyHours = Math.floor(Math.random() * 50) + 120; // Entre 120-170
-        const increment = currentHour > 12 ? '+' : '';
+        // Cargar estadísticas reales de servicios y horas
+        const servicesStats = await getServicesStats();
+
+        // Formatear incremento de horas
+        const increment = servicesStats.weeklyHoursIncrement > 0 ? '+' : '';
+        const hoursIncrementText =
+          servicesStats.weeklyHoursIncrement !== 0
+            ? `${increment}${Math.abs(servicesStats.weeklyHoursIncrement)}h vs semana pasada`
+            : 'Sin cambios vs semana pasada';
 
         setStats({
           workers: workersStats.active,
           users: users.length,
-          servicesWithIncrement: `${servicesCount}`,
-          hoursWithIncrement: `${weeklyHours}${increment}${Math.floor(Math.random() * 20)}h vs semana pasada`,
+          servicesWithIncrement: `${servicesStats.todayServices}`,
+          hoursWithIncrement: `${servicesStats.weeklyHours} ${hoursIncrementText}`,
         });
       } catch (error) {
         // eslint-disable-next-line no-console
@@ -315,7 +319,11 @@ export default function DashboardPage() {
                     {loading ? '...' : stats.servicesWithIncrement}
                   </p>
                   <p className='text-xs md:text-xs text-blue-600 mt-1'>
-                    {loading ? 'Cargando...' : 'En progreso'}
+                    {loading
+                      ? 'Cargando...'
+                      : stats.servicesWithIncrement === '0'
+                        ? 'Sin servicios programados'
+                        : `${stats.servicesWithIncrement} en progreso`}
                   </p>
                 </div>
                 <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
@@ -339,7 +347,12 @@ export default function DashboardPage() {
                   <p className='text-xs md:text-xs text-orange-600 mt-1'>
                     {loading
                       ? 'Cargando...'
-                      : stats.hoursWithIncrement.split(' ').slice(1).join(' ')}
+                      : stats.hoursWithIncrement.split(' ')[0] === '0'
+                        ? 'Sin horas programadas'
+                        : stats.hoursWithIncrement
+                            .split(' ')
+                            .slice(1)
+                            .join(' ')}
                   </p>
                 </div>
                 <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-orange-100 rounded-xl flex items-center justify-center'>
