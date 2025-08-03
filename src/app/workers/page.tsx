@@ -17,6 +17,7 @@ import {
   updateWorker,
 } from '@/lib/workers-query';
 import type { WorkerInsert, Worker as WorkerType, WorkerUpdate } from '@/types';
+import { workerLogger } from '@/utils/logger';
 
 // Usar el tipo de la base de datos
 type Worker = WorkerType;
@@ -261,6 +262,7 @@ export default function WorkersPage() {
 
   const handleSaveWorker = async () => {
     setSavingWorker(true);
+    setError(null); // Limpiar errores previos
 
     try {
       if (isAddModalOpen) {
@@ -281,7 +283,12 @@ export default function WorkersPage() {
           is_active: editingWorker.is_active ?? true,
         } as WorkerInsert;
 
+        // Debug: log the data being sent
+        workerLogger.sendingData(workerData);
+
         const newWorker = await createWorker(workerData);
+        workerLogger.created(newWorker);
+
         setWorkers([...workers, newWorker]);
         setIsAddModalOpen(false);
         setEditingWorker({});
@@ -348,6 +355,7 @@ export default function WorkersPage() {
       }
       setEditingWorker({});
     } catch (err) {
+      workerLogger.error(err);
       const errorMessage =
         err instanceof Error ? err.message : 'Ocurrió un error desconocido.';
       setError(`Error al guardar: ${errorMessage}`);
@@ -1013,10 +1021,18 @@ export default function WorkersPage() {
                   placeholder='María Carmen'
                   value={editingWorker.name ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newValue = e.target.value;
                     setEditingWorker({
                       ...editingWorker,
-                      name: e.target.value,
+                      name: newValue,
                     });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    // Validar solo cuando se pierde el foco (más eficiente)
+                    setWorkerValidationErrors((prev) => ({
+                      ...prev,
+                      name: validateWorkerName(e.target.value),
+                    }));
                   }}
                 />
                 {workerValidationErrors.name !== '' && (
@@ -1042,10 +1058,18 @@ export default function WorkersPage() {
                   placeholder='García López'
                   value={editingWorker.surname ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newValue = e.target.value;
                     setEditingWorker({
                       ...editingWorker,
-                      surname: e.target.value,
+                      surname: newValue,
                     });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    // Validar solo cuando se pierde el foco (más eficiente)
+                    setWorkerValidationErrors((prev) => ({
+                      ...prev,
+                      surname: validateWorkerSurname(e.target.value),
+                    }));
                   }}
                 />
                 {workerValidationErrors.surname !== '' && (
@@ -1072,10 +1096,18 @@ export default function WorkersPage() {
                   type='email'
                   value={editingWorker.email ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newValue = e.target.value;
                     setEditingWorker({
                       ...editingWorker,
-                      email: e.target.value,
+                      email: newValue,
                     });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    // Validar solo cuando se pierde el foco (más eficiente)
+                    setWorkerValidationErrors((prev) => ({
+                      ...prev,
+                      email: validateWorkerEmail(e.target.value),
+                    }));
                   }}
                 />
                 {workerValidationErrors.email !== '' && (
@@ -1102,10 +1134,18 @@ export default function WorkersPage() {
                   type='tel'
                   value={editingWorker.phone ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newValue = e.target.value;
                     setEditingWorker({
                       ...editingWorker,
-                      phone: e.target.value,
+                      phone: newValue,
                     });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    // Validar solo cuando se pierde el foco (más eficiente)
+                    setWorkerValidationErrors((prev) => ({
+                      ...prev,
+                      phone: validateWorkerPhone(e.target.value),
+                    }));
                   }}
                 />
                 {workerValidationErrors.phone !== '' && (
@@ -1132,10 +1172,18 @@ export default function WorkersPage() {
                   type='text'
                   value={editingWorker.dni ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const newValue = e.target.value.toUpperCase();
                     setEditingWorker({
                       ...editingWorker,
-                      dni: e.target.value,
+                      dni: newValue,
                     });
+                  }}
+                  onBlur={(e: React.FocusEvent<HTMLInputElement>) => {
+                    // Validar solo cuando se pierde el foco (más eficiente)
+                    setWorkerValidationErrors((prev) => ({
+                      ...prev,
+                      dni: validateWorkerDni(e.target.value),
+                    }));
                   }}
                 />
                 {workerValidationErrors.dni !== '' && (

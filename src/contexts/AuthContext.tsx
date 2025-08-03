@@ -12,6 +12,7 @@ import React, {
 
 import { supabase } from '@/lib/database';
 import type { AppUser } from '@/types';
+import { authLogger } from '@/utils/logger';
 
 interface AuthError {
   message: string;
@@ -65,22 +66,81 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
 
   // Mover checkUserRole antes del useEffect
+  // Usar useMemo para cache del resultado y evitar re-ejecutar
   const checkUserRole = useCallback(
     async (userObj: User | null): Promise<AppUser | null> => {
       if (!userObj) return null;
 
-      if (userObj.email === 'conectomail@gmail.com') {
-        return {
-          id: userObj.id,
-          email: userObj.email ?? '',
-          name:
-            (userObj.user_metadata?.['name'] as string | undefined) ??
-            'Super Admin',
-          role: 'super_admin',
-        };
+      // Cache simple para evitar múltiples ejecuciones del mismo usuario
+      if (
+        userObj.email !== null &&
+        userObj.email === user?.email &&
+        user?.role
+      ) {
+        return user;
       }
 
       try {
+        // Debug logs (solo en desarrollo)
+        authLogger.userRole(userObj.email);
+
+        // Primero verificar si el rol está en los metadatos del usuario
+        const metaRole = userObj.user_metadata?.['role'] as string | undefined;
+        authLogger.metadata(metaRole);
+
+        // Si el rol está en metadata, usarlo directamente (más eficiente)
+        if (
+          metaRole !== null &&
+          metaRole !== undefined &&
+          ['super_admin', 'admin', 'worker'].includes(metaRole)
+        ) {
+          authLogger.usingRole(metaRole);
+          return {
+            id: userObj.id,
+            email: userObj.email ?? '',
+            name:
+              (userObj.user_metadata?.['name'] as string | undefined) ??
+              userObj.email?.split('@')[0] ??
+              'Usuario',
+            role: metaRole as 'super_admin' | 'admin' | 'worker',
+          };
+        }
+
+        // Si es súper admin por email
+        if (userObj.email === 'conectomail@gmail.com') {
+          authLogger.superAdminByEmail();
+          return {
+            id: userObj.id,
+            email: userObj.email ?? '',
+            name: 'Super Admin',
+            role: 'super_admin',
+          };
+        }
+
+        // Para admin por defecto (credenciales de prueba)
+        if (userObj.email === 'admin@sadlas.com') {
+          authLogger.adminDefault();
+          return {
+            id: userObj.id,
+            email: userObj.email ?? '',
+            name: 'Administrador',
+            role: 'admin',
+          };
+        }
+
+        // Para worker por defecto (credenciales de prueba)
+        if (userObj.email === 'maria.garcia@sadlas.com') {
+          authLogger.workerDefault();
+          return {
+            id: userObj.id,
+            email: userObj.email ?? '',
+            name: 'María García',
+            role: 'worker',
+          };
+        }
+
+        // Solo consultar auth_users si no hay metadata
+        authLogger.fetchingUserFromDb(userObj.id);
         const { data, error } = await supabase
           .from('auth_users')
           .select('role')
@@ -89,7 +149,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
         if (error) {
           // eslint-disable-next-line no-console
-          console.error('Error getting user role:', error);
+          console.warn(
+            'User not found in auth_users, treating as basic user:',
+            error
+          );
           return {
             id: userObj.id,
             email: userObj.email ?? '',
@@ -97,10 +160,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
               (userObj.user_metadata?.['name'] as string | undefined) ??
               userObj.email ??
               'Usuario',
-            role: null,
+            role: 'worker', // Default role
           };
         }
 
+        authLogger.userRoleFromDb(data?.role);
         return {
           id: userObj.id,
           email: userObj.email ?? '',
@@ -120,36 +184,58 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             (userObj.user_metadata?.['name'] as string | undefined) ??
             userObj.email ??
             'Usuario',
-          role: null,
+          role: 'worker', // Default role on error
         };
       }
     },
-    []
+    [user] // Dependencia completa para cache
   );
 
   useEffect(() => {
+    let isMounted = true;
+
     const getInitialSession = async () => {
       const {
         data: { session: initialSession },
       } = await supabase.auth.getSession();
+
+      if (!isMounted) return;
+
       setSession(initialSession);
-      const appUser = await checkUserRole(initialSession?.user ?? null);
-      setUser(appUser);
-      setLoading(false);
+      if (initialSession?.user) {
+        const appUser = await checkUserRole(initialSession.user);
+        if (isMounted) {
+          setUser(appUser);
+        }
+      }
+      if (isMounted) {
+        setLoading(false);
+      }
     };
 
     getInitialSession().catch((error) => {
-      // eslint-disable-next-line no-console
-      console.error('Error getting initial session:', error);
+      authLogger.sessionError(error);
+      if (isMounted) {
+        setLoading(false);
+      }
     });
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
       async (event: AuthChangeEvent, newSession: Session | null) => {
+        if (!isMounted) return;
+
         setSession(newSession);
-        const appUser = await checkUserRole(newSession?.user ?? null);
-        setUser(appUser);
+
+        if (newSession?.user) {
+          const appUser = await checkUserRole(newSession.user);
+          if (isMounted) {
+            setUser(appUser);
+          }
+        } else {
+          setUser(null);
+        }
 
         if (event === 'PASSWORD_RECOVERY') {
           setIsPasswordRecovery(true);
@@ -157,51 +243,48 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           setIsPasswordRecovery(false);
         }
 
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     );
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, [checkUserRole]);
 
   const signIn = async (
     email: string,
     password: string
   ): Promise<{ error: AuthError | null; redirectTo?: string }> => {
-    if (email === 'conectomail@gmail.com' && password === 'Federe_4231') {
-      const mockUser = {
-        id: 'super-admin-test',
-        email: 'conectomail@gmail.com',
-        user_metadata: { role: 'super_admin', name: 'alamia' },
-        app_metadata: {},
-        aud: 'authenticated',
-        created_at: new Date().toISOString(),
-      } as User;
-      const appUser = await checkUserRole(mockUser);
-      setUser(appUser);
-      return { error: null, redirectTo: '/super-dashboard' };
-    }
+    authLogger.signInStart(email);
 
     const { error: signInError } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
     if (signInError) {
+      authLogger.authError(signInError);
       return { error: signInError };
     }
 
-    const {
-      data: { user: currentUser },
-    } = await supabase.auth.getUser();
-    if (currentUser) {
-      const appUser = await checkUserRole(currentUser);
-      let redirectTo = '/dashboard';
-      if (appUser?.role === 'super_admin') redirectTo = '/super-dashboard';
-      if (appUser?.role === 'admin') redirectTo = '/dashboard';
-      if (appUser?.role === 'worker') redirectTo = '/worker-dashboard';
-      return { error: null, redirectTo };
-    }
-    return { error: null };
+    authLogger.signInSuccess();
+
+    // No necesitamos llamar checkUserRole aquí porque useEffect lo hará
+    // cuando detecte el cambio de sesión, evitando duplicación
+
+    // Determinar redirect basado en email como fallback rápido
+    let redirectTo = '/dashboard';
+    if (email === 'conectomail@gmail.com') redirectTo = '/super-dashboard';
+    if (email === 'info@alamia.es' || email === 'admin@sadlas.com')
+      redirectTo = '/dashboard';
+    if (email === 'maria.garcia@sadlas.com') redirectTo = '/worker-dashboard';
+
+    authLogger.quickRedirect(redirectTo);
+
+    return { error: null, redirectTo };
   };
 
   const signUp = async (
