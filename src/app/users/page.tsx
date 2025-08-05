@@ -172,20 +172,11 @@ export default function UsersPage() {
     return '';
   };
 
-  const validateUserClientCode = (clientCode: string): string => {
-    if (clientCode.trim().length === 0) {
-      return 'El código de usuario es obligatorio';
-    }
-    if (clientCode.trim().length < 3) {
-      return 'El código de usuario debe tener al menos 3 caracteres';
-    }
-    if (clientCode.trim().length > 20) {
-      return 'El código de usuario no puede tener más de 20 caracteres';
-    }
-    if (!/^[a-zA-Z0-9_-]+$/.test(clientCode.trim())) {
-      return 'El código de usuario solo puede contener letras, números, guiones y guiones bajos';
-    }
-    return '';
+  // Función para generar código de usuario automáticamente
+  const generateUserCode = (): string => {
+    const timestamp = Date.now().toString().slice(-6); // Últimos 6 dígitos del timestamp
+    const random = Math.random().toString(36).substring(2, 5).toUpperCase(); // 3 caracteres aleatorios
+    return `USR${timestamp}${random}`;
   };
 
   const validateUserForm = (): boolean => {
@@ -198,9 +189,6 @@ export default function UsersPage() {
       editingUser.postal_code ?? ''
     );
     const cityError = validateUserCity(editingUser.city ?? '');
-    const clientCodeError = validateUserClientCode(
-      editingUser.client_code ?? ''
-    );
 
     setUserValidationErrors({
       name: nameError,
@@ -210,7 +198,7 @@ export default function UsersPage() {
       address: addressError,
       postal_code: postalCodeError,
       city: cityError,
-      client_code: clientCodeError,
+      client_code: '', // Ya no se valida porque se auto-genera
     });
 
     return (
@@ -220,8 +208,7 @@ export default function UsersPage() {
       phoneError === '' &&
       addressError === '' &&
       postalCodeError === '' &&
-      cityError === '' &&
-      clientCodeError === ''
+      cityError === ''
     );
   };
 
@@ -277,7 +264,7 @@ export default function UsersPage() {
       address: '',
       postal_code: '',
       city: '',
-      client_code: '',
+      client_code: generateUserCode(), // Auto-generar código
       medical_conditions: [],
       emergency_contact: {
         name: '',
@@ -950,23 +937,12 @@ export default function UsersPage() {
                 </label>
                 <Input
                   value={editingUser.client_code ?? ''}
-                  onChange={(e) => {
-                    setEditingUser({
-                      ...editingUser,
-                      client_code: e.target.value,
-                    });
-                  }}
-                  className={
-                    userValidationErrors.client_code
-                      ? 'border-red-300 focus:border-red-500'
-                      : ''
-                  }
+                  readOnly
+                  className='bg-gray-50 cursor-not-allowed'
                 />
-                {userValidationErrors.client_code && (
-                  <p className='mt-1 text-sm text-red-600'>
-                    {userValidationErrors.client_code}
-                  </p>
-                )}
+                <p className='mt-1 text-xs text-gray-500'>
+                  Código auto-generado por el sistema
+                </p>
               </div>
             </div>
 
