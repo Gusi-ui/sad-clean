@@ -82,6 +82,9 @@ export default function UsersPage() {
     if (name.trim().length < 2) {
       return 'El nombre debe tener al menos 2 caracteres';
     }
+    if (name.trim().length > 50) {
+      return 'El nombre no puede tener más de 50 caracteres';
+    }
     if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(name.trim())) {
       return 'El nombre solo puede contener letras y espacios';
     }
@@ -95,6 +98,9 @@ export default function UsersPage() {
     if (surname.trim().length < 2) {
       return 'Los apellidos deben tener al menos 2 caracteres';
     }
+    if (surname.trim().length > 100) {
+      return 'Los apellidos no pueden tener más de 100 caracteres';
+    }
     if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(surname.trim())) {
       return 'Los apellidos solo pueden contener letras y espacios';
     }
@@ -102,8 +108,11 @@ export default function UsersPage() {
   };
 
   const validateUserEmail = (email: string): string => {
-    if (email.trim() === '') {
+    if (email.trim().length === 0) {
       return 'El email es obligatorio';
+    }
+    if (email.trim().length > 100) {
+      return 'El email no puede tener más de 100 caracteres';
     }
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
@@ -113,7 +122,7 @@ export default function UsersPage() {
   };
 
   const validateUserPhone = (phone: string): string => {
-    if (phone.trim() === '') {
+    if (phone.trim().length === 0) {
       return 'El teléfono es obligatorio';
     }
     const phoneRegex =
@@ -125,17 +134,20 @@ export default function UsersPage() {
   };
 
   const validateUserAddress = (address: string): string => {
-    if (address.trim() === '') {
+    if (address.trim().length === 0) {
       return 'La dirección es obligatoria';
     }
     if (address.trim().length < 5) {
       return 'La dirección debe tener al menos 5 caracteres';
     }
+    if (address.trim().length > 200) {
+      return 'La dirección no puede tener más de 200 caracteres';
+    }
     return '';
   };
 
   const validateUserPostalCode = (postalCode: string): string => {
-    if (postalCode.trim() === '') {
+    if (postalCode.trim().length === 0) {
       return 'El código postal es obligatorio';
     }
     if (!/^\d{5}$/.test(postalCode.trim())) {
@@ -145,21 +157,33 @@ export default function UsersPage() {
   };
 
   const validateUserCity = (city: string): string => {
-    if (city.trim() === '') {
+    if (city.trim().length === 0) {
       return 'La ciudad es obligatoria';
     }
     if (city.trim().length < 2) {
       return 'La ciudad debe tener al menos 2 caracteres';
     }
+    if (city.trim().length > 50) {
+      return 'La ciudad no puede tener más de 50 caracteres';
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(city.trim())) {
+      return 'La ciudad solo puede contener letras y espacios';
+    }
     return '';
   };
 
   const validateUserClientCode = (clientCode: string): string => {
-    if (clientCode.trim() === '') {
+    if (clientCode.trim().length === 0) {
       return 'El código de usuario es obligatorio';
     }
     if (clientCode.trim().length < 3) {
       return 'El código de usuario debe tener al menos 3 caracteres';
+    }
+    if (clientCode.trim().length > 20) {
+      return 'El código de usuario no puede tener más de 20 caracteres';
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(clientCode.trim())) {
+      return 'El código de usuario solo puede contener letras, números, guiones y guiones bajos';
     }
     return '';
   };
