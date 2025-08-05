@@ -349,14 +349,14 @@ export type Database = {
       };
       log_system_activity: {
         Args: {
+          p_activity_type: string;
+          p_entity_type: string;
+          p_description: string;
           p_user_id?: string;
           p_user_email?: string;
           p_user_name?: string;
-          p_activity_type: string;
-          p_entity_type: string;
           p_entity_id?: string;
           p_entity_name?: string;
-          p_description: string;
           p_details?: Json;
           p_ip_address?: string;
           p_user_agent?: string;

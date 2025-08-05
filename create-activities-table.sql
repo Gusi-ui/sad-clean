@@ -69,14 +69,14 @@ CREATE INDEX IF NOT EXISTS idx_system_activities_user_email ON system_activities
 -- ============================================================================
 
 CREATE OR REPLACE FUNCTION log_system_activity(
+  p_activity_type TEXT,
+  p_entity_type TEXT,
+  p_description TEXT,
   p_user_id UUID DEFAULT NULL,
   p_user_email TEXT DEFAULT NULL,
   p_user_name TEXT DEFAULT NULL,
-  p_activity_type TEXT,
-  p_entity_type TEXT,
   p_entity_id UUID DEFAULT NULL,
   p_entity_name TEXT DEFAULT NULL,
-  p_description TEXT,
   p_details JSONB DEFAULT '{}',
   p_ip_address INET DEFAULT NULL,
   p_user_agent TEXT DEFAULT NULL
