@@ -11,6 +11,11 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  logUserCreated,
+  logUserDeleted,
+  logUserUpdated,
+} from '@/lib/activities-query';
+import {
   createUser,
   deleteUser,
   getAllUsers,
@@ -322,6 +327,16 @@ export default function UsersPage() {
         setUsers([newUser, ...users]);
         setSuccessMessage('Usuario creado exitosamente');
         setIsAddModalOpen(false);
+
+        // Log de creación de usuario
+        if (user) {
+          await logUserCreated(
+            `${newUser.name} ${newUser.surname}`,
+            newUser.id,
+            (user.user_metadata?.['name'] as string) || 'Administrador',
+            user.email || ''
+          );
+        }
       } else {
         const updatedUser = await updateUser(
           editingUser.id ?? '',
@@ -333,6 +348,16 @@ export default function UsersPage() {
           );
           setSuccessMessage('Usuario actualizado exitosamente');
           setIsEditModalOpen(false);
+
+          // Log de actualización de usuario
+          if (user) {
+            await logUserUpdated(
+              `${updatedUser.name} ${updatedUser.surname}`,
+              updatedUser.id,
+              (user.user_metadata?.['name'] as string) || 'Administrador',
+              user.email || ''
+            );
+          }
         }
       }
       setEditingUser({});
@@ -366,6 +391,17 @@ export default function UsersPage() {
       setUsers(users.filter((u) => u.id !== userToDelete.id));
       setSuccessMessage('Usuario eliminado exitosamente');
       setIsDeleteModalOpen(false);
+
+      // Log de eliminación de usuario
+      if (user) {
+        await logUserDeleted(
+          `${userToDelete.name} ${userToDelete.surname}`,
+          userToDelete.id,
+          (user.user_metadata?.['name'] as string) || 'Administrador',
+          user.email || ''
+        );
+      }
+
       setUserToDelete(null);
     } catch (deleteError) {
       const errorMessage =

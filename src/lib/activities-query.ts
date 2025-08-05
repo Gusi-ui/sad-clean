@@ -295,3 +295,97 @@ export const logAdminDeleted = async (
     console.error('Error logging admin deletion:', error);
   }
 };
+
+/**
+ * Registra la creación de un usuario
+ */
+export const logUserCreated = async (
+  userName: string,
+  userId: string,
+  adminName: string,
+  adminEmail: string
+): Promise<void> => {
+  try {
+    await logActivity({
+      user_name: adminName,
+      user_email: adminEmail,
+      activity_type: 'user_created',
+      entity_type: 'user',
+      entity_id: userId,
+      entity_name: userName,
+      description: `Nuevo usuario "${userName}" añadido al sistema`,
+      details: {
+        action: 'create',
+        entity: 'user',
+        user_name: userName,
+        user_id: userId,
+      },
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error logging user creation:', error);
+    // No lanzar error para no interrumpir el flujo principal
+  }
+};
+
+/**
+ * Registra la actualización de un usuario
+ */
+export const logUserUpdated = async (
+  userName: string,
+  userId: string,
+  adminName: string,
+  adminEmail: string
+): Promise<void> => {
+  try {
+    await logActivity({
+      user_name: adminName,
+      user_email: adminEmail,
+      activity_type: 'user_updated',
+      entity_type: 'user',
+      entity_id: userId,
+      entity_name: userName,
+      description: `Usuario "${userName}" actualizado`,
+      details: {
+        action: 'update',
+        entity: 'user',
+        user_name: userName,
+        user_id: userId,
+      },
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error logging user update:', error);
+  }
+};
+
+/**
+ * Registra la eliminación de un usuario
+ */
+export const logUserDeleted = async (
+  userName: string,
+  userId: string,
+  adminName: string,
+  adminEmail: string
+): Promise<void> => {
+  try {
+    await logActivity({
+      user_name: adminName,
+      user_email: adminEmail,
+      activity_type: 'user_deleted',
+      entity_type: 'user',
+      entity_id: userId,
+      entity_name: userName,
+      description: `Usuario "${userName}" eliminado del sistema`,
+      details: {
+        action: 'delete',
+        entity: 'user',
+        user_name: userName,
+        user_id: userId,
+      },
+    });
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error logging user deletion:', error);
+  }
+};
