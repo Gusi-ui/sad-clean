@@ -271,12 +271,98 @@ export type Database = {
         };
         Relationships: [];
       };
+      system_activities: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          user_email: string | null;
+          user_name: string | null;
+          activity_type: string;
+          entity_type: string;
+          entity_id: string | null;
+          entity_name: string | null;
+          description: string;
+          details: Json;
+          ip_address: string | null;
+          user_agent: string | null;
+          created_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          user_email?: string | null;
+          user_name?: string | null;
+          activity_type: string;
+          entity_type: string;
+          entity_id?: string | null;
+          entity_name?: string | null;
+          description: string;
+          details?: Json;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          user_email?: string | null;
+          user_name?: string | null;
+          activity_type?: string;
+          entity_type?: string;
+          entity_id?: string | null;
+          entity_name?: string | null;
+          description?: string;
+          details?: Json;
+          ip_address?: string | null;
+          user_agent?: string | null;
+          created_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'system_activities_user_id_fkey';
+            columns: ['user_id'];
+            isOneToOne: false;
+            referencedRelation: 'auth_users';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      get_recent_activities: {
+        Args: {
+          limit_count: number;
+        };
+        Returns: {
+          id: string;
+          user_name: string | null;
+          activity_type: string;
+          entity_type: string;
+          entity_name: string | null;
+          description: string;
+          created_at: string | null;
+          time_ago: string;
+        }[];
+      };
+      log_system_activity: {
+        Args: {
+          p_user_id?: string;
+          p_user_email?: string;
+          p_user_name?: string;
+          p_activity_type: string;
+          p_entity_type: string;
+          p_entity_id?: string;
+          p_entity_name?: string;
+          p_description: string;
+          p_details?: Json;
+          p_ip_address?: string;
+          p_user_agent?: string;
+        };
+        Returns: string;
+      };
     };
     Enums: {
       [_ in never]: never;

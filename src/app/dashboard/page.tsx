@@ -7,8 +7,10 @@ import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
+import { getRecentActivities } from '@/lib/activities-query';
 import { getAllUsers, getServicesStats } from '@/lib/database';
 import { getWorkersStats } from '@/lib/workers-query';
+import type { Activity } from '@/types';
 
 export default function DashboardPage() {
   const { user, signOut } = useAuth();
@@ -41,6 +43,7 @@ export default function DashboardPage() {
     servicesWithIncrement: '',
     hoursWithIncrement: '',
   });
+  const [recentActivities, setRecentActivities] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
 
   // Obtener nombre del usuario y saludo personalizado
@@ -99,6 +102,9 @@ export default function DashboardPage() {
         // Cargar estadísticas reales de servicios y horas
         const servicesStats = await getServicesStats();
 
+        // Cargar actividades recientes
+        const activities = await getRecentActivities(6);
+
         // Formatear incremento de horas
         const increment = servicesStats.weeklyHoursIncrement > 0 ? '+' : '';
         const hoursIncrementText =
@@ -112,6 +118,8 @@ export default function DashboardPage() {
           servicesWithIncrement: `${servicesStats.todayServices}`,
           hoursWithIncrement: `${servicesStats.weeklyHours} ${hoursIncrementText}`,
         });
+
+        setRecentActivities(activities);
       } catch (error) {
         // eslint-disable-next-line no-console
         console.error('Error loading dashboard stats:', error);
@@ -122,6 +130,7 @@ export default function DashboardPage() {
           servicesWithIncrement: '0',
           hoursWithIncrement: '0h vs semana pasada',
         });
+        setRecentActivities([]);
       } finally {
         setLoading(false);
       }
@@ -492,50 +501,135 @@ export default function DashboardPage() {
                 📊 Actividad Reciente
               </h2>
               <div className='space-y-4'>
-                <div className='flex items-center space-x-3 p-3 bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl border border-blue-200'>
-                  <div className='w-10 h-10 bg-blue-600 rounded-full flex items-center justify-center'>
-                    <span className='text-white text-sm font-bold'>M</span>
-                  </div>
-                  <div className='flex-1'>
-                    <p className='text-sm font-medium text-gray-900'>
-                      María García
-                    </p>
-                    <p className='text-xs text-gray-600'>
-                      ✅ Completó servicio en Calle Mayor, 123
-                    </p>
-                  </div>
-                  <span className='text-xs text-gray-500'>2h</span>
-                </div>
+                {loading ? (
+                  // Estado de carga
+                  Array.from({ length: 3 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className='flex items-center space-x-3 p-3 bg-gray-50 rounded-xl border border-gray-200 animate-pulse'
+                    >
+                      <div className='w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center'>
+                        <div className='w-6 h-6 bg-gray-400 rounded'></div>
+                      </div>
+                      <div className='flex-1 space-y-2'>
+                        <div className='h-4 bg-gray-300 rounded w-3/4'></div>
+                        <div className='h-3 bg-gray-200 rounded w-1/2'></div>
+                      </div>
+                      <div className='w-8 h-4 bg-gray-300 rounded'></div>
+                    </div>
+                  ))
+                ) : recentActivities.length > 0 ? (
+                  // Actividades reales
+                  recentActivities.map((activity) => {
+                    const getActivityIcon = (type: string): string => {
+                      switch (type) {
+                        case 'worker_created':
+                          return '👷';
+                        case 'worker_updated':
+                          return '✏️';
+                        case 'worker_deleted':
+                          return '🗑️';
+                        case 'user_created':
+                          return '👤';
+                        case 'user_updated':
+                          return '✏️';
+                        case 'user_deleted':
+                          return '🗑️';
+                        case 'assignment_created':
+                          return '📅';
+                        case 'assignment_completed':
+                          return '✅';
+                        case 'admin_created':
+                          return '👑';
+                        case 'admin_updated':
+                          return '✏️';
+                        case 'admin_deleted':
+                          return '🗑️';
+                        case 'login':
+                          return '🔐';
+                        case 'logout':
+                          return '🚪';
+                        default:
+                          return '📝';
+                      }
+                    };
 
-                <div className='flex items-center space-x-3 p-3 bg-gradient-to-r from-green-50 to-green-100 rounded-xl border border-green-200'>
-                  <div className='w-10 h-10 bg-green-600 rounded-full flex items-center justify-center'>
-                    <span className='text-white text-sm font-bold'>A</span>
-                  </div>
-                  <div className='flex-1'>
-                    <p className='text-sm font-medium text-gray-900'>
-                      Ana López
-                    </p>
-                    <p className='text-xs text-gray-600'>
-                      🆕 Nuevo usuario registrado
-                    </p>
-                  </div>
-                  <span className='text-xs text-gray-500'>4h</span>
-                </div>
+                    const getActivityColor = (type: string): string => {
+                      switch (type) {
+                        case 'worker_created':
+                        case 'user_created':
+                        case 'admin_created':
+                          return 'from-green-50 to-green-100 border-green-200';
+                        case 'worker_updated':
+                        case 'user_updated':
+                        case 'admin_updated':
+                          return 'from-blue-50 to-blue-100 border-blue-200';
+                        case 'worker_deleted':
+                        case 'user_deleted':
+                        case 'admin_deleted':
+                          return 'from-red-50 to-red-100 border-red-200';
+                        case 'assignment_created':
+                          return 'from-purple-50 to-purple-100 border-purple-200';
+                        case 'assignment_completed':
+                          return 'from-green-50 to-green-100 border-green-200';
+                        case 'login':
+                          return 'from-blue-50 to-blue-100 border-blue-200';
+                        case 'logout':
+                          return 'from-gray-50 to-gray-100 border-gray-200';
+                        default:
+                          return 'from-gray-50 to-gray-100 border-gray-200';
+                      }
+                    };
 
-                <div className='flex items-center space-x-3 p-3 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl border border-purple-200'>
-                  <div className='w-10 h-10 bg-purple-600 rounded-full flex items-center justify-center'>
-                    <span className='text-white text-sm font-bold'>C</span>
-                  </div>
-                  <div className='flex-1'>
-                    <p className='text-sm font-medium text-gray-900'>
-                      Carlos Ruiz
+                    const getInitials = (name: string): string =>
+                      name
+                        .split(' ')
+                        .map((n) => n[0])
+                        .join('')
+                        .toUpperCase()
+                        .slice(0, 2);
+
+                    return (
+                      <div
+                        key={activity.id}
+                        className={`flex items-center space-x-3 p-3 bg-gradient-to-r ${getActivityColor(
+                          activity.activity_type
+                        )} rounded-xl border`}
+                      >
+                        <div className='w-10 h-10 bg-gray-600 rounded-full flex items-center justify-center'>
+                          <span className='text-white text-sm font-bold'>
+                            {activity.user_name !== null &&
+                            activity.user_name !== undefined
+                              ? getInitials(activity.user_name)
+                              : '👤'}
+                          </span>
+                        </div>
+                        <div className='flex-1'>
+                          <p className='text-sm font-medium text-gray-900'>
+                            {activity.user_name ?? 'Usuario del sistema'}
+                          </p>
+                          <p className='text-xs text-gray-600 flex items-center space-x-1'>
+                            <span>
+                              {getActivityIcon(activity.activity_type)}
+                            </span>
+                            <span>{activity.description}</span>
+                          </p>
+                        </div>
+                        <span className='text-xs text-gray-500'>
+                          {activity.time_ago ?? 'Reciente'}
+                        </span>
+                      </div>
+                    );
+                  })
+                ) : (
+                  // Estado vacío
+                  <div className='text-center py-8 text-gray-500'>
+                    <p className='text-sm'>No hay actividades recientes</p>
+                    <p className='text-xs mt-1'>
+                      Las actividades aparecerán aquí automáticamente
                     </p>
-                    <p className='text-xs text-gray-600'>
-                      📅 Asignación programada para mañana
-                    </p>
                   </div>
-                  <span className='text-xs text-gray-500'>6h</span>
-                </div>
+                )}
               </div>
             </div>
           </div>
