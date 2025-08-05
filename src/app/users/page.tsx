@@ -677,65 +677,217 @@ export default function UsersPage() {
             </div>
           </div>
 
-          {/* Users List */}
-          <div className='space-y-4'>
-            {loading ? (
-              // Loading skeleton
-              Array.from({ length: 3 }).map((_, index) => (
-                <Card key={index} className='p-4 animate-pulse'>
-                  <div className='flex items-center space-x-4'>
-                    <div className='w-12 h-12 bg-gray-300 rounded-full'></div>
-                    <div className='flex-1 space-y-2'>
-                      <div className='h-4 bg-gray-300 rounded w-3/4'></div>
-                      <div className='h-3 bg-gray-200 rounded w-1/2'></div>
+          {/* Loading State */}
+          {loading && (
+            <div className='text-center py-8'>
+              <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+              <p className='mt-2 text-gray-600'>Cargando usuarios...</p>
+            </div>
+          )}
+
+          {/* Users List - Mobile Cards */}
+          {!loading && (
+            <div className='md:hidden space-y-4'>
+              {filteredUsers.map((currentUser) => (
+                <Card
+                  key={currentUser.id}
+                  className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
+                >
+                  {/* Header con Avatar y Nombre */}
+                  <div className='flex items-center space-x-3 mb-3'>
+                    <div className='w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md'>
+                      <span className='text-sm font-bold text-white'>
+                        {currentUser.name.charAt(0).toUpperCase()}
+                        {currentUser.surname.charAt(0).toUpperCase()}
+                      </span>
                     </div>
-                    <div className='w-20 h-8 bg-gray-300 rounded'></div>
+                    <div className='flex-1'>
+                      <h3 className='font-medium text-gray-900 text-lg'>
+                        {currentUser.name} {currentUser.surname}
+                      </h3>
+                      <p className='text-sm text-gray-500'>
+                        Código: {currentUser.client_code}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Información de Contacto */}
+                  <div className='space-y-2 mb-4'>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>📧</span>
+                      <span className='text-sm text-gray-700'>
+                        {currentUser.email ?? 'Sin email'}
+                      </span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>📱</span>
+                      <span className='text-sm text-gray-700'>
+                        {currentUser.phone}
+                      </span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>📍</span>
+                      <span className='text-sm text-gray-700'>
+                        {currentUser.city}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Estado y Acciones */}
+                  <div className='flex items-center justify-between pt-3 border-t border-gray-100'>
+                    <div className='flex items-center space-x-2'>
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                          currentUser.is_active === true
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300'
+                        }`}
+                      >
+                        {currentUser.is_active === true ? 'Activo' : 'Inactivo'}
+                      </span>
+                    </div>
+
+                    {/* Acciones */}
+                    <div className='flex items-center space-x-3'>
+                      <button
+                        className='text-blue-600 hover:text-blue-900 transition-colors text-sm font-medium'
+                        onClick={() => handleViewUser(currentUser)}
+                      >
+                        👁️ Ver
+                      </button>
+                      <button
+                        className='text-indigo-600 hover:text-indigo-900 transition-colors text-sm font-medium'
+                        onClick={() => handleEditUser(currentUser)}
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        className='text-red-600 hover:text-red-900 transition-colors text-sm font-medium'
+                        onClick={() => handleDeleteUserConfirm(currentUser)}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
                   </div>
                 </Card>
-              ))
-            ) : filteredUsers.length > 0 ? (
-              // Users list
-              filteredUsers.map((currentUser) => (
-                <Card key={currentUser.id} className='p-4 lg:p-6'>
-                  <div className='flex items-center justify-between'>
-                    <div className='flex items-center space-x-4'>
-                      <div className='w-12 h-12 lg:w-16 lg:h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0'>
-                        <span className='text-blue-600 font-bold text-lg lg:text-xl'>
+              ))}
+            </div>
+          )}
+
+          {/* Users List - Tablet Hybrid Layout */}
+          {!loading && (
+            <div className='hidden md:block lg:hidden space-y-3'>
+              {filteredUsers.map((currentUser) => (
+                <Card
+                  key={currentUser.id}
+                  className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
+                >
+                  <div className='flex items-center gap-6'>
+                    {/* Avatar y información principal */}
+                    <div className='flex items-center space-x-4 flex-1'>
+                      <div className='w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0'>
+                        <span className='text-base font-bold text-white'>
                           {currentUser.name.charAt(0).toUpperCase()}
                           {currentUser.surname.charAt(0).toUpperCase()}
                         </span>
                       </div>
                       <div className='flex-1 min-w-0'>
-                        <h3 className='text-lg lg:text-xl font-semibold text-gray-900 truncate'>
+                        <h3 className='text-base font-semibold text-gray-900 mb-1'>
                           {currentUser.name} {currentUser.surname}
                         </h3>
-                        <p className='text-sm lg:text-base text-gray-600 truncate'>
+                        <p className='text-sm text-gray-600 mb-1'>
+                          Código: {currentUser.client_code}
+                        </p>
+                        <div className='flex flex-wrap items-center gap-3 text-sm text-gray-600'>
+                          <span>📧 {currentUser.email ?? 'Sin email'}</span>
+                          <span>📱 {currentUser.phone}</span>
+                          <span>📍 {currentUser.city}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Estado y acciones */}
+                    <div className='flex flex-col items-center gap-3 min-w-0'>
+                      <span
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                          currentUser.is_active === true
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300'
+                        }`}
+                      >
+                        {currentUser.is_active === true ? 'Activo' : 'Inactivo'}
+                      </span>
+
+                      <div className='flex space-x-2'>
+                        <button
+                          className='px-3 py-1 text-xs text-blue-600 hover:text-blue-900 hover:bg-blue-50 rounded transition-colors whitespace-nowrap'
+                          onClick={() => handleViewUser(currentUser)}
+                        >
+                          👁️ Ver
+                        </button>
+                        <button
+                          className='px-3 py-1 text-xs text-indigo-600 hover:text-indigo-900 hover:bg-indigo-50 rounded transition-colors whitespace-nowrap'
+                          onClick={() => handleEditUser(currentUser)}
+                        >
+                          ✏️ Editar
+                        </button>
+                        <button
+                          className='px-3 py-1 text-xs text-red-600 hover:text-red-900 hover:bg-red-50 rounded transition-colors whitespace-nowrap'
+                          onClick={() => handleDeleteUserConfirm(currentUser)}
+                        >
+                          🗑️ Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Users List - Desktop Layout */}
+          {!loading && (
+            <div className='hidden lg:block space-y-4'>
+              {filteredUsers.map((currentUser) => (
+                <Card key={currentUser.id} className='p-6'>
+                  <div className='flex items-center justify-between'>
+                    <div className='flex items-center space-x-4'>
+                      <div className='w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md flex-shrink-0'>
+                        <span className='text-xl font-bold text-white'>
+                          {currentUser.name.charAt(0).toUpperCase()}
+                          {currentUser.surname.charAt(0).toUpperCase()}
+                        </span>
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <h3 className='text-xl font-semibold text-gray-900 truncate'>
+                          {currentUser.name} {currentUser.surname}
+                        </h3>
+                        <p className='text-base text-gray-600 truncate'>
                           {currentUser.email ?? 'Sin email'}
                         </p>
-                        <p className='text-xs lg:text-sm text-gray-500 truncate'>
+                        <p className='text-sm text-gray-500 truncate'>
                           {currentUser.phone} • {currentUser.city}
                         </p>
-                        <p className='text-xs lg:text-sm text-gray-500 truncate'>
+                        <p className='text-sm text-gray-500 truncate'>
                           Código: {currentUser.client_code}
                         </p>
                       </div>
                     </div>
-                    <div className='flex flex-col lg:flex-row gap-2'>
+                    <div className='flex items-center space-x-4'>
                       <span
-                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
                           currentUser.is_active
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-red-100 text-red-800'
+                            ? 'bg-green-100 text-green-800 border border-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300'
                         }`}
                       >
                         {currentUser.is_active ? 'Activo' : 'Inactivo'}
                       </span>
-                      <div className='flex gap-1 lg:gap-2'>
+                      <div className='flex space-x-3'>
                         <Button
                           variant='outline'
                           size='sm'
                           onClick={() => handleViewUser(currentUser)}
-                          className='text-xs lg:text-sm'
                         >
                           👁️ Ver
                         </Button>
@@ -743,7 +895,6 @@ export default function UsersPage() {
                           variant='outline'
                           size='sm'
                           onClick={() => handleEditUser(currentUser)}
-                          className='text-xs lg:text-sm'
                         >
                           ✏️ Editar
                         </Button>
@@ -751,7 +902,7 @@ export default function UsersPage() {
                           variant='outline'
                           size='sm'
                           onClick={() => handleDeleteUserConfirm(currentUser)}
-                          className='text-xs lg:text-sm text-red-600 hover:text-red-700'
+                          className='text-red-600 hover:text-red-700'
                         >
                           🗑️ Eliminar
                         </Button>
@@ -759,28 +910,30 @@ export default function UsersPage() {
                     </div>
                   </div>
                 </Card>
-              ))
-            ) : (
-              // Empty state
-              <Card className='p-8 text-center'>
-                <div className='text-6xl mb-4'>👤</div>
-                <h3 className='text-lg font-medium text-gray-900 mb-2'>
-                  No hay usuarios
-                </h3>
-                <p className='text-gray-600 mb-4'>
-                  {searchTerm
-                    ? 'No se encontraron usuarios con ese criterio de búsqueda'
-                    : 'Aún no hay usuarios registrados en el sistema'}
-                </p>
-                <Button
-                  onClick={handleAddUser}
-                  className='bg-blue-600 hover:bg-blue-700 text-white'
-                >
-                  ➕ Agregar Primer Usuario
-                </Button>
-              </Card>
-            )}
-          </div>
+              ))}
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && filteredUsers.length === 0 && (
+            <Card className='p-8 text-center'>
+              <div className='text-6xl mb-4'>👤</div>
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                No hay usuarios
+              </h3>
+              <p className='text-gray-600 mb-4'>
+                {searchTerm
+                  ? 'No se encontraron usuarios con ese criterio de búsqueda'
+                  : 'Aún no hay usuarios registrados en el sistema'}
+              </p>
+              <Button
+                onClick={handleAddUser}
+                className='bg-blue-600 hover:bg-blue-700 text-white'
+              >
+                ➕ Agregar Primer Usuario
+              </Button>
+            </Card>
+          )}
         </div>
 
         {/* Add/Edit User Modal */}
