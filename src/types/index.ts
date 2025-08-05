@@ -121,6 +121,7 @@ export interface UpdateUserData extends Partial<CreateUserData> {
 
 // Alias para compatibilidad
 export type UserInsert = CreateUserData;
+export type UserUpdate = UpdateUserData;
 export type AdminInsert = CreateAdminData;
 
 // ============================================================================

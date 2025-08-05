@@ -1,168 +1,1129 @@
 'use client';
 
-import React from 'react';
+import { useEffect, useState } from 'react';
+
+import Link from 'next/link';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import Layout from '@/components/layout/Layout';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
+import { useAuth } from '@/contexts/AuthContext';
+import {
+  createUser,
+  deleteUser,
+  getAllUsers,
+  getUsersStats,
+  searchUsers,
+  updateUser,
+} from '@/lib/users-query';
+import type { User, UserInsert, UserUpdate } from '@/types';
 
 export default function UsersPage() {
-  return (
-    <ProtectedRoute>
-      <Layout>
-        <div className='p-4 lg:p-6'>
-          <div className='max-w-7xl mx-auto'>
-            {/* Header */}
-            <div className='mb-8'>
-              <h1 className='text-3xl font-bold text-gray-900 mb-2'>
-                👤 Gestión de Clientes
-              </h1>
-              <p className='text-gray-600'>
-                Administra los clientes del servicio SAD
-              </p>
-            </div>
+  const { user } = useAuth();
+  const [dashboardUrl, setDashboardUrl] = useState('/dashboard');
 
-            {/* Stats Cards */}
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8'>
-              <Card className='p-6'>
+  // Determinar la URL del dashboard según el rol del usuario
+  useEffect(() => {
+    if (user?.role === 'super_admin') {
+      setDashboardUrl('/super-dashboard');
+    } else if (user?.role === 'admin') {
+      setDashboardUrl('/dashboard');
+    } else if (user?.role === 'worker') {
+      setDashboardUrl('/worker-dashboard');
+    }
+  }, [user?.role]);
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [savingUser, setSavingUser] = useState(false);
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isViewModalOpen, setIsViewModalOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState('all');
+  const [editingUser, setEditingUser] = useState<Partial<User>>({});
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+
+  // Estados para modal de confirmación de eliminación
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [userToDelete, setUserToDelete] = useState<User | null>(null);
+  const [deletingUser, setDeletingUser] = useState(false);
+
+  // Estados para validaciones del formulario de crear usuario
+  const [userValidationErrors, setUserValidationErrors] = useState({
+    name: '',
+    surname: '',
+    email: '',
+    phone: '',
+    address: '',
+    postal_code: '',
+    city: '',
+    client_code: '',
+  });
+
+  // Estados para estadísticas
+  const [stats, setStats] = useState({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    withAssignments: 0,
+  });
+
+  // Funciones de validación para usuarios
+  const validateUserName = (name: string): string => {
+    if (name.trim().length === 0) {
+      return 'El nombre es obligatorio';
+    }
+    if (name.trim().length < 2) {
+      return 'El nombre debe tener al menos 2 caracteres';
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(name.trim())) {
+      return 'El nombre solo puede contener letras y espacios';
+    }
+    return '';
+  };
+
+  const validateUserSurname = (surname: string): string => {
+    if (surname.trim().length === 0) {
+      return 'Los apellidos son obligatorios';
+    }
+    if (surname.trim().length < 2) {
+      return 'Los apellidos deben tener al menos 2 caracteres';
+    }
+    if (!/^[a-zA-ZáéíóúÁÉÍÓÚüÜñÑ\s]+$/.test(surname.trim())) {
+      return 'Los apellidos solo pueden contener letras y espacios';
+    }
+    return '';
+  };
+
+  const validateUserEmail = (email: string): string => {
+    if (email.trim() === '') {
+      return 'El email es obligatorio';
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      return 'Formato de email inválido';
+    }
+    return '';
+  };
+
+  const validateUserPhone = (phone: string): string => {
+    if (phone.trim() === '') {
+      return 'El teléfono es obligatorio';
+    }
+    const phoneRegex =
+      /^[67]\d{8}$|^[89]\d{8}$|^\+34[67]\d{8}$|^\+34[89]\d{8}$/;
+    if (!phoneRegex.test(phone.trim().replace(/\s/g, ''))) {
+      return 'Formato de teléfono inválido (ej: 612345678 o +34612345678)';
+    }
+    return '';
+  };
+
+  const validateUserAddress = (address: string): string => {
+    if (address.trim() === '') {
+      return 'La dirección es obligatoria';
+    }
+    if (address.trim().length < 5) {
+      return 'La dirección debe tener al menos 5 caracteres';
+    }
+    return '';
+  };
+
+  const validateUserPostalCode = (postalCode: string): string => {
+    if (postalCode.trim() === '') {
+      return 'El código postal es obligatorio';
+    }
+    if (!/^\d{5}$/.test(postalCode.trim())) {
+      return 'El código postal debe tener 5 dígitos';
+    }
+    return '';
+  };
+
+  const validateUserCity = (city: string): string => {
+    if (city.trim() === '') {
+      return 'La ciudad es obligatoria';
+    }
+    if (city.trim().length < 2) {
+      return 'La ciudad debe tener al menos 2 caracteres';
+    }
+    return '';
+  };
+
+  const validateUserClientCode = (clientCode: string): string => {
+    if (clientCode.trim() === '') {
+      return 'El código de cliente es obligatorio';
+    }
+    if (clientCode.trim().length < 3) {
+      return 'El código de cliente debe tener al menos 3 caracteres';
+    }
+    return '';
+  };
+
+  const validateUserForm = (): boolean => {
+    const nameError = validateUserName(editingUser.name ?? '');
+    const surnameError = validateUserSurname(editingUser.surname ?? '');
+    const emailError = validateUserEmail(editingUser.email ?? '');
+    const phoneError = validateUserPhone(editingUser.phone ?? '');
+    const addressError = validateUserAddress(editingUser.address ?? '');
+    const postalCodeError = validateUserPostalCode(
+      editingUser.postal_code ?? ''
+    );
+    const cityError = validateUserCity(editingUser.city ?? '');
+    const clientCodeError = validateUserClientCode(
+      editingUser.client_code ?? ''
+    );
+
+    setUserValidationErrors({
+      name: nameError,
+      surname: surnameError,
+      email: emailError,
+      phone: phoneError,
+      address: addressError,
+      postal_code: postalCodeError,
+      city: cityError,
+      client_code: clientCodeError,
+    });
+
+    return (
+      nameError === '' &&
+      surnameError === '' &&
+      emailError === '' &&
+      phoneError === '' &&
+      addressError === '' &&
+      postalCodeError === '' &&
+      cityError === '' &&
+      clientCodeError === ''
+    );
+  };
+
+  // Cargar usuarios y estadísticas
+  useEffect(() => {
+    const loadUsers = async () => {
+      try {
+        setLoading(true);
+        const [usersData, statsData] = await Promise.all([
+          getAllUsers(),
+          getUsersStats(),
+        ]);
+        setUsers(usersData);
+        setStats(statsData);
+      } catch (err) {
+        setError('Error al cargar los usuarios');
+        // eslint-disable-next-line no-console
+        console.error('Error loading users:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadUsers().catch((loadError) => {
+      // eslint-disable-next-line no-console
+      console.error('Error loading users:', loadError);
+    });
+  }, []);
+
+  // Limpiar mensajes después de un tiempo
+  useEffect(() => {
+    if (error !== null && error !== undefined) {
+      const timer = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [error]);
+
+  useEffect(() => {
+    if (successMessage !== null && successMessage !== undefined) {
+      const timer = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+    return undefined;
+  }, [successMessage]);
+
+  const handleAddUser = () => {
+    setEditingUser({
+      name: '',
+      surname: '',
+      email: '',
+      phone: '',
+      address: '',
+      postal_code: '',
+      city: '',
+      client_code: '',
+      medical_conditions: [],
+      emergency_contact: {
+        name: '',
+        phone: '',
+        relationship: '',
+      },
+      is_active: true,
+    });
+    setUserValidationErrors({
+      name: '',
+      surname: '',
+      email: '',
+      phone: '',
+      address: '',
+      postal_code: '',
+      city: '',
+      client_code: '',
+    });
+    setIsAddModalOpen(true);
+  };
+
+  const handleEditUser = (currentUser: User) => {
+    setEditingUser({ ...currentUser });
+    setUserValidationErrors({
+      name: '',
+      surname: '',
+      email: '',
+      phone: '',
+      address: '',
+      postal_code: '',
+      city: '',
+      client_code: '',
+    });
+    setIsEditModalOpen(true);
+  };
+
+  const handleViewUser = (currentUser: User) => {
+    setSelectedUser(currentUser);
+    setIsViewModalOpen(true);
+  };
+
+  const handleSaveUser = async () => {
+    if (!validateUserForm()) {
+      setError('Por favor, corrige los errores en el formulario');
+      return;
+    }
+
+    setSavingUser(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      if (isAddModalOpen) {
+        const newUser = await createUser(editingUser as UserInsert);
+        setUsers([newUser, ...users]);
+        setSuccessMessage('Usuario creado exitosamente');
+        setIsAddModalOpen(false);
+      } else {
+        const updatedUser = await updateUser(
+          editingUser.id ?? '',
+          editingUser as UserUpdate
+        );
+        if (updatedUser) {
+          setUsers(
+            users.map((u) => (u.id === updatedUser.id ? updatedUser : u))
+          );
+          setSuccessMessage('Usuario actualizado exitosamente');
+          setIsEditModalOpen(false);
+        }
+      }
+      setEditingUser({});
+    } catch (err) {
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error desconocido';
+      setError(`Error al guardar el usuario: ${errorMessage}`);
+    } finally {
+      setSavingUser(false);
+    }
+  };
+
+  const handleDeleteUserConfirm = (currentUser: User) => {
+    setUserToDelete(currentUser);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleDeleteModalClose = () => {
+    setIsDeleteModalOpen(false);
+    setUserToDelete(null);
+  };
+
+  const handleDeleteUser = async () => {
+    if (!userToDelete) return;
+
+    setDeletingUser(true);
+    setError(null);
+
+    try {
+      await deleteUser(userToDelete.id);
+      setUsers(users.filter((u) => u.id !== userToDelete.id));
+      setSuccessMessage('Usuario eliminado exitosamente');
+      setIsDeleteModalOpen(false);
+      setUserToDelete(null);
+    } catch (deleteError) {
+      const errorMessage =
+        deleteError instanceof Error
+          ? deleteError.message
+          : 'Error desconocido';
+      setError(`Error al eliminar el usuario: ${errorMessage}`);
+    } finally {
+      setDeletingUser(false);
+    }
+  };
+
+  const handleSearch = async (term: string): Promise<void> => {
+    setSearchTerm(term);
+    try {
+      if (term.trim() === '') {
+        const allUsers = await getAllUsers();
+        setUsers(allUsers);
+      } else {
+        const searchResults = await searchUsers(term);
+        setUsers(searchResults);
+      }
+    } catch (searchError) {
+      // eslint-disable-next-line no-console
+      console.error('Error searching users:', searchError);
+    }
+  };
+
+  // Filtrar usuarios según el estado seleccionado
+  const filteredUsers = users.filter((currentUser) => {
+    if (filterStatus === 'all') return true;
+    if (filterStatus === 'active') return currentUser.is_active === true;
+    if (filterStatus === 'inactive') return currentUser.is_active !== true;
+    return true;
+  });
+
+  return (
+    <ProtectedRoute requiredRole='admin'>
+      <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
+        {/* Header Móvil */}
+        <header className='bg-white shadow-sm border-b border-gray-200 lg:hidden'>
+          <div className='px-4 py-3 flex items-center justify-between'>
+            <div className='flex items-center space-x-3'>
+              <div className='w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden'>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 64 64'
+                  width='32'
+                  height='32'
+                  className='w-full h-full'
+                >
+                  <defs>
+                    <linearGradient
+                      id='mobileUsersLogoGradient'
+                      x1='0%'
+                      y1='0%'
+                      x2='100%'
+                      y2='100%'
+                    >
+                      <stop offset='0%' stopColor='#3b82f6' />
+                      <stop offset='100%' stopColor='#22c55e' />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx='32'
+                    cy='32'
+                    r='30'
+                    fill='url(#mobileUsersLogoGradient)'
+                  />
+                  <path
+                    d='M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z'
+                    fill='white'
+                    stroke='white'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                  />
+                </svg>
+              </div>
+              <span className='text-lg font-bold text-gray-900'>SAD</span>
+            </div>
+            <Link
+              href={dashboardUrl}
+              className='text-gray-600 hover:text-gray-900 transition-colors'
+            >
+              <svg
+                className='w-6 h-6'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M10 19l-7-7m0 0l7-7m-7 7h18'
+                />
+              </svg>
+            </Link>
+          </div>
+        </header>
+
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'>
+          {/* Header Desktop */}
+          <div className='hidden lg:block mb-8'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+                  👤 Gestión de Clientes
+                </h1>
+                <p className='text-gray-600 text-lg'>
+                  Administra los clientes del servicio SAD
+                </p>
+              </div>
+              <Link
+                href={dashboardUrl}
+                className='inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              >
+                <svg
+                  className='w-4 h-4 mr-2'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M10 19l-7-7m0 0l7-7m-7 7h18'
+                  />
+                </svg>
+                Volver al Dashboard
+              </Link>
+            </div>
+          </div>
+
+          {/* Header Mobile */}
+          <div className='lg:hidden mb-6'>
+            <h1 className='text-2xl font-bold text-gray-900 mb-2'>
+              👤 Gestión de Clientes
+            </h1>
+            <p className='text-gray-600 text-sm'>
+              Administra los clientes del servicio SAD
+            </p>
+          </div>
+
+          {/* Mensajes de Éxito y Error */}
+          {successMessage !== null && successMessage !== undefined && (
+            <div className='mb-4 rounded-lg bg-green-100 p-4 text-center text-sm text-green-700'>
+              {successMessage}
+            </div>
+          )}
+          {error !== null && error !== undefined && (
+            <div className='mb-4 rounded-lg bg-red-100 p-4 text-center text-sm text-red-700'>
+              {error}
+            </div>
+          )}
+
+          {/* Stats Cards */}
+          <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
+            <div
+              onClick={() => setFilterStatus('all')}
+              className='cursor-pointer'
+            >
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-200'>
                 <div className='flex items-center'>
-                  <div className='p-2 bg-blue-100 rounded-lg'>
-                    <span className='text-2xl'>👤</span>
-                  </div>
-                  <div className='ml-4'>
-                    <p className='text-sm font-medium text-gray-600'>
+                  <div className='text-2xl lg:text-3xl mr-3'>👤</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
                       Total Clientes
                     </p>
-                    <p className='text-2xl font-bold text-gray-900'>45</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className='p-6'>
-                <div className='flex items-center'>
-                  <div className='p-2 bg-green-100 rounded-lg'>
-                    <span className='text-2xl'>✅</span>
-                  </div>
-                  <div className='ml-4'>
-                    <p className='text-sm font-medium text-gray-600'>Activos</p>
-                    <p className='text-2xl font-bold text-gray-900'>38</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className='p-6'>
-                <div className='flex items-center'>
-                  <div className='p-2 bg-yellow-100 rounded-lg'>
-                    <span className='text-2xl'>📋</span>
-                  </div>
-                  <div className='ml-4'>
-                    <p className='text-sm font-medium text-gray-600'>
-                      Con Asignación
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.total}
                     </p>
-                    <p className='text-2xl font-bold text-gray-900'>32</p>
-                  </div>
-                </div>
-              </Card>
-
-              <Card className='p-6'>
-                <div className='flex items-center'>
-                  <div className='p-2 bg-purple-100 rounded-lg'>
-                    <span className='text-2xl'>🆕</span>
-                  </div>
-                  <div className='ml-4'>
-                    <p className='text-sm font-medium text-gray-600'>
-                      Nuevos Este Mes
-                    </p>
-                    <p className='text-2xl font-bold text-gray-900'>7</p>
                   </div>
                 </div>
               </Card>
             </div>
+            <div
+              onClick={() => setFilterStatus('active')}
+              className='cursor-pointer'
+            >
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>✅</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Activos
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.active}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            <div
+              onClick={() => setFilterStatus('inactive')}
+              className='cursor-pointer'
+            >
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>⏸️</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Inactivos
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.inactive}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            <div className='cursor-pointer'>
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>📋</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Con Asignación
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.withAssignments}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
 
-            {/* Actions */}
-            <div className='mb-6'>
-              <Button className='bg-blue-600 hover:bg-blue-700 text-white'>
+          {/* Search and Actions */}
+          <div className='mb-6 space-y-4'>
+            {/* Search Bar */}
+            <div className='relative'>
+              <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+                <svg
+                  className='h-5 w-5 text-gray-400'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
+                  />
+                </svg>
+              </div>
+              <Input
+                type='text'
+                placeholder='Buscar clientes por nombre, apellido o email...'
+                value={searchTerm}
+                onChange={(e) => {
+                  handleSearch(e.target.value).catch((searchError) => {
+                    // eslint-disable-next-line no-console
+                    console.error('Error in search:', searchError);
+                  });
+                }}
+                className='pl-10'
+              />
+            </div>
+
+            {/* Action Buttons */}
+            <div className='flex flex-col sm:flex-row gap-3'>
+              <Button
+                onClick={handleAddUser}
+                className='bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto'
+              >
                 ➕ Agregar Cliente
               </Button>
             </div>
+          </div>
 
-            {/* Users Table */}
-            <Card className='overflow-hidden'>
-              <div className='px-6 py-4 border-b border-gray-200'>
-                <h3 className='text-lg font-medium text-gray-900'>
-                  Lista de Clientes
-                </h3>
-              </div>
-              <div className='overflow-x-auto'>
-                <table className='min-w-full divide-y divide-gray-200'>
-                  <thead className='bg-gray-50'>
-                    <tr>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Cliente
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Estado
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Asignaciones
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Última Visita
-                      </th>
-                      <th className='px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider'>
-                        Acciones
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className='bg-white divide-y divide-gray-200'>
-                    <tr>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        <div className='flex items-center'>
-                          <div className='flex-shrink-0 h-10 w-10'>
-                            <div className='h-10 w-10 rounded-full bg-green-100 flex items-center justify-center'>
-                              <span className='text-sm font-medium text-green-600'>
-                                AM
-                              </span>
-                            </div>
-                          </div>
-                          <div className='ml-4'>
-                            <div className='text-sm font-medium text-gray-900'>
-                              Ana Martínez
-                            </div>
-                            <div className='text-sm text-gray-500'>
-                              ana.martinez@email.com
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap'>
-                        <span className='inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800'>
-                          Activo
+          {/* Users List */}
+          <div className='space-y-4'>
+            {loading ? (
+              // Loading skeleton
+              Array.from({ length: 3 }).map((_, index) => (
+                <Card key={index} className='p-4 animate-pulse'>
+                  <div className='flex items-center space-x-4'>
+                    <div className='w-12 h-12 bg-gray-300 rounded-full'></div>
+                    <div className='flex-1 space-y-2'>
+                      <div className='h-4 bg-gray-300 rounded w-3/4'></div>
+                      <div className='h-3 bg-gray-200 rounded w-1/2'></div>
+                    </div>
+                    <div className='w-20 h-8 bg-gray-300 rounded'></div>
+                  </div>
+                </Card>
+              ))
+            ) : filteredUsers.length > 0 ? (
+              // Users list
+              filteredUsers.map((currentUser) => (
+                <Card key={currentUser.id} className='p-4 lg:p-6'>
+                  <div className='flex items-center justify-between'>
+                    <div className='flex items-center space-x-4'>
+                      <div className='w-12 h-12 lg:w-16 lg:h-16 bg-blue-100 rounded-full flex items-center justify-center flex-shrink-0'>
+                        <span className='text-blue-600 font-bold text-lg lg:text-xl'>
+                          {currentUser.name.charAt(0).toUpperCase()}
+                          {currentUser.surname.charAt(0).toUpperCase()}
                         </span>
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
-                        2 asignaciones
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm text-gray-900'>
-                        Ayer
-                      </td>
-                      <td className='px-6 py-4 whitespace-nowrap text-sm font-medium'>
-                        <Button variant='outline' size='sm' className='mr-2'>
-                          Editar
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <h3 className='text-lg lg:text-xl font-semibold text-gray-900 truncate'>
+                          {currentUser.name} {currentUser.surname}
+                        </h3>
+                        <p className='text-sm lg:text-base text-gray-600 truncate'>
+                          {currentUser.email ?? 'Sin email'}
+                        </p>
+                        <p className='text-xs lg:text-sm text-gray-500 truncate'>
+                          {currentUser.phone} • {currentUser.city}
+                        </p>
+                        <p className='text-xs lg:text-sm text-gray-500 truncate'>
+                          Código: {currentUser.client_code}
+                        </p>
+                      </div>
+                    </div>
+                    <div className='flex flex-col lg:flex-row gap-2'>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                          currentUser.is_active
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-red-100 text-red-800'
+                        }`}
+                      >
+                        {currentUser.is_active ? 'Activo' : 'Inactivo'}
+                      </span>
+                      <div className='flex gap-1 lg:gap-2'>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleViewUser(currentUser)}
+                          className='text-xs lg:text-sm'
+                        >
+                          👁️ Ver
                         </Button>
-                        <Button variant='outline' size='sm'>
-                          Ver
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleEditUser(currentUser)}
+                          className='text-xs lg:text-sm'
+                        >
+                          ✏️ Editar
                         </Button>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </Card>
+                        <Button
+                          variant='outline'
+                          size='sm'
+                          onClick={() => handleDeleteUserConfirm(currentUser)}
+                          className='text-xs lg:text-sm text-red-600 hover:text-red-700'
+                        >
+                          🗑️ Eliminar
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </Card>
+              ))
+            ) : (
+              // Empty state
+              <Card className='p-8 text-center'>
+                <div className='text-6xl mb-4'>👤</div>
+                <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                  No hay clientes
+                </h3>
+                <p className='text-gray-600 mb-4'>
+                  {searchTerm
+                    ? 'No se encontraron clientes con ese criterio de búsqueda'
+                    : 'Aún no hay clientes registrados en el sistema'}
+                </p>
+                <Button
+                  onClick={handleAddUser}
+                  className='bg-blue-600 hover:bg-blue-700 text-white'
+                >
+                  ➕ Agregar Primer Cliente
+                </Button>
+              </Card>
+            )}
           </div>
         </div>
-      </Layout>
+
+        {/* Add/Edit User Modal */}
+        <Modal
+          isOpen={isAddModalOpen || isEditModalOpen}
+          onClose={() => {
+            setIsAddModalOpen(false);
+            setIsEditModalOpen(false);
+            setEditingUser({});
+            setUserValidationErrors({
+              name: '',
+              surname: '',
+              email: '',
+              phone: '',
+              address: '',
+              postal_code: '',
+              city: '',
+              client_code: '',
+            });
+          }}
+          title={isAddModalOpen ? '➕ Agregar Cliente' : '✏️ Editar Cliente'}
+          size='lg'
+        >
+          <div className='space-y-4'>
+            {/* Personal Information */}
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Nombre *
+                </label>
+                <Input
+                  value={editingUser.name ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({ ...editingUser, name: e.target.value });
+                  }}
+                  className={
+                    userValidationErrors.name
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.name && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.name}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Apellidos *
+                </label>
+                <Input
+                  value={editingUser.surname ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({ ...editingUser, surname: e.target.value });
+                  }}
+                  className={
+                    userValidationErrors.surname
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.surname && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.surname}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Email
+                </label>
+                <Input
+                  type='email'
+                  value={editingUser.email ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({ ...editingUser, email: e.target.value });
+                  }}
+                  className={
+                    userValidationErrors.email
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.email && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.email}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Teléfono *
+                </label>
+                <Input
+                  type='tel'
+                  value={editingUser.phone ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({ ...editingUser, phone: e.target.value });
+                  }}
+                  className={
+                    userValidationErrors.phone
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.phone && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.phone}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Address Information */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-1'>
+                Dirección *
+              </label>
+              <Input
+                value={editingUser.address ?? ''}
+                onChange={(e) => {
+                  setEditingUser({ ...editingUser, address: e.target.value });
+                }}
+                className={
+                  userValidationErrors.address
+                    ? 'border-red-300 focus:border-red-500'
+                    : ''
+                }
+              />
+              {userValidationErrors.address && (
+                <p className='mt-1 text-sm text-red-600'>
+                  {userValidationErrors.address}
+                </p>
+              )}
+            </div>
+
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Código Postal *
+                </label>
+                <Input
+                  value={editingUser.postal_code ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({
+                      ...editingUser,
+                      postal_code: e.target.value,
+                    });
+                  }}
+                  className={
+                    userValidationErrors.postal_code
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.postal_code && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.postal_code}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Ciudad *
+                </label>
+                <Input
+                  value={editingUser.city ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({ ...editingUser, city: e.target.value });
+                  }}
+                  className={
+                    userValidationErrors.city
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.city && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.city}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Código Cliente *
+                </label>
+                <Input
+                  value={editingUser.client_code ?? ''}
+                  onChange={(e) => {
+                    setEditingUser({
+                      ...editingUser,
+                      client_code: e.target.value,
+                    });
+                  }}
+                  className={
+                    userValidationErrors.client_code
+                      ? 'border-red-300 focus:border-red-500'
+                      : ''
+                  }
+                />
+                {userValidationErrors.client_code && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {userValidationErrors.client_code}
+                  </p>
+                )}
+              </div>
+            </div>
+
+            {/* Status */}
+            <div>
+              <label className='flex items-center'>
+                <input
+                  type='checkbox'
+                  checked={editingUser.is_active ?? true}
+                  onChange={(e) =>
+                    setEditingUser({
+                      ...editingUser,
+                      is_active: e.target.checked,
+                    })
+                  }
+                  className='rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50'
+                />
+                <span className='ml-2 text-sm text-gray-700'>
+                  Cliente activo
+                </span>
+              </label>
+            </div>
+          </div>
+
+          <div className='flex justify-end space-x-3 mt-6'>
+            <Button
+              variant='outline'
+              onClick={() => {
+                setIsAddModalOpen(false);
+                setIsEditModalOpen(false);
+                setEditingUser({});
+              }}
+              disabled={savingUser}
+            >
+              Cancelar
+            </Button>
+            <Button
+              onClick={() => {
+                handleSaveUser().catch((saveError) => {
+                  // eslint-disable-next-line no-console
+                  console.error('Error saving user:', saveError);
+                });
+              }}
+              disabled={savingUser}
+              className='bg-blue-600 hover:bg-blue-700 text-white'
+            >
+              {savingUser ? 'Guardando...' : 'Guardar Cliente'}
+            </Button>
+          </div>
+        </Modal>
+
+        {/* View User Modal */}
+        <Modal
+          isOpen={isViewModalOpen}
+          onClose={() => {
+            setIsViewModalOpen(false);
+            setSelectedUser(null);
+          }}
+          title='👤 Detalles del Cliente'
+          size='md'
+        >
+          {selectedUser && (
+            <div className='space-y-4'>
+              <div className='flex items-center space-x-4'>
+                <div className='w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center'>
+                  <span className='text-blue-600 font-bold text-xl'>
+                    {selectedUser.name.charAt(0).toUpperCase()}
+                    {selectedUser.surname.charAt(0).toUpperCase()}
+                  </span>
+                </div>
+                <div>
+                  <h3 className='text-xl font-semibold text-gray-900'>
+                    {selectedUser.name} {selectedUser.surname}
+                  </h3>
+                  <p className='text-gray-600'>{selectedUser.email}</p>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                      selectedUser.is_active
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {selectedUser.is_active ? 'Activo' : 'Inactivo'}
+                  </span>
+                </div>
+              </div>
+
+              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Teléfono
+                  </label>
+                  <p className='text-sm text-gray-900'>{selectedUser.phone}</p>
+                </div>
+                <div>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Código Cliente
+                  </label>
+                  <p className='text-sm text-gray-900'>
+                    {selectedUser.client_code}
+                  </p>
+                </div>
+                <div className='md:col-span-2'>
+                  <label className='block text-sm font-medium text-gray-700'>
+                    Dirección
+                  </label>
+                  <p className='text-sm text-gray-900'>
+                    {selectedUser.address}
+                    <br />
+                    {selectedUser.postal_code} {selectedUser.city}
+                  </p>
+                </div>
+              </div>
+
+              <div className='flex justify-end space-x-3 pt-4'>
+                <Button
+                  variant='outline'
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    handleEditUser(selectedUser);
+                  }}
+                >
+                  ✏️ Editar
+                </Button>
+                <Button
+                  variant='outline'
+                  onClick={() => {
+                    setIsViewModalOpen(false);
+                    handleDeleteUserConfirm(selectedUser);
+                  }}
+                  className='text-red-600 hover:text-red-700'
+                >
+                  🗑️ Eliminar
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Delete Confirmation Modal */}
+        <Modal
+          isOpen={isDeleteModalOpen}
+          onClose={handleDeleteModalClose}
+          title='🗑️ Eliminar Cliente'
+          size='md'
+        >
+          <div className='space-y-4'>
+            <div className='bg-red-50 border border-red-200 text-red-800 rounded-lg p-4'>
+              <p className='font-medium'>
+                ¿Estás seguro de que quieres eliminar a{' '}
+                <strong>
+                  {userToDelete?.name} {userToDelete?.surname}
+                </strong>
+                ?
+              </p>
+              <p className='text-sm mt-2'>
+                Esta acción no se puede deshacer. Se eliminarán todos los datos
+                asociados al cliente.
+              </p>
+            </div>
+
+            <div className='flex justify-end space-x-3'>
+              <Button variant='outline' onClick={handleDeleteModalClose}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  handleDeleteUser().catch((deleteError) => {
+                    // eslint-disable-next-line no-console
+                    console.error('Error deleting user:', deleteError);
+                  });
+                }}
+                disabled={deletingUser}
+                className='bg-red-600 hover:bg-red-700 text-white'
+              >
+                {deletingUser ? 'Eliminando...' : 'Eliminar Cliente'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      </div>
     </ProtectedRoute>
   );
 }
