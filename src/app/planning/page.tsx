@@ -329,7 +329,7 @@ export default function PlanningPage() {
 
           {/* Weekly Schedule - Mobile Layout */}
           {!loading && (
-            <div className='lg:hidden space-y-4 mb-8'>
+            <div className='md:hidden space-y-4 mb-8'>
               {weekDates.map((date, index) => {
                 const dayAssignments = getAssignmentsForDate(date);
                 return (
@@ -392,6 +392,76 @@ export default function PlanningPage() {
                   </Card>
                 );
               })}
+            </div>
+          )}
+
+          {/* Weekly Schedule - Tablet Layout */}
+          {!loading && (
+            <div className='hidden md:block lg:hidden mb-8'>
+              <div className='grid grid-cols-2 gap-4'>
+                {weekDates.map((date, index) => {
+                  const dayAssignments = getAssignmentsForDate(date);
+                  return (
+                    <Card
+                      key={index}
+                      className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
+                    >
+                      <div className='text-center mb-4'>
+                        <h3 className='font-semibold text-gray-900'>
+                          {formatWeekday(date)}
+                        </h3>
+                        <p className='text-sm text-gray-500'>
+                          {formatDate(date)}
+                        </p>
+                      </div>
+
+                      {dayAssignments.length > 0 ? (
+                        <div className='space-y-2'>
+                          {dayAssignments.map((assignment) => (
+                            <div
+                              key={assignment.id}
+                              className={`p-2 rounded border-l-4 ${getAssignmentColor(assignment.type)} cursor-pointer hover:shadow-md transition-shadow`}
+                              onClick={() => handleViewAssignment(assignment)}
+                            >
+                              <div className='flex items-center justify-between mb-1'>
+                                <p className='text-xs font-medium truncate'>
+                                  {assignment.workerName}
+                                </p>
+                                <span
+                                  className={`inline-flex px-1 py-0.5 text-xs font-semibold rounded-full ${getStatusColor(assignment.status)}`}
+                                >
+                                  {assignment.status === 'confirmed'
+                                    ? '✓'
+                                    : assignment.status === 'completed'
+                                      ? '✓'
+                                      : assignment.status === 'cancelled'
+                                        ? '✗'
+                                        : '⏳'}
+                                </span>
+                              </div>
+                              <p className='text-xs text-gray-700 truncate'>
+                                {assignment.userName} - {assignment.hours}h
+                              </p>
+                              {assignment.type === 'urgent' && (
+                                <span className='inline-block mt-1 text-xs text-red-700 font-medium'>
+                                  🚨
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className='text-center py-4'>
+                          <div className='text-2xl mb-1'>📅</div>
+                          <p className='text-xs text-gray-500'>
+                            Sin asignaciones
+                          </p>
+                        </div>
+                      )}
+                    </Card>
+                  );
+                })}
+              </div>
             </div>
           )}
 
