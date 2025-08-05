@@ -14,9 +14,26 @@ import {
   createAdmin,
   deleteAdmin,
   getAdmins,
+  getUsersStats,
   resetAdminPassword,
 } from '@/lib/admin-query';
+import { getWorkersStats } from '@/lib/workers-query';
 import type { User as AdminUser } from '@/types';
+
+interface WorkersStats {
+  total: number;
+  active: number;
+  inactive: number;
+  cuidadoras: number;
+  auxiliares: number;
+  enfermeras: number;
+}
+
+interface UsersStats {
+  total: number;
+  active: number;
+  inactive: number;
+}
 
 export default function SuperDashboardPage() {
   const { user, signOut } = useAuth();
@@ -41,6 +58,19 @@ export default function SuperDashboardPage() {
   const [userName, setUserName] = useState<string>('');
   const [greeting, setGreeting] = useState<string>('');
   const [admins, setAdmins] = useState<AdminUser[]>([]);
+  const [workersStats, setWorkersStats] = useState<WorkersStats>({
+    total: 0,
+    active: 0,
+    inactive: 0,
+    cuidadoras: 0,
+    auxiliares: 0,
+    enfermeras: 0,
+  });
+  const [usersStats, setUsersStats] = useState<UsersStats>({
+    total: 0,
+    active: 0,
+    inactive: 0,
+  });
   const [isCreateAdminModalOpen, setIsCreateAdminModalOpen] = useState(false);
   const [isResetPasswordModalOpen, setIsResetPasswordModalOpen] =
     useState(false);
@@ -130,22 +160,31 @@ export default function SuperDashboardPage() {
     }
   }, [user]);
 
-  // Cargar administradores existentes
+  // Cargar administradores existentes y estadísticas de trabajadoras
   useEffect(() => {
-    const fetchAdmins = async () => {
+    const fetchData = async () => {
       try {
+        // Cargar administradores
         const adminUsers = await getAdmins();
         setAdmins(adminUsers);
+
+        // Cargar estadísticas de trabajadoras
+        const workersStatsData = await getWorkersStats();
+        setWorkersStats(workersStatsData);
+
+        // Cargar estadísticas de usuarios
+        const usersStatsData = await getUsersStats();
+        setUsersStats(usersStatsData);
       } catch (err) {
-        setError('No se pudieron cargar los administradores.');
+        setError('No se pudieron cargar los datos del dashboard.');
         // eslint-disable-next-line no-console
         console.error(err);
       }
     };
 
-    fetchAdmins().catch((err) => {
+    fetchData().catch((err) => {
       // eslint-disable-next-line no-console
-      console.error('Error fetching admins:', err);
+      console.error('Error fetching dashboard data:', err);
     });
   }, []);
 
@@ -559,10 +598,12 @@ export default function SuperDashboardPage() {
                     Trabajadoras
                   </p>
                   <p className='text-xl md:text-2xl font-bold text-gray-900'>
-                    0
+                    {workersStats.total}
                   </p>
                   <p className='text-xs md:text-sm text-green-600 mt-1 font-medium'>
-                    Gestionar trabajadoras
+                    {workersStats.total > 0
+                      ? `${workersStats.total} trabajadoras`
+                      : 'Ninguna'}
                   </p>
                 </div>
                 <div className='w-10 h-10 md:w-12 md:h-12 bg-green-100 rounded-xl flex items-center justify-center ml-3'>
@@ -581,10 +622,12 @@ export default function SuperDashboardPage() {
                     Usuarios
                   </p>
                   <p className='text-xl md:text-2xl font-bold text-gray-900'>
-                    0
+                    {usersStats.total}
                   </p>
                   <p className='text-xs md:text-sm text-orange-600 mt-1 font-medium'>
-                    Gestionar usuarios
+                    {usersStats.total > 0
+                      ? `${usersStats.total} usuarios`
+                      : 'Ninguno'}
                   </p>
                 </div>
                 <div className='w-10 h-10 md:w-12 md:h-12 bg-orange-100 rounded-xl flex items-center justify-center ml-3'>
