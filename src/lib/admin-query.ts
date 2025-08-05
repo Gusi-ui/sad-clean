@@ -248,3 +248,40 @@ export const deleteAdmin = async (
     };
   }
 };
+
+/**
+ * Obtiene estadísticas de usuarios del sistema
+ */
+export const getUsersStats = async (): Promise<{
+  total: number;
+  active: number;
+  inactive: number;
+}> => {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from('auth_users')
+      .select('id, role');
+
+    if (error !== null) {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching users stats:', error);
+      throw error;
+    }
+
+    // Como no tenemos columna is_active, consideramos activos a todos los usuarios
+    // excepto los que tengan role 'worker' (que son trabajadoras, no usuarios del sistema)
+    const users = (data ?? []).filter((u) => u.role !== 'worker');
+
+    const stats = {
+      total: users.length,
+      active: users.length, // Todos los usuarios del sistema están activos
+      inactive: 0, // No hay usuarios inactivos en el sistema actual
+    };
+
+    return stats;
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error in getUsersStats:', error);
+    throw error;
+  }
+};

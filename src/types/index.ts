@@ -383,6 +383,69 @@ export interface ValidationResult {
 }
 
 // ============================================================================
+// TIPOS DE ACTIVIDADES DEL SISTEMA
+// ============================================================================
+
+export type ActivityType =
+  | 'worker_created'
+  | 'worker_updated'
+  | 'worker_deleted'
+  | 'user_created'
+  | 'user_updated'
+  | 'user_deleted'
+  | 'assignment_created'
+  | 'assignment_updated'
+  | 'assignment_completed'
+  | 'assignment_cancelled'
+  | 'service_completed'
+  | 'admin_created'
+  | 'admin_updated'
+  | 'admin_deleted'
+  | 'login'
+  | 'logout'
+  | 'password_reset'
+  | 'profile_updated';
+
+export type EntityType =
+  | 'worker'
+  | 'user'
+  | 'assignment'
+  | 'service'
+  | 'admin'
+  | 'system';
+
+export interface Activity {
+  id: string;
+  user_id?: string;
+  user_email?: string;
+  user_name?: string;
+  activity_type: ActivityType;
+  entity_type: EntityType;
+  entity_id?: string;
+  entity_name?: string;
+  description: string;
+  details?: Record<string, unknown>;
+  ip_address?: string;
+  user_agent?: string;
+  created_at: string;
+  time_ago?: string;
+}
+
+export interface ActivityInsert {
+  user_id?: string;
+  user_email?: string;
+  user_name?: string;
+  activity_type: ActivityType;
+  entity_type: EntityType;
+  entity_id?: string;
+  entity_name?: string;
+  description: string;
+  details?: Record<string, unknown>;
+  ip_address?: string;
+  user_agent?: string;
+}
+
+// ============================================================================
 // TIPOS DE CONFIGURACIÓN
 // ============================================================================
 
