@@ -156,10 +156,10 @@ export default function UsersPage() {
 
   const validateUserClientCode = (clientCode: string): string => {
     if (clientCode.trim() === '') {
-      return 'El código de cliente es obligatorio';
+      return 'El código de usuario es obligatorio';
     }
     if (clientCode.trim().length < 3) {
-      return 'El código de cliente debe tener al menos 3 caracteres';
+      return 'El código de usuario debe tener al menos 3 caracteres';
     }
     return '';
   };
@@ -463,10 +463,10 @@ export default function UsersPage() {
             <div className='flex items-center justify-between'>
               <div>
                 <h1 className='text-3xl font-bold text-gray-900 mb-2'>
-                  👤 Gestión de Clientes
+                  👤 Gestión de Usuarios
                 </h1>
                 <p className='text-gray-600 text-lg'>
-                  Administra los clientes del servicio SAD
+                  Administra los usuarios del servicio SAD
                 </p>
               </div>
               <Link
@@ -494,10 +494,10 @@ export default function UsersPage() {
           {/* Header Mobile */}
           <div className='lg:hidden mb-6'>
             <h1 className='text-2xl font-bold text-gray-900 mb-2'>
-              👤 Gestión de Clientes
+              👤 Gestión de Usuarios
             </h1>
             <p className='text-gray-600 text-sm'>
-              Administra los clientes del servicio SAD
+              Administra los usuarios del servicio SAD
             </p>
           </div>
 
@@ -524,7 +524,7 @@ export default function UsersPage() {
                   <div className='text-2xl lg:text-3xl mr-3'>👤</div>
                   <div>
                     <p className='text-sm lg:text-base font-medium text-gray-600'>
-                      Total Clientes
+                      Total Usuarios
                     </p>
                     <p className='text-xl lg:text-2xl font-bold text-gray-900'>
                       {stats.total}
@@ -607,7 +607,7 @@ export default function UsersPage() {
               </div>
               <Input
                 type='text'
-                placeholder='Buscar clientes por nombre, apellido o email...'
+                placeholder='Buscar usuarios por nombre, apellido o email...'
                 value={searchTerm}
                 onChange={(e) => {
                   handleSearch(e.target.value).catch((searchError) => {
@@ -625,7 +625,7 @@ export default function UsersPage() {
                 onClick={handleAddUser}
                 className='bg-blue-600 hover:bg-blue-700 text-white w-full sm:w-auto'
               >
-                ➕ Agregar Cliente
+                ➕ Agregar Usuario
               </Button>
             </div>
           </div>
@@ -718,18 +718,18 @@ export default function UsersPage() {
               <Card className='p-8 text-center'>
                 <div className='text-6xl mb-4'>👤</div>
                 <h3 className='text-lg font-medium text-gray-900 mb-2'>
-                  No hay clientes
+                  No hay usuarios
                 </h3>
                 <p className='text-gray-600 mb-4'>
                   {searchTerm
-                    ? 'No se encontraron clientes con ese criterio de búsqueda'
-                    : 'Aún no hay clientes registrados en el sistema'}
+                    ? 'No se encontraron usuarios con ese criterio de búsqueda'
+                    : 'Aún no hay usuarios registrados en el sistema'}
                 </p>
                 <Button
                   onClick={handleAddUser}
                   className='bg-blue-600 hover:bg-blue-700 text-white'
                 >
-                  ➕ Agregar Primer Cliente
+                  ➕ Agregar Primer Usuario
                 </Button>
               </Card>
             )}
@@ -754,7 +754,7 @@ export default function UsersPage() {
               client_code: '',
             });
           }}
-          title={isAddModalOpen ? '➕ Agregar Cliente' : '✏️ Editar Cliente'}
+          title={isAddModalOpen ? '➕ Agregar Usuario' : '✏️ Editar Usuario'}
           size='lg'
         >
           <div className='space-y-4'>
@@ -922,7 +922,7 @@ export default function UsersPage() {
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
-                  Código Cliente *
+                  Código Usuario *
                 </label>
                 <Input
                   value={editingUser.client_code ?? ''}
@@ -961,7 +961,7 @@ export default function UsersPage() {
                   className='rounded border-gray-300 text-blue-600 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50'
                 />
                 <span className='ml-2 text-sm text-gray-700'>
-                  Cliente activo
+                  Usuario activo
                 </span>
               </label>
             </div>
@@ -989,7 +989,7 @@ export default function UsersPage() {
               disabled={savingUser}
               className='bg-blue-600 hover:bg-blue-700 text-white'
             >
-              {savingUser ? 'Guardando...' : 'Guardar Cliente'}
+              {savingUser ? 'Guardando...' : 'Guardar Usuario'}
             </Button>
           </div>
         </Modal>
@@ -1001,7 +1001,7 @@ export default function UsersPage() {
             setIsViewModalOpen(false);
             setSelectedUser(null);
           }}
-          title='👤 Detalles del Cliente'
+          title='👤 Detalles del Usuario'
           size='md'
         >
           {selectedUser && (
@@ -1039,7 +1039,7 @@ export default function UsersPage() {
                 </div>
                 <div>
                   <label className='block text-sm font-medium text-gray-700'>
-                    Código Cliente
+                    Código Usuario
                   </label>
                   <p className='text-sm text-gray-900'>
                     {selectedUser.client_code}
@@ -1086,7 +1086,7 @@ export default function UsersPage() {
         <Modal
           isOpen={isDeleteModalOpen}
           onClose={handleDeleteModalClose}
-          title='🗑️ Eliminar Cliente'
+          title='🗑️ Eliminar Usuario'
           size='md'
         >
           <div className='space-y-4'>
@@ -1100,7 +1100,7 @@ export default function UsersPage() {
               </p>
               <p className='text-sm mt-2'>
                 Esta acción no se puede deshacer. Se eliminarán todos los datos
-                asociados al cliente.
+                asociados al usuario.
               </p>
             </div>
 
@@ -1118,7 +1118,7 @@ export default function UsersPage() {
                 disabled={deletingUser}
                 className='bg-red-600 hover:bg-red-700 text-white'
               >
-                {deletingUser ? 'Eliminando...' : 'Eliminar Cliente'}
+                {deletingUser ? 'Eliminando...' : 'Eliminar Usuario'}
               </Button>
             </div>
           </div>
