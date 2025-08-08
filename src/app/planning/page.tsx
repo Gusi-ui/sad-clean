@@ -546,35 +546,35 @@ export default function PlanningPage() {
           {/* Month Selector */}
           <div className='mb-6'>
             <Card className='p-4 lg:p-6'>
-              <div className='flex flex-col lg:flex-row items-center justify-between gap-4'>
-                <div className='flex items-center space-x-2 lg:space-x-4'>
+              <div className='flex flex-col lg:flex-row lg:flex-nowrap items-center justify-between gap-4'>
+                <div className='flex items-center space-x-2 lg:space-x-4 h-10 flex-none'>
                   <Button
                     variant='outline'
                     size='sm'
                     onClick={handlePrevMonth}
-                    className='text-xs lg:text-sm'
+                    className='text-xs lg:text-sm h-10'
                   >
                     ← Mes Anterior
                   </Button>
-                  <h2 className='text-base lg:text-lg font-semibold text-gray-900 text-center'>
+                  <h2 className='text-base lg:text-lg font-semibold text-gray-900 text-center flex items-center h-10'>
                     {formatMonthTitle(firstDayOfMonth)}
                   </h2>
                   <Button
                     variant='outline'
                     size='sm'
                     onClick={handleNextMonth}
-                    className='text-xs lg:text-sm'
+                    className='text-xs lg:text-sm h-10'
                   >
                     Mes Siguiente →
                   </Button>
                 </div>
-                <div className='w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:space-x-2'>
+                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:space-x-2 lg:items-center'>
                   {/* Input Trabajadora - sin label visible, con placeholder */}
                   <input
                     id='filter-worker'
                     aria-label='Buscar trabajadora'
                     type='text'
-                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-600 bg-white text-gray-900'
+                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-400 bg-white text-gray-900'
                     placeholder='Trabajadora'
                     value={selectedWorker}
                     onChange={(e) => setSelectedWorker(e.target.value)}
@@ -584,7 +584,7 @@ export default function PlanningPage() {
                     id='filter-user'
                     aria-label='Buscar usuario'
                     type='text'
-                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-600 bg-white text-gray-900'
+                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-400 bg-white text-gray-900'
                     placeholder='Usuario'
                     value={selectedUser}
                     onChange={(e) => setSelectedUser(e.target.value)}
@@ -592,7 +592,7 @@ export default function PlanningPage() {
                   <Button
                     variant='outline'
                     size='sm'
-                    className='text-xs'
+                    className='text-xs h-10'
                     onClick={() => {
                       setSelectedWorker('');
                       setSelectedUser('');
@@ -600,12 +600,7 @@ export default function PlanningPage() {
                   >
                     Limpiar filtros
                   </Button>
-                  <Button
-                    className='bg-blue-600 hover:bg-blue-700 text-white text-xs lg:text-sm'
-                    onClick={() => setShowEntryModal(true)}
-                  >
-                    ➕ Nueva Entrada
-                  </Button>
+                  {/* Botón Nueva Entrada oculto de momento */}
                 </div>
               </div>
             </Card>
@@ -686,21 +681,14 @@ export default function PlanningPage() {
                             key={`${dateKey}-${i}`}
                             className={`rounded px-1.5 py-1 ${getEntryStyle(e.assignmentType).container}`}
                           >
-                            <div className='flex items-center justify-between gap-2'>
-                              <span className='text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate'>
-                                {e.workerName}
-                              </span>
-                              <span className='text-[10px] sm:text-[11px] text-gray-700'>
-                                {e.start}–{e.end}
-                              </span>
+                            <div className='text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate'>
+                              {e.workerName}
                             </div>
-                            <div className='flex items-center justify-between gap-2'>
-                              <div className='text-[10px] sm:text-[11px] text-gray-700 truncate'>
-                                {e.userName}
-                              </div>
-                              <span className='text-[10px] text-gray-600 hidden sm:inline'>
-                                ⏱️
-                              </span>
+                            <div className='text-[10px] sm:text-[11px] text-gray-700'>
+                              {e.start}–{e.end}
+                            </div>
+                            <div className='text-[10px] sm:text-[11px] text-gray-700 truncate'>
+                              {e.userName}
                             </div>
                           </div>
                         ))}
