@@ -574,8 +574,8 @@ export default function PlanningPage() {
                     id='filter-worker'
                     aria-label='Buscar trabajadora'
                     type='text'
-                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-400 bg-white text-gray-900'
-                    placeholder='Trabajadora'
+                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-300 bg-white text-gray-900'
+                    placeholder='Buscar trabajadora'
                     value={selectedWorker}
                     onChange={(e) => setSelectedWorker(e.target.value)}
                   />
@@ -584,8 +584,8 @@ export default function PlanningPage() {
                     id='filter-user'
                     aria-label='Buscar usuario'
                     type='text'
-                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-400 bg-white text-gray-900'
-                    placeholder='Usuario'
+                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-300 bg-white text-gray-900'
+                    placeholder='Buscar usuario'
                     value={selectedUser}
                     onChange={(e) => setSelectedUser(e.target.value)}
                   />
@@ -681,10 +681,10 @@ export default function PlanningPage() {
                             key={`${dateKey}-${i}`}
                             className={`rounded px-1.5 py-1 ${getEntryStyle(e.assignmentType).container}`}
                           >
-                            <div className='text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate'>
+                            <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
                               {e.workerName}
                             </div>
-                            <div className='text-[10px] sm:text-[11px] text-gray-700'>
+                            <div className='text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
                               {e.start}–{e.end}
                             </div>
                             <div className='text-[10px] sm:text-[11px] text-gray-700 truncate'>
