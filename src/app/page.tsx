@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-
 import Link from 'next/link';
 
 import { Button } from '@/components/ui';
@@ -347,10 +345,13 @@ export default function Home() {
           </div>
           <div className='border-t border-gray-800 mt-8 pt-8 text-center'>
             <p className='text-gray-400'>
-              © 2024 SAD - Sistema de Gestión de Servicios Asistenciales
+              © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
               Domiciliarios
             </p>
-            <p className='text-gray-400 mt-2'>Hecho con mucho ❤️ por Gusi</p>
+            <p className='text-gray-400 mt-2'>
+              Hecho con mucho ❤️ por{' '}
+              <span className='font-medium text-white'>Gusi</span>
+            </p>
           </div>
         </div>
       </footer>

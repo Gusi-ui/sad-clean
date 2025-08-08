@@ -5,6 +5,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Navigation from '@/components/layout/Navigation';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -440,9 +441,9 @@ export default function UsersPage() {
 
   return (
     <ProtectedRoute requiredRole='admin'>
-      <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
-        {/* Header Móvil */}
-        <header className='bg-white shadow-sm border-b border-gray-200 lg:hidden'>
+      <div className='bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen flex flex-col'>
+        {/* Header - Visible en todos los dispositivos */}
+        <header className='bg-white shadow-sm border-b border-gray-200'>
           <div className='px-4 py-3 flex items-center justify-between'>
             <div className='flex items-center space-x-3'>
               <div className='w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden'>
@@ -485,7 +486,7 @@ export default function UsersPage() {
             </div>
             <Link
               href={dashboardUrl}
-              className='text-gray-600 hover:text-gray-900 transition-colors'
+              className='flex items-center text-gray-600 hover:text-gray-900 transition-colors space-x-2'
             >
               <svg
                 className='w-6 h-6'
@@ -500,11 +501,13 @@ export default function UsersPage() {
                   d='M10 19l-7-7m0 0l7-7m-7 7h18'
                 />
               </svg>
+              <span className='text-sm font-medium'>Volver al Dashboard</span>
             </Link>
           </div>
         </header>
 
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'>
+        {/* Contenido Principal */}
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 lg:py-8 flex-1'>
           {/* Header Desktop */}
           <div className='hidden lg:block mb-8'>
             <div className='flex items-center justify-between'>
@@ -516,25 +519,6 @@ export default function UsersPage() {
                   Administra los usuarios del servicio SAD
                 </p>
               </div>
-              <Link
-                href={dashboardUrl}
-                className='inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
-              >
-                <svg
-                  className='w-4 h-4 mr-2'
-                  fill='none'
-                  stroke='currentColor'
-                  viewBox='0 0 24 24'
-                >
-                  <path
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
-                    strokeWidth={2}
-                    d='M10 19l-7-7m0 0l7-7m-7 7h18'
-                  />
-                </svg>
-                Volver al Dashboard
-              </Link>
             </div>
           </div>
 
@@ -1312,6 +1296,25 @@ export default function UsersPage() {
             </div>
           </div>
         </Modal>
+
+        {/* Footer */}
+        <footer className='border-t border-gray-200 bg-white py-8 mt-auto mb-20'>
+          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+            <div className='text-center'>
+              <p className='text-sm text-gray-600 mb-2 font-medium'>
+                © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
+                Domiciliarios
+              </p>
+              <p className='text-xs text-gray-500'>
+                Hecho con mucho ❤️ por{' '}
+                <span className='font-bold text-gray-700'>Gusi</span>
+              </p>
+            </div>
+          </div>
+        </footer>
+
+        {/* Navegación Móvil */}
+        <Navigation variant='mobile' />
       </div>
     </ProtectedRoute>
   );

@@ -1,0 +1,1542 @@
+'use client';
+
+import React, { useEffect, useState } from 'react';
+
+import Link from 'next/link';
+
+import ScheduleConfig from '@/components/assignments/ScheduleConfig';
+import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
+import { useDashboardUrl } from '@/hooks/useDashboardUrl';
+import { supabase } from '@/lib/database';
+import { logger } from '@/utils/logger';
+
+interface TimeSlot {
+  id: string;
+  startTime: string;
+  endTime: string;
+  hours: number;
+}
+
+interface DaySchedule {
+  enabled: boolean;
+  timeSlots: TimeSlot[];
+  totalHours: number;
+}
+
+interface Schedule {
+  monday: DaySchedule;
+  tuesday: DaySchedule;
+  wednesday: DaySchedule;
+  thursday: DaySchedule;
+  friday: DaySchedule;
+  saturday: DaySchedule;
+  sunday: DaySchedule;
+}
+
+interface Assignment {
+  id: string;
+  user_id: string;
+  worker_id: string;
+  assignment_type:
+    | 'laborables'
+    | 'festivos'
+    | 'flexible'
+    | 'completa'
+    | 'personalizada';
+  monthly_hours: number;
+  schedule: Schedule;
+  start_date: string;
+  status: 'active' | 'inactive';
+  priority: number;
+  notes: string;
+  created_at: string;
+  user?: {
+    name: string;
+    surname: string;
+  };
+  worker?: {
+    name: string;
+    surname: string;
+  };
+}
+
+interface AssignmentStats {
+  totalAssignments: number;
+  activeAssignments: number;
+  inactiveAssignments: number;
+  newThisWeek: number;
+}
+
+export default function AssignmentsPage() {
+  // Función para mostrar notificaciones
+  const showNotification = (message: string) => {
+    // Por ahora usamos alert, pero en producción se puede reemplazar con un toast
+    // eslint-disable-next-line no-alert
+    alert(message);
+  };
+
+  // Función para confirmaciones
+  // eslint-disable-next-line arrow-body-style
+  const showConfirmation = (message: string): boolean => {
+    // eslint-disable-next-line no-alert
+    return window.confirm(message);
+  };
+
+  // Función para calcular horas totales de un usuario (todas sus trabajadoras)
+  const calculateUserTotalHours = (userId: string): number => {
+    const userAssignments = assignments.filter(
+      (assignment) => assignment.user_id === userId && assignment.status === 'active'
+    );
+
+    return userAssignments.reduce((total, assignment) => {
+      return total + assignment.monthly_hours;
+    }, 0);
+  };
+
+  // Función para obtener todas las asignaciones de un usuario
+  const getUserAssignments = (userId: string): Assignment[] => {
+    return assignments.filter(
+      (assignment) => assignment.user_id === userId && assignment.status === 'active'
+    );
+  };
+
+  const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [showAddModal, setShowAddModal] = useState<boolean>(false);
+  const [showAssignmentModal, setShowAssignmentModal] =
+    useState<boolean>(false);
+  const [selectedAssignment, setSelectedAssignment] =
+    useState<Assignment | null>(null);
+  const [stats, setStats] = useState<AssignmentStats>({
+    totalAssignments: 0,
+    activeAssignments: 0,
+    inactiveAssignments: 0,
+    newThisWeek: 0,
+  });
+
+  // Estados para el formulario
+  const [formData, setFormData] = useState({
+    user_id: '',
+    worker_id: '',
+    assignment_type: 'laborables' as
+      | 'laborables'
+      | 'festivos'
+      | 'flexible'
+      | 'completa'
+      | 'personalizada',
+    monthly_hours: 0,
+    start_date: '',
+    status: 'active' as 'active' | 'inactive',
+    priority: 1,
+    notes: '',
+  });
+
+  // Estado para el horario avanzado
+  const [schedule, setSchedule] = useState<Schedule>({
+    monday: { enabled: true, timeSlots: [], totalHours: 0 },
+    tuesday: { enabled: true, timeSlots: [], totalHours: 0 },
+    wednesday: { enabled: true, timeSlots: [], totalHours: 0 },
+    thursday: { enabled: true, timeSlots: [], totalHours: 0 },
+    friday: { enabled: true, timeSlots: [], totalHours: 0 },
+    saturday: { enabled: false, timeSlots: [], totalHours: 0 },
+    sunday: { enabled: false, timeSlots: [], totalHours: 0 },
+  });
+
+  // Estado para mes y año seleccionados
+  const [selectedMonth, setSelectedMonth] = useState<number>(
+    new Date().getMonth() + 1
+  );
+  const [selectedYear, setSelectedYear] = useState<number>(
+    new Date().getFullYear()
+  );
+
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+  const [users, setUsers] = useState<
+    Array<{ id: string; name: string; surname: string }>
+  >([]);
+  const [workers, setWorkers] = useState<
+    Array<{ id: string; name: string; surname: string }>
+  >([]);
+
+  const dashboardUrl = useDashboardUrl();
+
+  // Cargar datos
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true);
+      try {
+        // Cargar asignaciones con datos relacionados
+        const { data: assignmentsData, error: assignmentsError } =
+          await supabase
+            .from('assignments')
+            .select(
+              `
+            *,
+            user:users(name, surname),
+            worker:workers(name, surname)
+          `
+            )
+            .order('created_at', { ascending: false });
+
+        if (assignmentsError !== null) {
+          logger.error('Error cargando asignaciones:', assignmentsError);
+        } else {
+          // Convertir los datos de Supabase al tipo Assignment
+          setAssignments(
+            (assignmentsData ?? []).map((a) => ({
+              ...a,
+              schedule: a.schedule as unknown as Assignment['schedule'],
+              assignment_type:
+                a.assignment_type as Assignment['assignment_type'],
+              status: a.status as Assignment['status'],
+              monthly_hours:
+                (a as { monthly_hours?: number; weekly_hours?: number })
+                  .monthly_hours ??
+                (a as { monthly_hours?: number; weekly_hours?: number })
+                  .weekly_hours ??
+                0,
+              notes: a.notes ?? '',
+              created_at: a.created_at ?? '',
+            }))
+          );
+        }
+
+        // Cargar usuarios
+        const { data: usersData, error: usersError } = await supabase
+          .from('users')
+          .select('id, name, surname')
+          .order('name');
+
+        if (usersError !== null) {
+          logger.error('Error cargando usuarios:', usersError);
+        } else {
+          setUsers(usersData ?? []);
+        }
+
+        // Cargar trabajadoras
+        const { data: workersData, error: workersError } = await supabase
+          .from('workers')
+          .select('id, name, surname')
+          .order('name');
+
+        if (workersError !== null) {
+          logger.error('Error cargando trabajadoras:', workersError);
+        } else {
+          setWorkers(workersData ?? []);
+        }
+
+        // Calcular estadísticas
+        const total = assignmentsData?.length ?? 0;
+        const active =
+          assignmentsData?.filter((a) => a.status === 'active').length ?? 0;
+        const inactive =
+          assignmentsData?.filter((a) => a.status === 'inactive').length ?? 0;
+
+        // Calcular nuevas esta semana
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const newThisWeek =
+          assignmentsData?.filter(
+            (a) => a.created_at !== null && new Date(a.created_at) > oneWeekAgo
+          ).length ?? 0;
+
+        setStats({
+          totalAssignments: total,
+          activeAssignments: active,
+          inactiveAssignments: inactive,
+          newThisWeek,
+        });
+      } catch (error) {
+        logger.error('Error cargando datos:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData().catch(() => {
+      // Handle error silently
+    });
+  }, []);
+
+  // Filtrar asignaciones
+  const filteredAssignments = assignments.filter((assignment) => {
+    const workerName =
+      `${assignment.worker?.name ?? ''} ${assignment.worker?.surname ?? ''}`.toLowerCase();
+    const userName =
+      `${assignment.user?.name ?? ''} ${assignment.user?.surname ?? ''}`.toLowerCase();
+
+    const matchesSearch =
+      workerName.includes(searchTerm.toLowerCase()) ||
+      userName.includes(searchTerm.toLowerCase()) ||
+      assignment.assignment_type
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      filterStatus === 'all' || assignment.status === filterStatus;
+
+    return matchesSearch && matchesStatus;
+  });
+
+  // Obtener color según el estado
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active':
+        return 'bg-green-100 text-green-800 border-green-300';
+      case 'inactive':
+        return 'bg-red-100 text-red-800 border-red-300';
+      default:
+        return 'bg-gray-100 text-gray-800 border-gray-300';
+    }
+  };
+
+  // Obtener color según el tipo
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'laborables':
+        return 'bg-blue-50 border-blue-500 text-blue-900';
+      case 'festivos':
+        return 'bg-yellow-50 border-yellow-500 text-yellow-900';
+      case 'flexible':
+        return 'bg-purple-50 border-purple-500 text-purple-900';
+      case 'completa':
+        return 'bg-green-50 border-green-500 text-green-900';
+      case 'personalizada':
+        return 'bg-indigo-50 border-indigo-500 text-indigo-900';
+      default:
+        return 'bg-gray-50 border-gray-500 text-gray-900';
+    }
+  };
+
+  const getDayName = (dayKey: string) => {
+    const dayNames: Record<string, string> = {
+      monday: 'Lunes',
+      tuesday: 'Martes',
+      wednesday: 'Miércoles',
+      thursday: 'Jueves',
+      friday: 'Viernes',
+      saturday: 'Sábado',
+      sunday: 'Domingo',
+    };
+    return dayNames[dayKey] ?? dayKey;
+  };
+
+  const handleOpenAddModal = () => {
+    setFormData({
+      user_id: '',
+      worker_id: '',
+      assignment_type: 'laborables',
+      monthly_hours: 0,
+      start_date: '',
+      status: 'active',
+      priority: 1,
+      notes: '',
+    });
+    setValidationErrors({});
+    setShowAddModal(true);
+  };
+
+  const handleViewAssignment = (assignment: Assignment) => {
+    setSelectedAssignment(assignment);
+    setShowAssignmentModal(true);
+  };
+
+  const handleEditAssignment = (assignment: Assignment) => {
+    // Cargar los datos de la asignación en el formulario
+    setFormData({
+      user_id: assignment.user_id,
+      worker_id: assignment.worker_id,
+      assignment_type: assignment.assignment_type,
+      monthly_hours: assignment.monthly_hours,
+      start_date: assignment.start_date,
+      status: assignment.status,
+      priority: assignment.priority,
+      notes: assignment.notes,
+    });
+
+    // Cargar el horario
+    setSchedule(assignment.schedule);
+
+    // Cerrar el modal de detalles y abrir el de edición
+    setShowAssignmentModal(false);
+    setShowAddModal(true);
+
+    // Marcar que estamos editando
+    setSelectedAssignment(assignment);
+  };
+
+  const handleDeleteAssignment = async (assignment: Assignment) => {
+    // Usar una confirmación más elegante
+    const confirmed = showConfirmation(
+      `¿Estás seguro de que quieres eliminar la asignación de ${assignment.worker?.name} ${assignment.worker?.surname} para ${assignment.user?.name} ${assignment.user?.surname}?`
+    );
+
+    if (confirmed) {
+      try {
+        const { error } = await supabase
+          .from('assignments')
+          .delete()
+          .eq('id', assignment.id);
+
+        if (error !== null) {
+          logger.error('Error eliminando asignación:', error);
+          showNotification('Error eliminando asignación');
+        } else {
+          // Actualizar la lista local
+          setAssignments((prev) => prev.filter((a) => a.id !== assignment.id));
+          setStats((prev) => ({
+            ...prev,
+            totalAssignments: prev.totalAssignments - 1,
+            activeAssignments:
+              prev.activeAssignments - (assignment.status === 'active' ? 1 : 0),
+            inactiveAssignments:
+              prev.inactiveAssignments -
+              (assignment.status === 'inactive' ? 1 : 0),
+          }));
+          showNotification('Asignación eliminada correctamente');
+        }
+      } catch (error) {
+        logger.error('Error eliminando asignación:', error);
+        showNotification('Error eliminando asignación');
+      }
+    }
+  };
+
+  const handleCloseModals = () => {
+    setShowAddModal(false);
+    setShowAssignmentModal(false);
+    setSelectedAssignment(null);
+  };
+
+  const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value);
+  };
+
+  // Validar formulario
+  const validateForm = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+
+    if (!formData['user_id']?.trim()) {
+      errors['user_id'] = 'Debe seleccionar un usuario';
+    }
+
+    if (!formData['worker_id']?.trim()) {
+      errors['worker_id'] = 'Debe seleccionar una trabajadora';
+    }
+
+    if (formData['monthly_hours'] <= 0) {
+      errors['monthly_hours'] = 'Las horas deben ser mayores a 0';
+    }
+
+    if (!formData['start_date']) {
+      errors['start_date'] = 'Debe especificar la fecha de inicio';
+    }
+
+    return errors;
+  };
+
+  // Manejar cambios en el formulario
+  const handleFormChange = (field: string, value: string | number) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Limpiar error de validación cuando el usuario empiece a escribir
+    if (
+      validationErrors[field] !== undefined &&
+      validationErrors[field] !== ''
+    ) {
+      setValidationErrors((prev) => ({ ...prev, [field]: '' }));
+    }
+  };
+
+  // Crear o actualizar asignación
+  const handleCreateAssignment = async () => {
+    const errors = validateForm();
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const assignmentData = {
+        user_id: formData['user_id'],
+        worker_id: formData['worker_id'],
+        assignment_type: formData['assignment_type'],
+        weekly_hours: formData['monthly_hours'], // Temporalmente usamos weekly_hours en la BD
+        schedule: schedule as unknown as any, // eslint-disable-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment
+        start_date: formData['start_date'],
+        status: formData['status'],
+        priority: formData['priority'],
+        notes: formData['notes'],
+      };
+
+      let result;
+
+      if (selectedAssignment) {
+        // Actualizar asignación existente
+        const { data: updatedAssignment, error } = await supabase
+          .from('assignments')
+          .update(assignmentData)
+          .eq('id', selectedAssignment.id)
+          .select(
+            `
+            *,
+            user:users(name, surname),
+            worker:workers(name, surname)
+          `
+          )
+          .single();
+
+        if (error !== null) {
+          logger.error('Error actualizando asignación:', error);
+          showNotification('Error actualizando asignación');
+          return;
+        }
+
+        result = updatedAssignment;
+      } else {
+        // Crear nueva asignación
+        const { data: newAssignment, error } = await supabase
+          .from('assignments')
+          .insert(assignmentData)
+          .select(
+            `
+            *,
+            user:users(name, surname),
+            worker:workers(name, surname)
+          `
+          )
+          .single();
+
+        if (error !== null) {
+          logger.error('Error creando asignación:', error);
+          showNotification('Error creando asignación');
+          return;
+        }
+
+        result = newAssignment;
+      }
+
+      // Convertir el resultado al tipo Assignment
+      const convertedAssignment = {
+        ...result,
+        schedule: result.schedule as unknown as Assignment['schedule'],
+        assignment_type:
+          result.assignment_type as Assignment['assignment_type'],
+        status: result.status as Assignment['status'],
+        monthly_hours:
+          (result as { monthly_hours?: number; weekly_hours?: number })
+            .monthly_hours ??
+          (result as { monthly_hours?: number; weekly_hours?: number })
+            .weekly_hours ??
+          0,
+        notes: result.notes ?? '',
+        created_at: result.created_at ?? '',
+      };
+
+      if (selectedAssignment) {
+        // Actualizar en la lista local
+        setAssignments((prev) => {
+          const updatedAssignments = prev.map((a) => {
+            if (a.id === selectedAssignment.id) {
+              return convertedAssignment;
+            }
+            return a;
+          });
+          return updatedAssignments;
+        });
+        showNotification('Asignación actualizada correctamente');
+      } else {
+        // Añadir a la lista local
+        setAssignments((prev) => [convertedAssignment, ...prev]);
+        setStats((prev) => ({
+          ...prev,
+          totalAssignments: prev.totalAssignments + 1,
+          activeAssignments:
+            prev.activeAssignments +
+            (convertedAssignment.status === 'active' ? 1 : 0),
+          inactiveAssignments:
+            prev.inactiveAssignments +
+            (convertedAssignment.status === 'inactive' ? 1 : 0),
+        }));
+        showNotification('Asignación creada correctamente');
+      }
+
+      // Limpiar formulario y cerrar modal
+      setFormData({
+        user_id: '',
+        worker_id: '',
+        assignment_type: 'laborables',
+        monthly_hours: 0,
+        start_date: '',
+        status: 'active',
+        priority: 1,
+        notes: '',
+      });
+      setSchedule({
+        monday: { enabled: false, totalHours: 0, timeSlots: [] },
+        tuesday: { enabled: false, totalHours: 0, timeSlots: [] },
+        wednesday: { enabled: false, totalHours: 0, timeSlots: [] },
+        thursday: { enabled: false, totalHours: 0, timeSlots: [] },
+        friday: { enabled: false, totalHours: 0, timeSlots: [] },
+        saturday: { enabled: false, totalHours: 0, timeSlots: [] },
+        sunday: { enabled: false, totalHours: 0, timeSlots: [] },
+      });
+      setValidationErrors({});
+      setShowAddModal(false);
+      setSelectedAssignment(null);
+    } catch (error) {
+      logger.error('Error procesando asignación:', error);
+      showNotification('Error procesando asignación');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  return (
+    <ProtectedRoute>
+      <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
+        {/* Header Móvil */}
+        <header className='bg-white shadow-sm border-b border-gray-200 lg:hidden'>
+          <div className='px-4 py-3 flex items-center justify-between'>
+            <div className='flex items-center space-x-3'>
+              <div className='w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden'>
+                <svg
+                  xmlns='http://www.w3.org/2000/svg'
+                  viewBox='0 0 64 64'
+                  width='32'
+                  height='32'
+                  className='w-full h-full'
+                >
+                  <defs>
+                    <linearGradient
+                      id='mobileAssignmentsLogoGradient'
+                      x1='0%'
+                      y1='0%'
+                      x2='100%'
+                      y2='100%'
+                    >
+                      <stop offset='0%' stopColor='#3b82f6' />
+                      <stop offset='100%' stopColor='#22c55e' />
+                    </linearGradient>
+                  </defs>
+                  <circle
+                    cx='32'
+                    cy='32'
+                    r='30'
+                    fill='url(#mobileAssignmentsLogoGradient)'
+                  />
+                  <path
+                    d='M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z'
+                    fill='white'
+                    stroke='white'
+                    strokeWidth='2'
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                  />
+                </svg>
+              </div>
+              <span className='text-lg font-bold text-gray-900'>SAD</span>
+            </div>
+            <Link
+              href={dashboardUrl}
+              className='text-gray-600 hover:text-gray-900 transition-colors'
+            >
+              <svg
+                className='w-6 h-6'
+                fill='none'
+                stroke='currentColor'
+                viewBox='0 0 24 24'
+              >
+                <path
+                  strokeLinecap='round'
+                  strokeLinejoin='round'
+                  strokeWidth={2}
+                  d='M10 19l-7-7m0 0l7-7m-7 7h18'
+                />
+              </svg>
+            </Link>
+          </div>
+        </header>
+
+        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'>
+          {/* Header Desktop */}
+          <div className='hidden lg:block mb-8'>
+            <div className='flex items-center justify-between'>
+              <div>
+                <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+                  📋 Gestión de Asignaciones
+                </h1>
+                <p className='text-gray-600 text-lg'>
+                  Administra las asignaciones entre trabajadoras y usuarios
+                </p>
+              </div>
+              <Link
+                href={dashboardUrl}
+                className='inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500'
+              >
+                <svg
+                  className='w-4 h-4 mr-2'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M10 19l-7-7m0 0l7-7m-7 7h18'
+                  />
+                </svg>
+                Volver al Dashboard
+              </Link>
+            </div>
+          </div>
+
+          {/* Header Mobile */}
+          <div className='lg:hidden mb-6'>
+            <h1 className='text-2xl font-bold text-gray-900 mb-2'>
+              📋 Gestión de Asignaciones
+            </h1>
+            <p className='text-gray-600 text-sm'>
+              Administra las asignaciones entre trabajadoras y usuarios
+            </p>
+          </div>
+
+          {/* Stats Cards */}
+          <div className='grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6'>
+            <div
+              onClick={() => setFilterStatus('all')}
+              className='cursor-pointer'
+            >
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>📋</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Total Asignaciones
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.totalAssignments}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            <div
+              onClick={() => setFilterStatus('active')}
+              className='cursor-pointer'
+            >
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>✅</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Activas
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.activeAssignments}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            <div
+              onClick={() => setFilterStatus('inactive')}
+              className='cursor-pointer'
+            >
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-red-50 to-red-100 border-red-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>⏸️</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Inactivas
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.inactiveAssignments}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+            <div className='cursor-pointer'>
+              <Card className='p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-200'>
+                <div className='flex items-center'>
+                  <div className='text-2xl lg:text-3xl mr-3'>🆕</div>
+                  <div>
+                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                      Nuevas Esta Semana
+                    </p>
+                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                      {stats.newThisWeek}
+                    </p>
+                  </div>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* Search and Actions */}
+          <div className='mb-6 space-y-4'>
+            {/* Search Bar */}
+            <div className='relative'>
+              <div className='absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none'>
+                <svg
+                  className='h-5 w-5 text-gray-400'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z'
+                  />
+                </svg>
+              </div>
+              <Input
+                className='pl-10 w-full'
+                placeholder='Buscar por trabajadora, usuario o tipo...'
+                value={searchTerm}
+                onChange={handleSearch}
+              />
+            </div>
+
+            {/* Actions */}
+            <div className='flex flex-col sm:flex-row gap-3'>
+              <Button
+                className='bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-200'
+                onClick={handleOpenAddModal}
+              >
+                ➕ Nueva Asignación
+              </Button>
+
+              {/* Filter Status */}
+              <select
+                className='px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                value={filterStatus}
+                onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
+                  setFilterStatus(e.target.value)
+                }
+              >
+                <option value='all'>Todos los estados</option>
+                <option value='active'>Activas</option>
+                <option value='inactive'>Inactivas</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Loading State */}
+          {loading && (
+            <div className='text-center py-8'>
+              <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+              <p className='mt-2 text-gray-600'>Cargando asignaciones...</p>
+            </div>
+          )}
+
+          {/* Assignments List - Mobile Cards */}
+          {!loading && (
+            <div className='md:hidden space-y-4'>
+              {filteredAssignments.map((assignment) => (
+                <Card
+                  key={assignment.id}
+                  className='p-4 shadow-lg hover:shadow-xl transition-all duration-200'
+                >
+                  {/* Header con Tipo y Estado */}
+                  <div className='flex items-center justify-between mb-3'>
+                    <div className='flex items-center space-x-3'>
+                      <div className='w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full flex items-center justify-center shadow-md'>
+                        <span className='text-sm font-bold text-white'>
+                          {assignment.assignment_type.slice(0, 2).toUpperCase()}
+                        </span>
+                      </div>
+                      <div>
+                        <h3 className='font-medium text-gray-900 text-lg'>
+                          {assignment.assignment_type === 'laborables'
+                            ? 'Laborables'
+                            : assignment.assignment_type === 'festivos'
+                              ? 'Festivos'
+                              : 'Flexible'}
+                        </h3>
+                        <p className='text-sm text-gray-500'>
+                          {assignment.monthly_hours}h/mes
+                        </p>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${getStatusColor(assignment.status)}`}
+                    >
+                      {assignment.status === 'active' ? 'Activa' : 'Inactiva'}
+                    </span>
+                  </div>
+
+                  {/* Información de Trabajadora y Usuario */}
+                  <div className='space-y-3 mb-4'>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>👩‍⚕️</span>
+                      <span className='text-sm text-gray-700'>
+                        {assignment.worker?.name} {assignment.worker?.surname}
+                      </span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>👤</span>
+                      <span className='text-sm text-gray-700'>
+                        {assignment.user?.name} {assignment.user?.surname}
+                      </span>
+                    </div>
+                    <div className='flex items-center space-x-2'>
+                      <span className='text-gray-400 text-sm'>📅</span>
+                      <span className='text-sm text-gray-700'>
+                        Desde:{' '}
+                        {new Date(assignment.start_date).toLocaleDateString()}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Acciones */}
+                  <div className='flex items-center justify-between pt-3 border-t border-gray-100'>
+                    <div className='flex items-center space-x-2'>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeColor(assignment.assignment_type)}`}
+                      >
+                        {assignment.assignment_type === 'laborables'
+                          ? '📅 Laborables'
+                          : assignment.assignment_type === 'festivos'
+                            ? '🎉 Festivos'
+                            : '🔄 Flexible'}
+                      </span>
+                    </div>
+
+                    <div className='flex items-center space-x-3'>
+                      <button
+                        className='text-blue-600 hover:text-blue-900 transition-colors text-sm font-medium'
+                        onClick={() => handleViewAssignment(assignment)}
+                      >
+                        👁️ Ver
+                      </button>
+                      <button
+                        className='text-yellow-600 hover:text-yellow-900 transition-colors text-sm font-medium'
+                        onClick={() => handleEditAssignment(assignment)}
+                      >
+                        ✏️ Editar
+                      </button>
+                      <button
+                        className='text-red-600 hover:text-red-900 transition-colors text-sm font-medium'
+                        onClick={() => {
+                          handleDeleteAssignment(assignment).catch(() => {
+                            // Error handled in the function
+                          });
+                        }}
+                      >
+                        🗑️ Eliminar
+                      </button>
+                    </div>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          )}
+
+          {/* Assignments List - Desktop Layout */}
+          {!loading && (
+            <div className='hidden md:block'>
+              <Card className='overflow-hidden'>
+                <div className='px-6 py-4 border-b border-gray-200'>
+                  <h3 className='text-lg font-medium text-gray-900'>
+                    Lista de Asignaciones
+                  </h3>
+                </div>
+                <div className='overflow-x-auto max-w-full'>
+                  <table className='w-full divide-y divide-gray-200'>
+                    <thead className='bg-gray-50'>
+                      <tr>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24'>
+                          Tipo
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48'>
+                          Trabajadora
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48'>
+                          Usuario
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-20'>
+                          Estado
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-24'>
+                          Horas
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-32'>
+                          Inicio
+                        </th>
+                        <th className='px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-48'>
+                          Acciones
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className='bg-white divide-y divide-gray-200'>
+                      {filteredAssignments.map((assignment) => (
+                        <tr key={assignment.id} className='hover:bg-gray-50'>
+                          <td className='px-4 py-4'>
+                            <div className='text-sm font-medium text-gray-900'>
+                              {assignment.assignment_type === 'laborables'
+                                ? 'Laborables'
+                                : assignment.assignment_type === 'festivos'
+                                  ? 'Festivos'
+                                  : 'Flexible'}
+                            </div>
+                          </td>
+                          <td className='px-4 py-4'>
+                            <div className='flex items-center'>
+                              <div className='flex-shrink-0 h-8 w-8'>
+                                <div className='h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center'>
+                                  <span className='text-xs font-medium text-blue-600'>
+                                    {assignment.worker?.name?.charAt(0)}
+                                    {assignment.worker?.surname?.charAt(0)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className='ml-2'>
+                                <div className='text-sm font-medium text-gray-900 truncate'>
+                                  {assignment.worker?.name}{' '}
+                                  {assignment.worker?.surname}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className='px-4 py-4'>
+                            <div className='flex items-center'>
+                              <div className='flex-shrink-0 h-8 w-8'>
+                                <div className='h-8 w-8 rounded-full bg-green-100 flex items-center justify-center'>
+                                  <span className='text-xs font-medium text-green-600'>
+                                    {assignment.user?.name?.charAt(0)}
+                                    {assignment.user?.surname?.charAt(0)}
+                                  </span>
+                                </div>
+                              </div>
+                              <div className='ml-2'>
+                                <div className='text-sm font-medium text-gray-900 truncate'>
+                                  {assignment.user?.name}{' '}
+                                  {assignment.user?.surname}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className='px-4 py-4'>
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(assignment.status)}`}
+                            >
+                              {assignment.status === 'active'
+                                ? 'Activa'
+                                : 'Inactiva'}
+                            </span>
+                          </td>
+                          <td className='px-4 py-4 text-sm text-gray-900'>
+                            {assignment.monthly_hours}h
+                          </td>
+                          <td className='px-4 py-4 text-sm text-gray-900'>
+                            {new Date(
+                              assignment.start_date
+                            ).toLocaleDateString()}
+                          </td>
+                          <td className='px-4 py-4 text-sm font-medium'>
+                            <div className='flex space-x-1'>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => handleViewAssignment(assignment)}
+                                className='text-xs px-2 py-1'
+                              >
+                                👁️
+                              </Button>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => handleEditAssignment(assignment)}
+                                className='text-xs px-2 py-1'
+                              >
+                                ✏️
+                              </Button>
+                              <Button
+                                variant='outline'
+                                size='sm'
+                                onClick={() => {
+                                  handleDeleteAssignment(assignment).catch(
+                                    () => {
+                                      // Error handled in the function
+                                    }
+                                  );
+                                }}
+                                className='text-xs px-2 py-1 text-red-600 hover:text-red-700'
+                              >
+                                🗑️
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </Card>
+            </div>
+          )}
+
+          {/* Empty State */}
+          {!loading && filteredAssignments.length === 0 && (
+            <Card className='p-8 text-center'>
+              <div className='text-6xl mb-4'>📋</div>
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                No hay asignaciones
+              </h3>
+              <p className='text-gray-600 mb-4'>
+                {searchTerm
+                  ? 'No se encontraron asignaciones con ese criterio de búsqueda'
+                  : 'Aún no hay asignaciones registradas en el sistema'}
+              </p>
+              <Button
+                onClick={handleOpenAddModal}
+                className='bg-blue-600 hover:bg-blue-700 text-white'
+              >
+                ➕ Crear Primera Asignación
+              </Button>
+            </Card>
+          )}
+        </div>
+
+        {/* Add Assignment Modal */}
+        <Modal
+          isOpen={showAddModal}
+          onClose={handleCloseModals}
+          title={selectedAssignment ? 'Editar Asignación' : 'Nueva Asignación'}
+        >
+          <div className='space-y-6'>
+            {/* Usuario */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Usuario *
+              </label>
+              <select
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  validationErrors['user_id'] !== undefined &&
+                  validationErrors['user_id'] !== ''
+                    ? 'border-red-500'
+                    : 'border-gray-300'
+                }`}
+                value={formData['user_id']}
+                onChange={(e) => handleFormChange('user_id', e.target.value)}
+              >
+                <option value=''>Seleccionar usuario</option>
+                {users.map((user) => (
+                  <option key={user.id} value={user.id}>
+                    {user.name} {user.surname}
+                  </option>
+                ))}
+              </select>
+              {validationErrors['user_id'] !== undefined &&
+                validationErrors['user_id'] !== '' && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {validationErrors['user_id']}
+                  </p>
+                )}
+            </div>
+
+            {/* Trabajadora */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Trabajadora *
+              </label>
+              <select
+                className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                  validationErrors['worker_id'] !== undefined &&
+                  validationErrors['worker_id'] !== ''
+                    ? 'border-red-500'
+                    : 'border-gray-300'
+                }`}
+                value={formData['worker_id']}
+                onChange={(e) => handleFormChange('worker_id', e.target.value)}
+              >
+                <option value=''>Seleccionar trabajadora</option>
+                {workers.map((worker) => (
+                  <option key={worker.id} value={worker.id}>
+                    {worker.name} {worker.surname}
+                  </option>
+                ))}
+              </select>
+              {validationErrors['worker_id'] !== undefined &&
+                validationErrors['worker_id'] !== '' && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {validationErrors['worker_id']}
+                  </p>
+                )}
+            </div>
+
+            {/* Tipo de Asignación */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Tipo de Asignación
+              </label>
+              <select
+                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                value={formData['assignment_type']}
+                onChange={(e) =>
+                  handleFormChange('assignment_type', e.target.value)
+                }
+              >
+                <option value='laborables'>Laborables</option>
+                <option value='festivos'>Festivos</option>
+                <option value='flexible'>Flexible</option>
+              </select>
+            </div>
+
+            {/* Horas Mensuales */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Horas Mensuales *
+              </label>
+              <Input
+                type='number'
+                min='1'
+                className={
+                  validationErrors['monthly_hours'] !== undefined &&
+                  validationErrors['monthly_hours'] !== ''
+                    ? 'border-red-500'
+                    : ''
+                }
+                placeholder='Ej: 86'
+                value={formData['monthly_hours'] ?? ''}
+                onChange={(e) =>
+                  handleFormChange(
+                    'monthly_hours',
+                    parseInt(e.target.value) || 0
+                  )
+                }
+              />
+              {validationErrors['monthly_hours'] !== undefined &&
+                validationErrors['monthly_hours'] !== '' && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {validationErrors['monthly_hours']}
+                  </p>
+                )}
+            </div>
+
+            {/* Mes y Año para Cálculo */}
+            <div className='grid grid-cols-2 gap-4'>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Mes para Cálculo
+                </label>
+                <select
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  value={selectedMonth}
+                  onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                >
+                  <option value={1}>Enero</option>
+                  <option value={2}>Febrero</option>
+                  <option value={3}>Marzo</option>
+                  <option value={4}>Abril</option>
+                  <option value={5}>Mayo</option>
+                  <option value={6}>Junio</option>
+                  <option value={7}>Julio</option>
+                  <option value={8}>Agosto</option>
+                  <option value={9}>Septiembre</option>
+                  <option value={10}>Octubre</option>
+                  <option value={11}>Noviembre</option>
+                  <option value={12}>Diciembre</option>
+                </select>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  Año para Cálculo
+                </label>
+                <select
+                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  value={selectedYear}
+                  onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                >
+                  <option value={2024}>2024</option>
+                  <option value={2025}>2025</option>
+                  <option value={2026}>2026</option>
+                </select>
+              </div>
+            </div>
+
+            {/* Configuración Avanzada de Horarios */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Configuración de Horarios
+              </label>
+              <ScheduleConfig
+                schedule={schedule}
+                onScheduleChange={setSchedule}
+                assignedHours={formData['monthly_hours']}
+                selectedMonth={selectedMonth}
+                selectedYear={selectedYear}
+              />
+            </div>
+
+            {/* Fecha de Inicio */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Fecha de Inicio *
+              </label>
+              <Input
+                type='date'
+                className={
+                  validationErrors['start_date'] !== undefined &&
+                  validationErrors['start_date'] !== ''
+                    ? 'border-red-500'
+                    : ''
+                }
+                value={formData['start_date']}
+                onChange={(e) => handleFormChange('start_date', e.target.value)}
+              />
+              {validationErrors['start_date'] !== undefined &&
+                validationErrors['start_date'] !== '' && (
+                  <p className='mt-1 text-sm text-red-600'>
+                    {validationErrors['start_date']}
+                  </p>
+                )}
+            </div>
+
+            {/* Estado */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Estado
+              </label>
+              <select
+                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                value={formData['status']}
+                onChange={(e) => handleFormChange('status', e.target.value)}
+              >
+                <option value='active'>Activa</option>
+                <option value='inactive'>Inactiva</option>
+              </select>
+            </div>
+
+            {/* Notas */}
+            <div>
+              <label className='block text-sm font-medium text-gray-700 mb-2'>
+                Notas
+              </label>
+              <textarea
+                className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                rows={3}
+                placeholder='Notas adicionales...'
+                value={formData['notes']}
+                onChange={(e) => {
+                  handleFormChange('notes', e.target.value);
+                }}
+              />
+            </div>
+
+            {/* Botones */}
+            <div className='flex justify-end space-x-3 pt-4'>
+              <Button
+                variant='outline'
+                onClick={handleCloseModals}
+                disabled={isSubmitting}
+              >
+                Cancelar
+              </Button>
+              <Button
+                onClick={() => {
+                  handleCreateAssignment().catch(() => {
+                    // Error handled in the function
+                  });
+                }}
+                disabled={isSubmitting}
+                className='bg-blue-600 hover:bg-blue-700 text-white'
+              >
+                {isSubmitting ? 'Creando...' : 'Crear Asignación'}
+              </Button>
+            </div>
+          </div>
+        </Modal>
+
+        {/* View Assignment Modal */}
+        <Modal
+          isOpen={showAssignmentModal}
+          onClose={handleCloseModals}
+          title='Detalles de Asignación'
+        >
+          {selectedAssignment && (
+            <div className='space-y-6'>
+              {/* Información básica */}
+              <div className='grid grid-cols-2 gap-4'>
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>Tipo</p>
+                  <p className='text-base text-gray-900'>
+                    {selectedAssignment.assignment_type === 'laborables'
+                      ? 'Laborables'
+                      : selectedAssignment.assignment_type === 'festivos'
+                        ? 'Festivos'
+                        : selectedAssignment.assignment_type === 'completa'
+                          ? 'Completa'
+                          : selectedAssignment.assignment_type ===
+                              'personalizada'
+                            ? 'Personalizada'
+                            : 'Flexible'}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>Estado</p>
+                  <span
+                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedAssignment.status)}`}
+                  >
+                    {selectedAssignment.status === 'active'
+                      ? 'Activa'
+                      : 'Inactiva'}
+                  </span>
+                </div>
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>
+                    Trabajadora
+                  </p>
+                  <p className='text-base text-gray-900'>
+                    {selectedAssignment.worker?.name}{' '}
+                    {selectedAssignment.worker?.surname}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>Usuario</p>
+                  <p className='text-base text-gray-900'>
+                    {selectedAssignment.user?.name}{' '}
+                    {selectedAssignment.user?.surname}
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>
+                    Horas Mensuales
+                  </p>
+                  <p className='text-base text-gray-900'>
+                    {selectedAssignment.monthly_hours}h
+                  </p>
+                </div>
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>
+                    Fecha Inicio
+                  </p>
+                  <p className='text-base text-gray-900'>
+                    {new Date(
+                      selectedAssignment.start_date
+                    ).toLocaleDateString()}
+                  </p>
+                </div>
+              </div>
+
+              {/* Horario detallado */}
+              <div>
+                <h4 className='font-semibold text-gray-900 mb-3'>
+                  Horario Configurado
+                </h4>
+                <div className='space-y-3'>
+                  {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(
+                    (dayKey) => {
+                      const daySchedule = selectedAssignment.schedule[dayKey as keyof Schedule];
+                      return (
+                        <div key={dayKey} className='border rounded-lg p-3'>
+                          <div className='flex items-center justify-between mb-2'>
+                          <h5 className='font-medium text-gray-900'>
+                            {getDayName(dayKey)}
+                          </h5>
+                          <span
+                            className={`text-sm px-2 py-1 rounded ${
+                              daySchedule.enabled
+                                ? 'bg-green-100 text-green-800'
+                                : 'bg-gray-100 text-gray-600'
+                            }`}
+                          >
+                            {daySchedule.enabled ? 'Activo' : 'Inactivo'}
+                          </span>
+                        </div>
+
+                        {daySchedule.enabled === true &&
+                          daySchedule.timeSlots.length > 0 && (
+                            <div className='space-y-2'>
+                              {daySchedule.timeSlots.map(
+                                (slot: TimeSlot, index: number) => (
+                                  <div
+                                    key={slot.id || `slot-${dayKey}-${index}`}
+                                    className='flex items-center space-x-2 text-sm'
+                                  >
+                                    <span className='text-gray-600'>
+                                      Tramo {index + 1}:
+                                    </span>
+                                    <span className='font-medium'>
+                                      {slot.startTime} - {slot.endTime}
+                                    </span>
+                                    <span className='text-gray-500'>
+                                      ({slot.hours.toFixed(1)}h)
+                                    </span>
+                                  </div>
+                                )
+                              )}
+                              <div className='text-sm font-medium text-blue-600'>
+                                Total del día:{' '}
+                                {daySchedule.totalHours.toFixed(1)}h
+                              </div>
+                            </div>
+                          )}
+
+                        {daySchedule.enabled === true &&
+                          daySchedule.timeSlots.length === 0 && (
+                            <div className='text-sm text-gray-500 italic'>
+                              Sin tramos horarios configurados
+                            </div>
+                          )}
+                      </div>
+                    )
+                  )}
+                </div>
+              </div>
+
+              {selectedAssignment.notes && (
+                <div>
+                  <p className='text-sm font-medium text-gray-600'>Notas</p>
+                  <p className='text-base text-gray-900'>
+                    {selectedAssignment.notes}
+                  </p>
+                </div>
+              )}
+
+              {/* Botones de acción */}
+              <div className='flex justify-end space-x-3 pt-4 border-t'>
+                <Button
+                  variant='outline'
+                  onClick={() => handleEditAssignment(selectedAssignment)}
+                  className='text-blue-600 hover:text-blue-700'
+                >
+                  ✏️ Editar
+                </Button>
+                <Button
+                  variant='outline'
+                  onClick={() => {
+                    handleDeleteAssignment(selectedAssignment).catch(() => {
+                      // Error handled in the function
+                    });
+                  }}
+                  className='text-red-600 hover:text-red-700'
+                >
+                  🗑️ Eliminar
+                </Button>
+                <Button variant='outline' onClick={handleCloseModals}>
+                  Cerrar
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
+      </div>
+    </ProtectedRoute>
+  );
+}

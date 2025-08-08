@@ -206,14 +206,20 @@ export const getAllUsers = async (): Promise<User[]> => {
 };
 
 /**
- * Obtiene servicios programados para hoy
+ * Obtiene servicios activos para hoy
  */
 export const getTodayServices = async (): Promise<Assignment[]> => {
   const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
 
   const { data, error } = await supabase
     .from('assignments')
-    .select('*')
+    .select(
+      `
+      *,
+      workers (name, surname, email),
+      users (name, surname, client_code)
+    `
+    )
     .lte('start_date', today)
     .or(`end_date.is.null,end_date.gte.${today}`)
     .eq('status', 'active')
@@ -229,7 +235,7 @@ export const getTodayServices = async (): Promise<Assignment[]> => {
 };
 
 /**
- * Obtiene estadísticas de servicios y horas
+ * Obtiene estadísticas reales de servicios y horas
  */
 export const getServicesStats = async (): Promise<{
   todayServices: number;
@@ -237,7 +243,7 @@ export const getServicesStats = async (): Promise<{
   weeklyHoursIncrement: number;
 }> => {
   try {
-    // Servicios de hoy
+    // Servicios activos de hoy
     const todayServices = await getTodayServices();
 
     // Calcular horas de la semana actual
@@ -250,9 +256,10 @@ export const getServicesStats = async (): Promise<{
     const startDate = startOfWeek.toISOString().split('T')[0];
     const endDate = endOfWeek.toISOString().split('T')[0];
 
+    // Obtener asignaciones activas de la semana actual
     const { data: weeklyAssignments, error: weeklyError } = await supabase
       .from('assignments')
-      .select('weekly_hours')
+      .select('weekly_hours, start_date, end_date')
       .lte('start_date', endDate)
       .or(`end_date.is.null,end_date.gte.${startDate}`)
       .eq('status', 'active');
@@ -263,13 +270,41 @@ export const getServicesStats = async (): Promise<{
       throw weeklyError;
     }
 
+    // Calcular horas totales de la semana actual
     const weeklyHours = (weeklyAssignments ?? []).reduce(
       (total, assignment) => total + (assignment.weekly_hours || 0),
       0
     );
 
-    // Calcular incremento simulado (por ahora, hasta tener histórico real)
-    const weeklyHoursIncrement = Math.floor(Math.random() * 10) - 5; // Entre -5 y +5
+    // Calcular horas de la semana anterior para el incremento
+    const startOfLastWeek = new Date(startOfWeek);
+    startOfLastWeek.setDate(startOfWeek.getDate() - 7);
+    const endOfLastWeek = new Date(startOfLastWeek);
+    endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
+
+    const startDateLastWeek = startOfLastWeek.toISOString().split('T')[0];
+    const endDateLastWeek = endOfLastWeek.toISOString().split('T')[0];
+
+    const { data: lastWeekAssignments, error: lastWeekError } = await supabase
+      .from('assignments')
+      .select('weekly_hours, start_date, end_date')
+      .lte('start_date', endDateLastWeek)
+      .or(`end_date.is.null,end_date.gte.${startDateLastWeek}`)
+      .eq('status', 'active');
+
+    if (lastWeekError !== null) {
+      // eslint-disable-next-line no-console
+      console.error('Error fetching last week assignments:', lastWeekError);
+      throw lastWeekError;
+    }
+
+    const lastWeekHours = (lastWeekAssignments ?? []).reduce(
+      (total, assignment) => total + (assignment.weekly_hours || 0),
+      0
+    );
+
+    // Calcular incremento real
+    const weeklyHoursIncrement = weeklyHours - lastWeekHours;
 
     return {
       todayServices: todayServices.length,
@@ -283,6 +318,52 @@ export const getServicesStats = async (): Promise<{
       todayServices: 0,
       weeklyHours: 0,
       weeklyHoursIncrement: 0,
+    };
+  }
+};
+
+/**
+ * Obtiene estadísticas detalladas de servicios de hoy
+ */
+export const getTodayServicesStats = async (): Promise<{
+  totalServices: number;
+  activeWorkers: number;
+  activeUsers: number;
+  totalHours: number;
+}> => {
+  try {
+    const todayServices = await getTodayServices();
+
+    // Obtener trabajadoras únicas
+    const uniqueWorkers = new Set(
+      todayServices.map((service) => service.worker_id)
+    );
+
+    // Obtener usuarios únicos
+    const uniqueUsers = new Set(
+      todayServices.map((service) => service.user_id)
+    );
+
+    // Calcular horas totales
+    const totalHours = todayServices.reduce(
+      (total, service) => total + (service.weekly_hours || 0),
+      0
+    );
+
+    return {
+      totalServices: todayServices.length,
+      activeWorkers: uniqueWorkers.size,
+      activeUsers: uniqueUsers.size,
+      totalHours,
+    };
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error in getTodayServicesStats:', error);
+    return {
+      totalServices: 0,
+      activeWorkers: 0,
+      activeUsers: 0,
+      totalHours: 0,
     };
   }
 };
