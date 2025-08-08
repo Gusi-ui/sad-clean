@@ -684,8 +684,16 @@ export default function PlanningPage() {
                             <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
                               {e.workerName}
                             </div>
-                            <div className='text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
-                              {e.start}–{e.end}
+                            <div className='flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
+                              <span
+                                className='hidden md:inline'
+                                aria-hidden='true'
+                              >
+                                ⏰
+                              </span>
+                              <span>
+                                {e.start}–{e.end}
+                              </span>
                             </div>
                             <div className='text-[10px] sm:text-[11px] text-gray-700 truncate'>
                               {e.userName}
