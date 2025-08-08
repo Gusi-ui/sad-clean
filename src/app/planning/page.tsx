@@ -79,6 +79,7 @@ export default function PlanningPage() {
   });
   const [showEntryModal, setShowEntryModal] = useState<boolean>(false);
   const [selectedCellDate, setSelectedCellDate] = useState<string>('');
+  // Consultas de filtro por texto (mobile-first)
   const [selectedWorker, setSelectedWorker] = useState<string>('');
   const [selectedUser, setSelectedUser] = useState<string>('');
 
@@ -105,32 +106,19 @@ export default function PlanningPage() {
       .replace('.', '')
       .slice(0, 3);
 
-  // Lista de opciones (únicas) para filtros
-  const workerOptions = useMemo(() => {
-    const set = new Set<string>();
-    Object.values(entriesByDate).forEach((list) => {
-      list.forEach((e) => set.add(e.workerName));
-    });
-    return Array.from(set).sort();
-  }, [entriesByDate]);
-
-  const userOptions = useMemo(() => {
-    const set = new Set<string>();
-    Object.values(entriesByDate).forEach((list) => {
-      list.forEach((e) => set.add(e.userName));
-    });
-    return Array.from(set).sort();
-  }, [entriesByDate]);
+  // Nota: eliminamos opciones predefinidas (selects) para usar inputs de texto
 
   // Aplicar filtros de trabajadora/usuario
   const visibleEntriesByDate = useMemo(() => {
-    if (selectedWorker === '' && selectedUser === '') return entriesByDate;
+    // Si no hay filtros, mantener el calendario vacío (mejor rendimiento/legibilidad)
+    if (selectedWorker.trim() === '' && selectedUser.trim() === '') return {};
     const result: Record<string, ExpandedEntry[]> = {};
     Object.entries(entriesByDate).forEach(([key, list]) => {
       result[key] = list.filter((e) => {
-        const okWorker =
-          selectedWorker === '' || e.workerName === selectedWorker;
-        const okUser = selectedUser === '' || e.userName === selectedUser;
+        const wq = selectedWorker.trim().toLowerCase();
+        const uq = selectedUser.trim().toLowerCase();
+        const okWorker = wq === '' || e.workerName.toLowerCase().includes(wq);
+        const okUser = uq === '' || e.userName.toLowerCase().includes(uq);
         return okWorker && okUser;
       });
     });
@@ -396,8 +384,41 @@ export default function PlanningPage() {
     });
   }, [firstDayOfMonth, lastDayOfMonth, month, year]);
 
-  const formatMonthTitle = (date: Date): string =>
-    date.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const formatMonthTitle = (date: Date): string => {
+    const monthName = date
+      .toLocaleDateString('es-ES', { month: 'long' })
+      .replace(' de', '');
+    const yearNum = date.getFullYear();
+    return `${monthName} ${yearNum}`;
+  };
+
+  // Estilo visual para entradas según tipo de asignación
+  const getEntryStyle = (
+    type: string
+  ): { container: string; badge?: string } => {
+    switch (type) {
+      case 'laborables':
+        return {
+          container:
+            'border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50',
+        };
+      case 'festivos':
+        return {
+          container:
+            'border-l-4 border-orange-500 bg-orange-50/70 hover:bg-orange-50',
+        };
+      case 'flexible':
+        return {
+          container:
+            'border-l-4 border-purple-500 bg-purple-50/70 hover:bg-purple-50',
+        };
+      default:
+        return {
+          container:
+            'border-l-4 border-gray-400 bg-gray-50/70 hover:bg-gray-50',
+        };
+    }
+  };
 
   const handlePrevMonth = () => {
     const newMonth = month - 1;
@@ -548,50 +569,26 @@ export default function PlanningPage() {
                   </Button>
                 </div>
                 <div className='w-full lg:w-auto grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:space-x-2'>
-                  {/* Filtro por Trabajadora */}
-                  <div className='flex items-center gap-2'>
-                    <label
-                      htmlFor='filter-worker'
-                      className='text-xs text-gray-700'
-                    >
-                      Trabajadora
-                    </label>
-                    <select
-                      id='filter-worker'
-                      className='flex-1 px-2 py-1 border border-gray-300 rounded text-xs'
-                      value={selectedWorker}
-                      onChange={(e) => setSelectedWorker(e.target.value)}
-                    >
-                      <option value=''>Todas</option>
-                      {workerOptions.map((w) => (
-                        <option key={w} value={w}>
-                          {w}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {/* Filtro por Usuario */}
-                  <div className='flex items-center gap-2'>
-                    <label
-                      htmlFor='filter-user'
-                      className='text-xs text-gray-700'
-                    >
-                      Usuario
-                    </label>
-                    <select
-                      id='filter-user'
-                      className='flex-1 px-2 py-1 border border-gray-300 rounded text-xs'
-                      value={selectedUser}
-                      onChange={(e) => setSelectedUser(e.target.value)}
-                    >
-                      <option value=''>Todos</option>
-                      {userOptions.map((u) => (
-                        <option key={u} value={u}>
-                          {u}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                  {/* Input Trabajadora - sin label visible, con placeholder */}
+                  <input
+                    id='filter-worker'
+                    aria-label='Buscar trabajadora'
+                    type='text'
+                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-600 bg-white text-gray-900'
+                    placeholder='Trabajadora'
+                    value={selectedWorker}
+                    onChange={(e) => setSelectedWorker(e.target.value)}
+                  />
+                  {/* Input Usuario - sin label visible, con placeholder */}
+                  <input
+                    id='filter-user'
+                    aria-label='Buscar usuario'
+                    type='text'
+                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-600 bg-white text-gray-900'
+                    placeholder='Usuario'
+                    value={selectedUser}
+                    onChange={(e) => setSelectedUser(e.target.value)}
+                  />
                   <Button
                     variant='outline'
                     size='sm'
@@ -648,13 +645,14 @@ export default function PlanningPage() {
                     cell.isHoliday || cell.isWeekend
                       ? 'border-red-300'
                       : 'border-gray-200';
+                  const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
                   return (
                     <Card
                       key={idx}
                       role='button'
                       tabIndex={0}
                       aria-label={`Día ${cell.date.getDate()} ${cell.isHoliday ? `festivo ${cell.holidayName ?? ''}` : ''}`}
-                      className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500`}
+                      className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 ${todayRing}`}
                       onClick={() => handleOpenCell(dateKey)}
                       onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
                         if (e.key === 'Enter' || e.key === ' ')
@@ -682,26 +680,31 @@ export default function PlanningPage() {
                           </span>
                         )}
                       </div>
-                      <div className='space-y-1 max-h-32 overflow-y-auto'>
-                        {(cell.entries ?? []).slice(0, 3).map((e, i) => (
+                      <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
+                        {(cell.entries ?? []).slice(0, 4).map((e, i) => (
                           <div
                             key={`${dateKey}-${i}`}
-                            className='rounded border-l-4 bg-blue-50 border-blue-400 px-1.5 py-1'
+                            className={`rounded px-1.5 py-1 ${getEntryStyle(e.assignmentType).container}`}
                           >
                             <div className='flex items-center justify-between gap-2'>
-                              <span className='text-[10px] sm:text-xs font-semibold text-gray-800 truncate'>
+                              <span className='text-[10px] sm:text-[11px] font-semibold text-gray-800 truncate'>
                                 {e.workerName}
                               </span>
-                              <span className='text-[10px] sm:text-xs text-gray-600'>
+                              <span className='text-[10px] sm:text-[11px] text-gray-700'>
                                 {e.start}–{e.end}
                               </span>
                             </div>
-                            <div className='text-[10px] sm:text-xs text-gray-600 truncate'>
-                              {e.userName}
+                            <div className='flex items-center justify-between gap-2'>
+                              <div className='text-[10px] sm:text-[11px] text-gray-700 truncate'>
+                                {e.userName}
+                              </div>
+                              <span className='text-[10px] text-gray-600 hidden sm:inline'>
+                                ⏱️
+                              </span>
                             </div>
                           </div>
                         ))}
-                        {cell.entries.length > 3 && (
+                        {cell.entries.length > 4 && (
                           <button
                             type='button'
                             className='w-full text-[10px] sm:text-xs text-blue-700 hover:underline text-left'
@@ -710,7 +713,7 @@ export default function PlanningPage() {
                               handleOpenCell(dateKey);
                             }}
                           >
-                            Ver {cell.entries.length - 3} más
+                            Ver {cell.entries.length - 4} más
                           </button>
                         )}
                       </div>
