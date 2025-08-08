@@ -137,6 +137,28 @@ export default function ResetPasswordForm() {
           </div>
         </form>
       </div>
+
+      {/* Footer */}
+      <div className='text-center'>
+        <div className='relative'>
+          <div className='absolute inset-0 flex items-center'>
+            <div className='w-full border-t border-gray-300' />
+          </div>
+          <div className='relative flex justify-center text-sm'>
+            <span className='px-4 bg-gradient-to-br from-blue-50 via-white to-indigo-50 text-gray-500 font-medium'>
+              Sistema de Ayuda a Domicilio
+            </span>
+          </div>
+        </div>
+        <p className='mt-4 text-xs text-gray-400'>
+          © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
+          Domiciliarios
+        </p>
+        <p className='mt-1 text-xs text-gray-400'>
+          Hecho con mucho ❤️ por{' '}
+          <span className='font-medium text-gray-600'>Gusi</span>
+        </p>
+      </div>
     </div>
   );
 }

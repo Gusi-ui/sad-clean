@@ -8,7 +8,11 @@ import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
 import { getRecentActivities } from '@/lib/activities-query';
-import { getAllUsers, getServicesStats } from '@/lib/database';
+import {
+  getAllUsers,
+  getServicesStats,
+  getTodayServicesStats,
+} from '@/lib/database';
 import { getWorkersStats } from '@/lib/workers-query';
 import type { Activity } from '@/types';
 
@@ -102,6 +106,9 @@ export default function DashboardPage() {
         // Cargar estadísticas reales de servicios y horas
         const servicesStats = await getServicesStats();
 
+        // Cargar estadísticas detalladas de servicios de hoy
+        const todayServicesStats = await getTodayServicesStats();
+
         // Cargar actividades recientes
         const activities = await getRecentActivities(6);
 
@@ -115,8 +122,8 @@ export default function DashboardPage() {
         setStats({
           workers: workersStats.active,
           users: users.length,
-          servicesWithIncrement: `${servicesStats.todayServices}`,
-          hoursWithIncrement: `${servicesStats.weeklyHours} ${hoursIncrementText}`,
+          servicesWithIncrement: `${todayServicesStats.totalServices}`,
+          hoursWithIncrement: `${servicesStats.weeklyHours}h ${hoursIncrementText}`,
         });
 
         setRecentActivities(activities);
@@ -331,8 +338,8 @@ export default function DashboardPage() {
                     {loading
                       ? 'Cargando...'
                       : stats.servicesWithIncrement === '0'
-                        ? 'Sin servicios programados'
-                        : `${stats.servicesWithIncrement} en progreso`}
+                        ? 'Sin servicios activos'
+                        : `${stats.servicesWithIncrement} asignaciones activas`}
                   </p>
                 </div>
                 <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
@@ -699,12 +706,13 @@ export default function DashboardPage() {
           <footer className='mt-12 lg:mt-16 border-t border-gray-200 bg-white'>
             <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>
               <div className='text-center'>
-                <p className='text-sm text-gray-500 mb-2'>
-                  © {new Date().getFullYear()} SAD - Sistema de Gestión de
-                  Servicios Asistenciales Domiciliarios
+                <p className='text-sm text-gray-600 mb-2'>
+                  © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
+                  Domiciliarios
                 </p>
-                <p className='text-sm text-gray-500'>
-                  Hecho con mucho ❤️ por Gusi
+                <p className='text-xs text-gray-500'>
+                  Hecho con mucho ❤️ por{' '}
+                  <span className='font-medium text-gray-700'>Gusi</span>
                 </p>
               </div>
             </div>

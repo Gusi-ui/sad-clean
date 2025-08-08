@@ -336,7 +336,12 @@ export default function LoginForm() {
             </div>
           </div>
           <p className='mt-4 text-xs text-gray-400'>
-            Hecho con mucho ❤️ por Gusi
+            © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
+            Domiciliarios
+          </p>
+          <p className='mt-1 text-xs text-gray-400'>
+            Hecho con mucho ❤️ por{' '}
+            <span className='font-medium text-gray-600'>Gusi</span>
           </p>
         </div>
       </div>
