@@ -106,18 +106,38 @@ export default function PlanningPage() {
       .replace('.', '')
       .slice(0, 3);
 
-  // Nota: eliminamos opciones predefinidas (selects) para usar inputs de texto
+  // Nota: eliminamos opciones predefinidas (selects) y usamos inputs de texto (mobile-first)
 
   // Aplicar filtros de trabajadora/usuario
   const visibleEntriesByDate = useMemo(() => {
     // Si no hay filtros, mantener el calendario vacío (mejor rendimiento/legibilidad)
     if (selectedWorker.trim() === '' && selectedUser.trim() === '') return {};
+
+    // Si el filtro por trabajadora coincide exactamente con un nombre existente,
+    // usamos coincidencia exacta; de lo contrario, coincidencia parcial (includes)
+    const allWorkerNames = new Set<string>();
+    Object.values(entriesByDate).forEach((list) => {
+      list.forEach((e) => {
+        const name = e.workerName?.toLowerCase();
+        if (name && name.trim() !== '') allWorkerNames.add(name);
+      });
+    });
+
+    const workerQuery = selectedWorker.trim().toLowerCase();
+    const exactWorkerMatch =
+      workerQuery !== '' && allWorkerNames.has(workerQuery)
+        ? workerQuery
+        : undefined;
+
     const result: Record<string, ExpandedEntry[]> = {};
     Object.entries(entriesByDate).forEach(([key, list]) => {
       result[key] = list.filter((e) => {
-        const wq = selectedWorker.trim().toLowerCase();
         const uq = selectedUser.trim().toLowerCase();
-        const okWorker = wq === '' || e.workerName.toLowerCase().includes(wq);
+        const okWorker =
+          workerQuery === '' ||
+          (exactWorkerMatch !== undefined
+            ? e.workerName.toLowerCase() === exactWorkerMatch
+            : e.workerName.toLowerCase().includes(workerQuery));
         const okUser = uq === '' || e.userName.toLowerCase().includes(uq);
         return okWorker && okUser;
       });
@@ -524,7 +544,7 @@ export default function PlanningPage() {
             <div className='flex items-center justify-between'>
               <div>
                 <h1 className='text-3xl font-bold text-gray-900 mb-2'>
-                  📅 Planificación Semanal
+                  📅 Planificación Mensual
                 </h1>
                 <p className='text-gray-600 text-lg'>
                   Gestiona la planificación de servicios SAD
@@ -536,7 +556,7 @@ export default function PlanningPage() {
           {/* Header Mobile */}
           <div className='lg:hidden mb-6'>
             <h1 className='text-2xl font-bold text-gray-900 mb-2'>
-              📅 Planificación Semanal
+              📅 Planificación Mensual
             </h1>
             <p className='text-gray-600 text-sm'>
               Gestiona la planificación de servicios SAD
@@ -568,7 +588,7 @@ export default function PlanningPage() {
                     Mes Siguiente →
                   </Button>
                 </div>
-                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 gap-2 lg:flex lg:space-x-2 lg:items-center'>
+                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:flex lg:space-x-2 lg:items-center'>
                   {/* Input Trabajadora - sin label visible, con placeholder */}
                   <input
                     id='filter-worker'
