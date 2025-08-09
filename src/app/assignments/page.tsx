@@ -20,6 +20,7 @@ import {
   logAssignmentUpdated,
 } from '@/lib/activities-query';
 import { supabase } from '@/lib/database';
+import type { Json } from '@/types/supabase';
 import { logger } from '@/utils/logger';
 
 interface Assignment {
@@ -628,6 +629,14 @@ export default function AssignmentsPage() {
                   // Calcular horas semanales (incluye festivos si aplica)
                   const totalHours = calculateWeeklyHours(scheduleWithHoliday);
 
+                  // Validación: weekly_hours debe ser > 0
+                  if (totalHours <= 0) {
+                    setError(
+                      'Debes configurar al menos un tramo horario válido para crear la asignación.'
+                    );
+                    return;
+                  }
+
                   const { error: createError } = await supabase
                     .from('assignments')
                     .insert([
@@ -638,7 +647,7 @@ export default function AssignmentsPage() {
                         start_date: data.start_date,
                         end_date:
                           data.end_date.trim() === '' ? null : data.end_date,
-                        schedule: JSON.stringify(scheduleWithHoliday),
+                        schedule: scheduleWithHoliday as unknown as Json,
                         notes: data.notes,
                         status: 'active',
                         weekly_hours: totalHours,
@@ -647,7 +656,30 @@ export default function AssignmentsPage() {
 
                   if (createError) {
                     logger.error('Error creando asignación:', createError);
-                    setError('Error creando asignación');
+                    const message =
+                      (
+                        createError as {
+                          message?: string;
+                          details?: string;
+                          code?: string;
+                        }
+                      ).message ??
+                      (
+                        createError as {
+                          message?: string;
+                          details?: string;
+                          code?: string;
+                        }
+                      ).details ??
+                      (
+                        createError as {
+                          message?: string;
+                          details?: string;
+                          code?: string;
+                        }
+                      ).code ??
+                      'Error desconocido';
+                    setError(`Error creando asignación: ${message}`);
                   } else {
                     // Recargar datos
                     const { data: newAssignments } = await supabase
@@ -712,7 +744,14 @@ export default function AssignmentsPage() {
                   }
                 } catch (createErr) {
                   logger.error('Error creando asignación:', createErr);
-                  setError('Error creando asignación');
+                  const message =
+                    typeof createErr === 'object' && createErr !== null
+                      ? ((createErr as { message?: string; name?: string })
+                          .message ??
+                        (createErr as { name?: string }).name ??
+                        'Error desconocido')
+                      : String(createErr);
+                  setError(`Error creando asignación: ${message}`);
                 }
               };
               // eslint-disable-next-line no-void
@@ -741,6 +780,16 @@ export default function AssignmentsPage() {
                     },
                   };
 
+                  // Validación: weekly_hours debe ser > 0 en actualización
+                  const updatedWeeklyHours =
+                    calculateWeeklyHours(scheduleWithHoliday);
+                  if (updatedWeeklyHours <= 0) {
+                    setError(
+                      'Debes configurar al menos un tramo horario válido para actualizar la asignación.'
+                    );
+                    return;
+                  }
+
                   const { error: updateError } = await supabase
                     .from('assignments')
                     .update({
@@ -750,19 +799,40 @@ export default function AssignmentsPage() {
                       start_date: data.start_date,
                       end_date:
                         data.end_date.trim() === '' ? null : data.end_date,
-                      schedule: JSON.stringify(scheduleWithHoliday),
+                      schedule: scheduleWithHoliday as unknown as Json,
                       notes: data.notes,
                       // Calcular weekly_hours basado en el schedule (incluye festivos)
-                      weekly_hours: calculateWeeklyHours(scheduleWithHoliday),
+                      weekly_hours: updatedWeeklyHours,
                     })
                     .eq('id', editingAssignment.id)
                     .select();
 
                   if (updateError) {
                     logger.error('Error actualizando asignación:', updateError);
-                    setError(
-                      `Error actualizando asignación: ${updateError.message || 'Error desconocido'}`
-                    );
+                    const message =
+                      (
+                        updateError as {
+                          message?: string;
+                          details?: string;
+                          code?: string;
+                        }
+                      ).message ??
+                      (
+                        updateError as {
+                          message?: string;
+                          details?: string;
+                          code?: string;
+                        }
+                      ).details ??
+                      (
+                        updateError as {
+                          message?: string;
+                          details?: string;
+                          code?: string;
+                        }
+                      ).code ??
+                      'Error desconocido';
+                    setError(`Error actualizando asignación: ${message}`);
                   } else {
                     // Recargar datos
                     const { data: updatedAssignments } = await supabase
@@ -855,7 +925,14 @@ export default function AssignmentsPage() {
                   }
                 } catch (updateErr) {
                   logger.error('Error actualizando asignación:', updateErr);
-                  setError('Error actualizando asignación');
+                  const message =
+                    typeof updateErr === 'object' && updateErr !== null
+                      ? ((updateErr as { message?: string; name?: string })
+                          .message ??
+                        (updateErr as { name?: string }).name ??
+                        'Error desconocido')
+                      : String(updateErr);
+                  setError(`Error actualizando asignación: ${message}`);
                 }
               };
               // eslint-disable-next-line no-void
