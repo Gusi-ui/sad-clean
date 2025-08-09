@@ -14,7 +14,7 @@ type Row = {
 };
 
 export default function TodayScreen(): React.JSX.Element {
-  const { user } = useAuth();
+  const { user, session } = useAuth();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
@@ -113,6 +113,7 @@ export default function TodayScreen(): React.JSX.Element {
       return next;
     });
     const { error } = await supabase.from('system_activities').insert({
+      user_id: session?.user?.id ?? null,
       activity_type: 'service_completed',
       entity_type: 'assignment',
       entity_id: assignmentId,
