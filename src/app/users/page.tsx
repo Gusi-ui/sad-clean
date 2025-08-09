@@ -70,6 +70,7 @@ export default function UsersPage() {
     postal_code: '',
     city: '',
     client_code: '',
+    monthly_assigned_hours: '',
   });
 
   // Estados para estadísticas
@@ -196,6 +197,17 @@ export default function UsersPage() {
     );
     const cityError = validateUserCity(editingUser.city ?? '');
 
+    const monthlyHoursError = (() => {
+      const value = editingUser.monthly_assigned_hours;
+      if (value === undefined || value === null)
+        return 'Las horas mensuales son obligatorias';
+      if (typeof value !== 'number') return 'Valor inválido';
+      if (!Number.isFinite(value) || value < 0)
+        return 'Debe ser un número mayor o igual a 0';
+      if (value > 744) return 'No puede superar 744 (máx. horas en un mes)';
+      return '';
+    })();
+
     setUserValidationErrors({
       name: nameError,
       surname: surnameError,
@@ -205,6 +217,7 @@ export default function UsersPage() {
       postal_code: postalCodeError,
       city: cityError,
       client_code: '', // Ya no se valida porque se auto-genera
+      monthly_assigned_hours: monthlyHoursError,
     });
 
     return (
@@ -214,7 +227,8 @@ export default function UsersPage() {
       phoneError === '' &&
       addressError === '' &&
       postalCodeError === '' &&
-      cityError === ''
+      cityError === '' &&
+      monthlyHoursError === ''
     );
   };
 
@@ -271,6 +285,7 @@ export default function UsersPage() {
       postal_code: '',
       city: '',
       client_code: generateUserCode(), // Auto-generar código
+      monthly_assigned_hours: 0,
       medical_conditions: [],
       emergency_contact: {
         name: '',
@@ -288,6 +303,7 @@ export default function UsersPage() {
       postal_code: '',
       city: '',
       client_code: '',
+      monthly_assigned_hours: '',
     });
     setIsAddModalOpen(true);
   };
@@ -303,6 +319,7 @@ export default function UsersPage() {
       postal_code: '',
       city: '',
       client_code: '',
+      monthly_assigned_hours: '',
     });
     setIsEditModalOpen(true);
   };
@@ -936,12 +953,48 @@ export default function UsersPage() {
               postal_code: '',
               city: '',
               client_code: '',
+              monthly_assigned_hours: '',
             });
           }}
           title={isAddModalOpen ? '➕ Agregar Usuario' : '✏️ Editar Usuario'}
           size='lg'
         >
           <div className='space-y-4'>
+            {/* Destacado: Horas mensuales asignadas */}
+            <div className='bg-blue-50 border border-blue-200 rounded-lg p-4'>
+              <label className='block text-sm font-semibold text-blue-900 mb-1'>
+                Horas totales asignadas al mes (Servicios Sociales) *
+              </label>
+              <Input
+                type='number'
+                min={0}
+                max={744}
+                step={1}
+                value={editingUser.monthly_assigned_hours ?? 0}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  const num = val === '' ? 0 : Number(val);
+                  setEditingUser({
+                    ...editingUser,
+                    monthly_assigned_hours: Number.isFinite(num) ? num : 0,
+                  });
+                }}
+                className={
+                  userValidationErrors.monthly_assigned_hours
+                    ? 'border-red-300 focus:border-red-500'
+                    : 'text-lg'
+                }
+              />
+              {userValidationErrors.monthly_assigned_hours && (
+                <p className='mt-1 text-sm text-red-600'>
+                  {userValidationErrors.monthly_assigned_hours}
+                </p>
+              )}
+              <p className='mt-2 text-xs text-blue-800'>
+                Este dato se usará para calcular exceso/defecto mensual
+                automáticamente.
+              </p>
+            </div>
             {/* Personal Information */}
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
               <div>

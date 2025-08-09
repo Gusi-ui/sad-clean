@@ -350,7 +350,7 @@ export default function AssignmentForm({
   // Filtrar trabajadoras en tiempo real
   useEffect(() => {
     const filtered = workers.filter((worker) =>
-      `${worker.name} ${worker.surname} ${worker.dni}`
+      `${worker.name} ${worker.surname}`
         .toLowerCase()
         .includes(workerSearchTerm.toLowerCase())
     );
@@ -654,7 +654,8 @@ export default function AssignmentForm({
                       {worker.name} {worker.surname}
                     </div>
                     <div className='text-sm text-gray-600'>
-                      DNI: {worker.dni} | {worker.email}
+                      DNI: {worker.dni?.replace(/.(?=.{3}$)/g, '*') ?? '—'} |
+                      {` ${worker.email ?? '—'}`}
                     </div>
                   </div>
                 ))}

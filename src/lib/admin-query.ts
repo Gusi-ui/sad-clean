@@ -68,6 +68,7 @@ export const createAdmin = async (
     postal_code: '',
     city: '',
     client_code: '',
+    monthly_assigned_hours: 0,
     medical_conditions: [],
     emergency_contact: {
       name: '',
@@ -109,6 +110,7 @@ export const getAdmins = async (): Promise<AdminUser[]> => {
       postal_code: '',
       city: '',
       client_code: '',
+      monthly_assigned_hours: 0,
       medical_conditions: [],
       emergency_contact: {
         name: '',

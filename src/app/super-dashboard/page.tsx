@@ -274,6 +274,7 @@ export default function SuperDashboardPage() {
         address: '',
         postal_code: '',
         city: '',
+        monthly_assigned_hours: 0,
         medical_conditions: [],
         emergency_contact: {
           name: '',
