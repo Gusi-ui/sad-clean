@@ -11,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { ensureWorkerAuthAccount } from '@/lib/worker-auth';
 import {
   createWorker,
   deleteWorker,
@@ -54,6 +55,8 @@ export default function WorkersPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [editingWorker, setEditingWorker] = useState<Partial<WorkerType>>({});
+  const [workerAccessPassword, setWorkerAccessPassword] = useState<string>('');
+  const [showWorkerPassword, setShowWorkerPassword] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -251,9 +254,35 @@ export default function WorkersPage() {
     setIsAddModalOpen(true);
   };
 
+  const generatePassword = (length = 12): string => {
+    const charset =
+      'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%^&*_-';
+    const buf = new Uint32Array(length);
+    if (
+      typeof window !== 'undefined' &&
+      typeof window.crypto !== 'undefined' &&
+      typeof window.crypto.getRandomValues === 'function'
+    ) {
+      window.crypto.getRandomValues(buf);
+    } else {
+      for (let i = 0; i < length; i += 1) {
+        buf[i] = Math.floor(Math.random() * 4294967296);
+      }
+    }
+    let pwd = '';
+    for (let i = 0; i < length; i += 1) {
+      const v = buf[i] ?? 0;
+      const idx = v % charset.length;
+      pwd += charset.charAt(idx);
+    }
+    return pwd;
+  };
+
   const handleEditWorker = (worker: Worker) => {
     setSelectedWorker(worker);
     setEditingWorker({ ...worker });
+    // Generar contraseña por defecto al abrir edición
+    setWorkerAccessPassword(generatePassword());
     setIsEditModalOpen(true);
   };
 
@@ -261,6 +290,38 @@ export default function WorkersPage() {
     setSelectedWorker(worker);
     setIsViewModalOpen(true);
   };
+
+  const copyWorkerCredentialsToClipboard = (
+    email: string,
+    password: string
+  ): void => {
+    const text = `Email: ${email}\nContraseña: ${password}`;
+    const setOk = (): void =>
+      setSuccessMessage('Credenciales copiadas al portapapeles.');
+    const setErr = (): void =>
+      setError('No se pudieron copiar las credenciales.');
+    if (typeof navigator !== 'undefined' && navigator.clipboard !== undefined) {
+      navigator.clipboard.writeText(text).then(setOk).catch(setErr);
+      return;
+    }
+    try {
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.appendChild(textarea);
+      textarea.focus();
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      if (ok) setOk();
+      else setErr();
+    } catch {
+      setErr();
+    }
+  };
+
+  // generatePassword definido antes de su uso
 
   const handleSaveWorker = async () => {
     setSavingWorker(true);
@@ -663,9 +724,9 @@ export default function WorkersPage() {
                       <h3 className='font-medium text-gray-900 text-lg'>
                         {worker.name} {worker.surname}
                       </h3>
-                      <p className='text-sm text-gray-500'>
+                      <span className='inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200'>
                         {worker.worker_type}
-                      </p>
+                      </span>
                     </div>
                   </div>
 
@@ -695,10 +756,10 @@ export default function WorkersPage() {
                   <div className='flex items-center justify-between pt-3 border-t border-gray-100'>
                     <div className='flex items-center space-x-2'>
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ring-1 ring-inset ${
                           worker.is_active === true
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : 'bg-red-100 text-red-800 border border-red-300'
+                            ? 'bg-green-100 text-green-800 border border-green-300 ring-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300 ring-red-300'
                         }`}
                       >
                         {worker.is_active === true ? 'Activa' : 'Inactiva'}
@@ -756,9 +817,9 @@ export default function WorkersPage() {
                         <h3 className='text-base font-semibold text-gray-900 mb-1'>
                           {worker.name} {worker.surname}
                         </h3>
-                        <p className='text-sm text-gray-600 mb-1'>
+                        <span className='inline-flex items-center px-2 py-0.5 text-xs font-medium rounded-full bg-blue-50 text-blue-700 border border-blue-200 mb-1'>
                           {worker.worker_type}
-                        </p>
+                        </span>
                         <div className='flex flex-wrap items-center gap-3 text-sm text-gray-600'>
                           <span>📧 {worker.email}</span>
                           <span>📱 {worker.phone}</span>
@@ -772,10 +833,10 @@ export default function WorkersPage() {
                     {/* Estado y acciones */}
                     <div className='flex flex-col items-center gap-3 min-w-0'>
                       <span
-                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ${
+                        className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full whitespace-nowrap ring-1 ring-inset ${
                           worker.is_active === true
-                            ? 'bg-green-100 text-green-800 border border-green-300'
-                            : 'bg-red-100 text-red-800 border border-red-300'
+                            ? 'bg-green-100 text-green-800 border border-green-300 ring-green-300'
+                            : 'bg-red-100 text-red-800 border border-red-300 ring-red-300'
                         }`}
                       >
                         {worker.is_active === true ? 'Activa' : 'Inactiva'}
@@ -854,8 +915,11 @@ export default function WorkersPage() {
                                 <div className='text-sm font-medium text-gray-900'>
                                   {worker.name} {worker.surname}
                                 </div>
-                                <div className='text-sm text-gray-500'>
-                                  DNI: {worker.dni?.replace(/.(?=.{3}$)/g, '*')}
+                                <div className='text-sm text-gray-600'>
+                                  DNI:{' '}
+                                  <span className='font-medium text-gray-800'>
+                                    {worker.dni?.replace(/.(?=.{3}$)/g, '*')}
+                                  </span>
                                 </div>
                               </div>
                             </div>
@@ -868,10 +932,10 @@ export default function WorkersPage() {
                           </td>
                           <td className='px-4 py-4 whitespace-nowrap'>
                             <span
-                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ${
+                              className={`inline-flex px-3 py-1 text-xs font-semibold rounded-full ring-1 ring-inset ${
                                 worker.is_active === true
-                                  ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300'
-                                  : 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300'
+                                  ? 'bg-gradient-to-r from-green-100 to-green-200 text-green-800 border border-green-300 ring-green-300'
+                                  : 'bg-gradient-to-r from-red-100 to-red-200 text-red-800 border border-red-300 ring-red-300'
                               }`}
                             >
                               {worker.is_active === true
@@ -980,12 +1044,12 @@ export default function WorkersPage() {
             <div className='grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6'>
               {/* Nombre */}
               <div className='space-y-2'>
-                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>👤</span>
                   <span>Nombre *</span>
                 </label>
                 <Input
-                  className={`w-full ${
+                  className={`w-full h-11 placeholder:text-gray-400 ${
                     workerValidationErrors.name !== ''
                       ? 'border-red-300 focus:border-red-500'
                       : 'border-gray-300 focus:border-blue-500'
@@ -1017,12 +1081,12 @@ export default function WorkersPage() {
 
               {/* Apellidos */}
               <div className='space-y-2'>
-                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>👤</span>
                   <span>Apellidos *</span>
                 </label>
                 <Input
-                  className={`w-full ${
+                  className={`w-full h-11 placeholder:text-gray-400 ${
                     workerValidationErrors.surname !== ''
                       ? 'border-red-300 focus:border-red-500'
                       : 'border-gray-300 focus:border-blue-500'
@@ -1054,12 +1118,12 @@ export default function WorkersPage() {
 
               {/* Email */}
               <div className='space-y-2'>
-                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>📧</span>
                   <span>Email *</span>
                 </label>
                 <Input
-                  className={`w-full ${
+                  className={`w-full h-11 placeholder:text-gray-400 ${
                     workerValidationErrors.email !== ''
                       ? 'border-red-300 focus:border-red-500'
                       : 'border-gray-300 focus:border-blue-500'
@@ -1092,12 +1156,12 @@ export default function WorkersPage() {
 
               {/* Teléfono */}
               <div className='space-y-2'>
-                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>📱</span>
                   <span>Teléfono</span>
                 </label>
                 <Input
-                  className={`w-full ${
+                  className={`w-full h-11 placeholder:text-gray-400 ${
                     workerValidationErrors.phone !== ''
                       ? 'border-red-300 focus:border-red-500'
                       : 'border-gray-300 focus:border-blue-500'
@@ -1130,12 +1194,12 @@ export default function WorkersPage() {
 
               {/* DNI */}
               <div className='space-y-2'>
-                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>🆔</span>
                   <span>DNI *</span>
                 </label>
                 <Input
-                  className={`w-full ${
+                  className={`w-full h-11 placeholder:text-gray-400 ${
                     workerValidationErrors.dni !== ''
                       ? 'border-red-300 focus:border-red-500'
                       : 'border-gray-300 focus:border-blue-500'
@@ -1168,12 +1232,12 @@ export default function WorkersPage() {
 
               {/* Estado */}
               <div className='space-y-2'>
-                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-700'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>⚡</span>
                   <span>Estado</span>
                 </label>
                 <select
-                  className='w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base'
+                  className='w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm md:text-base bg-white text-gray-900 shadow-sm min-h-[44px]'
                   value={
                     editingWorker.is_active === true
                       ? 'activa'
@@ -1339,6 +1403,57 @@ export default function WorkersPage() {
                   }}
                 />
               </div>
+              <div className='sm:col-span-2'>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Contraseña de acceso (APP)
+                </label>
+                <div className='space-y-2'>
+                  <Input
+                    id='worker-password-input'
+                    className='w-full h-11 bg-white text-gray-900 placeholder:text-gray-400'
+                    type={showWorkerPassword ? 'text' : 'password'}
+                    placeholder='Generada automáticamente'
+                    value={workerAccessPassword}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      setWorkerAccessPassword(e.target.value)
+                    }
+                  />
+                  <div className='flex flex-col sm:flex-row gap-2'>
+                    <Button
+                      variant='outline'
+                      onClick={() => setShowWorkerPassword((v) => !v)}
+                    >
+                      {showWorkerPassword ? 'Ocultar' : 'Mostrar'}
+                    </Button>
+                    <Button
+                      variant='outline'
+                      onClick={() =>
+                        setWorkerAccessPassword(generatePassword())
+                      }
+                    >
+                      Generar
+                    </Button>
+                    <Button
+                      variant='outline'
+                      onClick={() => {
+                        if (!isValidField(editingWorker.email)) {
+                          setError('Email requerido para copiar credenciales.');
+                          return;
+                        }
+                        copyWorkerCredentialsToClipboard(
+                          editingWorker.email,
+                          workerAccessPassword
+                        );
+                      }}
+                    >
+                      Copiar credenciales
+                    </Button>
+                  </div>
+                </div>
+                <p className='mt-1 text-xs text-gray-600'>
+                  Mínimo 6 caracteres. Puedes editarla manualmente.
+                </p>
+              </div>
               <div>
                 <label className='block text-sm font-medium text-gray-700 mb-1'>
                   Teléfono
@@ -1371,11 +1486,11 @@ export default function WorkersPage() {
                 />
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
                   Tipo de Trabajadora
                 </label>
                 <select
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className='w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[44px]'
                   value={editingWorker.worker_type ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                     setEditingWorker({
@@ -1394,11 +1509,11 @@ export default function WorkersPage() {
                 </select>
               </div>
               <div>
-                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
                   Estado
                 </label>
                 <select
-                  className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                  className='w-full px-3 py-2 md:py-3 border border-gray-300 rounded-md bg-white text-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm min-h-[44px]'
                   value={
                     editingWorker.is_active === true
                       ? 'activa'
@@ -1430,6 +1545,38 @@ export default function WorkersPage() {
                 }}
               >
                 Cancelar
+              </Button>
+              <Button
+                className='bg-indigo-600 hover:bg-indigo-700 text-white'
+                onClick={() => {
+                  if (
+                    !isValidField(editingWorker.email) ||
+                    !isValidField(editingWorker.name)
+                  ) {
+                    setError(
+                      'Email y nombre son obligatorios para generar acceso.'
+                    );
+                    return;
+                  }
+                  const pwd = workerAccessPassword;
+                  if (pwd.trim().length < 6) {
+                    setError('La contraseña debe tener al menos 6 caracteres.');
+                    return;
+                  }
+                  ensureWorkerAuthAccount({
+                    email: editingWorker.email,
+                    name: editingWorker.name,
+                    password: pwd,
+                  })
+                    .then((res) => {
+                      if (res.success)
+                        setSuccessMessage('Acceso de trabajadora configurado.');
+                      else setError(res.message);
+                    })
+                    .catch(() => setError('Error generando acceso'));
+                }}
+              >
+                🔐 Generar/Resetear Acceso
               </Button>
               <Button
                 className='bg-blue-600 hover:bg-blue-700 text-white'
