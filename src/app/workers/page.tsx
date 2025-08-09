@@ -217,7 +217,8 @@ export default function WorkersPage() {
       (worker.dni !== undefined &&
         worker.dni !== null &&
         worker.dni.length > 0 &&
-        worker.dni.toLowerCase().includes(searchTerm.toLowerCase()));
+        // Permitir buscar por últimos 3 dígitos sin exponer completo
+        worker.dni.slice(-3).toLowerCase().includes(searchTerm.toLowerCase()));
 
     const matchesStatus =
       filterStatus === 'all' ||
@@ -685,7 +686,7 @@ export default function WorkersPage() {
                     <div className='flex items-center space-x-2'>
                       <span className='text-gray-400 text-sm'>🆔</span>
                       <span className='text-sm text-gray-700'>
-                        DNI: {worker.dni}
+                        DNI: {worker.dni?.replace(/.(?=.{3}$)/g, '*')}
                       </span>
                     </div>
                   </div>
@@ -761,7 +762,9 @@ export default function WorkersPage() {
                         <div className='flex flex-wrap items-center gap-3 text-sm text-gray-600'>
                           <span>📧 {worker.email}</span>
                           <span>📱 {worker.phone}</span>
-                          <span>🆔 {worker.dni}</span>
+                          <span>
+                            🆔 {worker.dni?.replace(/.(?=.{3}$)/g, '*')}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -852,7 +855,7 @@ export default function WorkersPage() {
                                   {worker.name} {worker.surname}
                                 </div>
                                 <div className='text-sm text-gray-500'>
-                                  DNI: {worker.dni}
+                                  DNI: {worker.dni?.replace(/.(?=.{3}$)/g, '*')}
                                 </div>
                               </div>
                             </div>
@@ -1499,7 +1502,7 @@ export default function WorkersPage() {
               <div className='flex items-center space-x-2'>
                 <span className='text-gray-400 text-lg'>🆔</span>
                 <span className='text-sm text-gray-700'>
-                  DNI: {selectedWorker?.dni}
+                  DNI: {selectedWorker?.dni?.replace(/.(?=.{3}$)/g, '*')}
                 </span>
               </div>
               <div className='flex items-center space-x-2'>
@@ -1572,7 +1575,7 @@ export default function WorkersPage() {
                       {workerToDelete.email}
                     </p>
                     <p className='text-xs text-gray-500'>
-                      DNI: {workerToDelete.dni}
+                      DNI: {workerToDelete.dni?.replace(/.(?=.{3}$)/g, '*')}
                     </p>
                   </div>
                 </div>

@@ -161,7 +161,7 @@ export const WorkersList: React.FC = () => {
                             {worker.name} {worker.surname}
                           </div>
                           <div className='text-sm text-gray-500'>
-                            DNI: {worker.dni}
+                            DNI: {worker.dni?.replace(/.(?=.{3}$)/g, '*')}
                           </div>
                         </div>
                       </div>

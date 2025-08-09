@@ -443,6 +443,35 @@ export default function DashboardPage() {
                   </div>
                 </Link>
 
+                <Link href='/assignments' className='block'>
+                  <div className='w-full text-left p-4 bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-xl hover:from-indigo-100 hover:to-indigo-200 transition-all duration-200 border border-indigo-200'>
+                    <div className='flex items-center space-x-3'>
+                      <span className='text-2xl'>📋</span>
+                      <div className='flex-1'>
+                        <p className='font-semibold text-gray-900'>
+                          Gestionar Asignaciones
+                        </p>
+                        <p className='text-sm text-gray-600'>
+                          Crear, editar o eliminar asignaciones
+                        </p>
+                      </div>
+                      <svg
+                        className='w-5 h-5 text-indigo-600'
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                      >
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={2}
+                          d='M9 5l7 7-7 7'
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+
                 <Link href='/planning' className='block'>
                   <div className='w-full text-left p-4 bg-gradient-to-r from-purple-50 to-purple-100 rounded-xl hover:from-purple-100 hover:to-purple-200 transition-all duration-200 border border-purple-200'>
                     <div className='flex items-center space-x-3'>

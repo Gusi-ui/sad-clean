@@ -82,6 +82,7 @@ export interface User {
   postal_code: string;
   city: string;
   client_code: string;
+  monthly_assigned_hours: number; // horas totales asignadas al mes
   medical_conditions: string[];
   emergency_contact: {
     name: string;
@@ -102,6 +103,7 @@ export interface CreateUserData {
   postal_code: string;
   city: string;
   client_code: string;
+  monthly_assigned_hours: number;
   medical_conditions: string[];
   emergency_contact: {
     name: string;

@@ -12,7 +12,13 @@ import Navigation from '@/components/layout/Navigation';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
+import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardUrl } from '@/hooks/useDashboardUrl';
+import {
+  logAssignmentCreated,
+  logAssignmentDeleted,
+  logAssignmentUpdated,
+} from '@/lib/activities-query';
 import { supabase } from '@/lib/database';
 import { logger } from '@/utils/logger';
 
@@ -34,9 +40,12 @@ interface Assignment {
 }
 
 export default function AssignmentsPage() {
+  const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
@@ -51,9 +60,9 @@ export default function AssignmentsPage() {
     if (typeof schedule === 'string') {
       try {
         return JSON.parse(schedule) as Record<string, unknown>;
-      } catch (error) {
+      } catch (parseErr) {
         // eslint-disable-next-line no-console
-        console.error('Error parsing schedule JSON:', error);
+        console.error('Error parsing schedule JSON:', parseErr);
         // Retornar un schedule por defecto si el parsing falla
         return {
           monday: {
@@ -142,6 +151,23 @@ export default function AssignmentsPage() {
 
   const dashboardUrl = useDashboardUrl();
 
+  // Limpiar mensajes automáticamente
+  useEffect(() => {
+    if (error !== null) {
+      const t = setTimeout(() => setError(null), 5000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [error]);
+
+  useEffect(() => {
+    if (successMessage !== null) {
+      const t = setTimeout(() => setSuccessMessage(null), 5000);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [successMessage]);
+
   // Cargar datos
   useEffect(() => {
     const loadData = async () => {
@@ -170,15 +196,15 @@ export default function AssignmentsPage() {
 
           setAssignments(transformedData);
         }
-      } catch (error) {
-        logger.error('Error cargando datos:', error);
+      } catch (loadErr) {
+        logger.error('Error cargando datos:', loadErr);
       } finally {
         setLoading(false);
       }
     };
 
-    loadData().catch((error) => {
-      logger.error('Error loading data:', error);
+    loadData().catch((loadErr) => {
+      logger.error('Error loading data:', loadErr);
     });
   }, []);
 
@@ -200,24 +226,62 @@ export default function AssignmentsPage() {
 
     if (confirmed) {
       try {
-        const { error } = await supabase
+        const { error: deleteError } = await supabase
           .from('assignments')
           .delete()
           .eq('id', assignment.id);
 
-        if (error !== null) {
-          logger.error('Error eliminando asignación:', error);
-          // eslint-disable-next-line no-alert
-          alert('Error eliminando asignación');
+        if (deleteError !== null) {
+          logger.error('Error eliminando asignación:', deleteError);
+          setError('Error eliminando asignación');
         } else {
           setAssignments((prev) => prev.filter((a) => a.id !== assignment.id));
-          // eslint-disable-next-line no-alert
-          alert('Asignación eliminada correctamente');
+          setSuccessMessage('Asignación eliminada correctamente');
+
+          // Log de eliminación de asignación
+          const nameMeta = user?.user_metadata?.['name'];
+          const adminName =
+            typeof nameMeta === 'string' && nameMeta.trim().length > 0
+              ? nameMeta
+              : 'Administrador';
+          const adminEmail = typeof user?.email === 'string' ? user.email : '';
+          const workerFullName =
+            assignment.worker?.name !== undefined &&
+            assignment.worker?.surname !== undefined
+              ? `${assignment.worker.name} ${assignment.worker.surname}`
+              : undefined;
+          const userFullName =
+            assignment.user?.name !== undefined &&
+            assignment.user?.surname !== undefined
+              ? `${assignment.user.name} ${assignment.user.surname}`
+              : undefined;
+
+          const deleteDetails: {
+            assignment_id: string;
+            worker_id: string;
+            user_id: string;
+            worker_name?: string;
+            user_name?: string;
+          } = {
+            assignment_id: assignment.id,
+            worker_id: assignment.worker_id,
+            user_id: assignment.user_id,
+          };
+          if (
+            typeof workerFullName === 'string' &&
+            workerFullName.trim() !== ''
+          ) {
+            deleteDetails.worker_name = workerFullName;
+          }
+          if (typeof userFullName === 'string' && userFullName.trim() !== '') {
+            deleteDetails.user_name = userFullName;
+          }
+
+          await logAssignmentDeleted(adminName, adminEmail, deleteDetails);
         }
-      } catch (error) {
-        logger.error('Error eliminando asignación:', error);
-        // eslint-disable-next-line no-alert
-        alert('Error eliminando asignación');
+      } catch (deleteErr) {
+        logger.error('Error eliminando asignación:', deleteErr);
+        setError('Error eliminando asignación');
       }
     }
   };
@@ -447,6 +511,18 @@ export default function AssignmentsPage() {
           </div>
 
           {/* Assignments List */}
+          {/* Mensajes de Éxito y Error */}
+          {successMessage !== null && (
+            <div className='mb-4 rounded-lg bg-green-100 p-4 text-center text-sm text-green-700'>
+              {successMessage}
+            </div>
+          )}
+          {error !== null && (
+            <div className='mb-4 rounded-lg bg-red-100 p-4 text-center text-sm text-red-700'>
+              {error}
+            </div>
+          )}
+
           {loading ? (
             <Card className='p-8'>
               <div className='text-center'>
@@ -518,8 +594,8 @@ export default function AssignmentsPage() {
                         variant='outline'
                         size='sm'
                         onClick={() => {
-                          handleDeleteAssignment(assignment).catch((error) => {
-                            logger.error('Error deleting assignment:', error);
+                          handleDeleteAssignment(assignment).catch((delErr) => {
+                            logger.error('Error deleting assignment:', delErr);
                           });
                         }}
                         className='text-red-600 hover:text-red-900'
@@ -552,25 +628,26 @@ export default function AssignmentsPage() {
                   // Calcular horas semanales (incluye festivos si aplica)
                   const totalHours = calculateWeeklyHours(scheduleWithHoliday);
 
-                  const { error } = await supabase.from('assignments').insert([
-                    {
-                      user_id: data.user_id,
-                      worker_id: data.worker_id,
-                      assignment_type: data.assignment_type,
-                      start_date: data.start_date,
-                      end_date:
-                        data.end_date.trim() === '' ? null : data.end_date,
-                      schedule: JSON.stringify(scheduleWithHoliday),
-                      notes: data.notes,
-                      status: 'active',
-                      weekly_hours: totalHours,
-                    },
-                  ]);
+                  const { error: createError } = await supabase
+                    .from('assignments')
+                    .insert([
+                      {
+                        user_id: data.user_id,
+                        worker_id: data.worker_id,
+                        assignment_type: data.assignment_type,
+                        start_date: data.start_date,
+                        end_date:
+                          data.end_date.trim() === '' ? null : data.end_date,
+                        schedule: JSON.stringify(scheduleWithHoliday),
+                        notes: data.notes,
+                        status: 'active',
+                        weekly_hours: totalHours,
+                      },
+                    ]);
 
-                  if (error) {
-                    logger.error('Error creando asignación:', error);
-                    // eslint-disable-next-line no-alert
-                    alert('Error creando asignación');
+                  if (createError) {
+                    logger.error('Error creando asignación:', createError);
+                    setError('Error creando asignación');
                   } else {
                     // Recargar datos
                     const { data: newAssignments } = await supabase
@@ -594,13 +671,48 @@ export default function AssignmentsPage() {
 
                     setAssignments(transformedData);
                     setShowAddModal(false);
-                    // eslint-disable-next-line no-alert
-                    alert('Asignación creada correctamente');
+                    setSuccessMessage('Asignación creada correctamente');
+
+                    // Log de creación de asignación
+                    const nameMeta = user?.user_metadata?.['name'];
+                    const adminName =
+                      typeof nameMeta === 'string' && nameMeta.trim().length > 0
+                        ? nameMeta
+                        : 'Administrador';
+                    const adminEmail =
+                      typeof user?.email === 'string' ? user.email : '';
+
+                    const createDetails: {
+                      assignment_type?: string;
+                      worker_id?: string;
+                      user_id?: string;
+                      start_date?: string;
+                      end_date?: string | null;
+                    } = {};
+                    if (typeof data.assignment_type === 'string') {
+                      createDetails.assignment_type = data.assignment_type;
+                    }
+                    if (typeof data.worker_id === 'string') {
+                      createDetails.worker_id = data.worker_id;
+                    }
+                    if (typeof data.user_id === 'string') {
+                      createDetails.user_id = data.user_id;
+                    }
+                    if (typeof data.start_date === 'string') {
+                      createDetails.start_date = data.start_date;
+                    }
+                    createDetails.end_date =
+                      data.end_date.trim() === '' ? null : data.end_date;
+
+                    await logAssignmentCreated(
+                      adminName,
+                      adminEmail,
+                      createDetails
+                    );
                   }
-                } catch (error) {
-                  logger.error('Error creando asignación:', error);
-                  // eslint-disable-next-line no-alert
-                  alert('Error creando asignación');
+                } catch (createErr) {
+                  logger.error('Error creando asignación:', createErr);
+                  setError('Error creando asignación');
                 }
               };
               // eslint-disable-next-line no-void
@@ -620,28 +732,6 @@ export default function AssignmentsPage() {
                 if (!editingAssignment) return;
 
                 try {
-                  // Log de datos para debugging
-                  // eslint-disable-next-line no-console
-                  console.log('=== INICIO ACTUALIZACIÓN ===');
-                  // eslint-disable-next-line no-console
-                  console.log('ID de asignación:', editingAssignment.id);
-                  // eslint-disable-next-line no-console
-                  console.log('Datos a actualizar:', {
-                    id: editingAssignment.id,
-                    user_id: data.user_id,
-                    worker_id: data.worker_id,
-                    assignment_type: data.assignment_type,
-                    start_date: data.start_date,
-                    end_date:
-                      data.end_date.trim() === '' ? null : data.end_date,
-                    schedule: JSON.stringify(data.schedule),
-                    notes: data.notes,
-                    weekly_hours: calculateWeeklyHours(data.schedule),
-                  });
-
-                  // eslint-disable-next-line no-console
-                  console.log('Ejecutando query de actualización...');
-
                   // Incluir configuración de festivos en el schedule persistido
                   const scheduleWithHoliday: ScheduleWithHoliday = {
                     ...data.schedule,
@@ -651,7 +741,7 @@ export default function AssignmentsPage() {
                     },
                   };
 
-                  const { data: updateResult, error } = await supabase
+                  const { error: updateError } = await supabase
                     .from('assignments')
                     .update({
                       user_id: data.user_id,
@@ -668,26 +758,12 @@ export default function AssignmentsPage() {
                     .eq('id', editingAssignment.id)
                     .select();
 
-                  // eslint-disable-next-line no-console
-                  console.log('Resultado de la operación:', {
-                    updateResult,
-                    error,
-                  });
-
-                  if (error) {
-                    // eslint-disable-next-line no-console
-                    console.error('Error de Supabase:', error);
-                    logger.error('Error actualizando asignación:', error);
-                    // eslint-disable-next-line no-alert
-                    alert(
-                      `Error actualizando asignación: ${error.message || 'Error desconocido'}`
+                  if (updateError) {
+                    logger.error('Error actualizando asignación:', updateError);
+                    setError(
+                      `Error actualizando asignación: ${updateError.message || 'Error desconocido'}`
                     );
                   } else {
-                    // eslint-disable-next-line no-console
-                    console.log(
-                      'Asignación actualizada correctamente:',
-                      updateResult
-                    );
                     // Recargar datos
                     const { data: updatedAssignments } = await supabase
                       .from('assignments')
@@ -711,13 +787,75 @@ export default function AssignmentsPage() {
                     setAssignments(transformedData);
                     setShowEditModal(false);
                     setEditingAssignment(null);
-                    // eslint-disable-next-line no-alert
-                    alert('Asignación actualizada correctamente');
+                    setSuccessMessage('Asignación actualizada correctamente');
+
+                    // Log de actualización de asignación
+                    const nameMeta = user?.user_metadata?.['name'];
+                    const adminName =
+                      typeof nameMeta === 'string' && nameMeta.trim().length > 0
+                        ? nameMeta
+                        : 'Administrador';
+                    const adminEmail =
+                      typeof user?.email === 'string' ? user.email : '';
+                    const workerFullName =
+                      editingAssignment.worker?.name !== undefined &&
+                      editingAssignment.worker?.surname !== undefined
+                        ? `${editingAssignment.worker.name} ${editingAssignment.worker.surname}`
+                        : undefined;
+                    const userFullName =
+                      editingAssignment.user?.name !== undefined &&
+                      editingAssignment.user?.surname !== undefined
+                        ? `${editingAssignment.user.name} ${editingAssignment.user.surname}`
+                        : undefined;
+
+                    const updateDetails: {
+                      assignment_id: string;
+                      assignment_type?: string;
+                      worker_id?: string;
+                      user_id?: string;
+                      start_date?: string;
+                      end_date?: string | null;
+                      worker_name?: string;
+                      user_name?: string;
+                    } = {
+                      assignment_id: editingAssignment.id,
+                    };
+                    if (typeof data.assignment_type === 'string') {
+                      updateDetails.assignment_type = data.assignment_type;
+                    }
+                    if (typeof data.worker_id === 'string') {
+                      updateDetails.worker_id = data.worker_id;
+                    }
+                    if (typeof data.user_id === 'string') {
+                      updateDetails.user_id = data.user_id;
+                    }
+                    if (typeof data.start_date === 'string') {
+                      updateDetails.start_date = data.start_date;
+                    }
+                    updateDetails.end_date =
+                      data.end_date.trim() === '' ? null : data.end_date;
+                    if (
+                      typeof workerFullName === 'string' &&
+                      workerFullName.trim() !== ''
+                    ) {
+                      updateDetails.worker_name = workerFullName;
+                    }
+                    if (
+                      typeof userFullName === 'string' &&
+                      userFullName.trim() !== ''
+                    ) {
+                      updateDetails.user_name = userFullName;
+                    }
+
+                    await logAssignmentUpdated(
+                      adminName,
+                      adminEmail,
+                      updateDetails
+                    );
                   }
-                } catch (error) {
-                  logger.error('Error actualizando asignación:', error);
-                  // eslint-disable-next-line no-alert
-                  alert('Error actualizando asignación');
+                } catch (updateErr) {
+                  logger.error('Error actualizando asignación:', updateErr);
+                  setError('Error actualizando asignación');
                 }
               };
               // eslint-disable-next-line no-void
