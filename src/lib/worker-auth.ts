@@ -33,37 +33,24 @@ export const ensureWorkerAuthAccount = async (
     };
   }
 
-  // 1) Intentar crear usuario
-  const { data: created, error: createErr } =
-    await supabaseAdmin.auth.admin.createUser({
-      email,
-      password,
-      email_confirm: true,
-      user_metadata: { role: 'worker', name },
-    });
+  // Estrategia robusta: buscar por email; si existe, actualizar; si no, crear
+  // eslint-disable-next-line no-useless-assignment
+  let authUserId: string | null = null;
 
-  let authUserId: string | null = created?.user?.id ?? null;
+  // Buscar por email (primera página)
+  const { data: listData, error: listErr } =
+    await supabaseAdmin.auth.admin.listUsers();
+  if (listErr !== null) {
+    return {
+      success: false,
+      message: `Error listando usuarios: ${listErr.message}`,
+    };
+  }
+  const found = listData.users.find(
+    (u) => (u.email?.toLowerCase() ?? '') === email.toLowerCase()
+  );
 
-  // 2) Si ya existe, localizar y actualizar
-  if (createErr?.message?.includes('already registered') === true) {
-    // Buscar por email en lista de usuarios (paginado simple 1ª página)
-    const { data: listData, error: listErr } =
-      await supabaseAdmin.auth.admin.listUsers();
-    if (listErr !== null) {
-      return {
-        success: false,
-        message: `Error listando usuarios: ${listErr.message}`,
-      };
-    }
-    const found = listData.users.find(
-      (u) => (u.email?.toLowerCase() ?? '') === email.toLowerCase()
-    );
-    if (found === undefined) {
-      return {
-        success: false,
-        message: 'No se pudo localizar el usuario existente.',
-      };
-    }
+  if (found !== undefined) {
     authUserId = found.id;
     const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(
       authUserId,
@@ -78,11 +65,21 @@ export const ensureWorkerAuthAccount = async (
         message: `Error actualizando usuario: ${updErr.message}`,
       };
     }
-  } else if (createErr !== null) {
-    return {
-      success: false,
-      message: `Error creando usuario: ${createErr.message}`,
-    };
+  } else {
+    const { data: created, error: createErr } =
+      await supabaseAdmin.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: { role: 'worker', name },
+      });
+    if (createErr !== null) {
+      return {
+        success: false,
+        message: `Error creando usuario: ${createErr.message}`,
+      };
+    }
+    authUserId = created?.user?.id ?? null;
   }
 
   if (authUserId === null) {

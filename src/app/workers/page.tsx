@@ -11,7 +11,6 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
-import { ensureWorkerAuthAccount } from '@/lib/worker-auth';
 import {
   createWorker,
   deleteWorker,
@@ -281,8 +280,8 @@ export default function WorkersPage() {
   const handleEditWorker = (worker: Worker) => {
     setSelectedWorker(worker);
     setEditingWorker({ ...worker });
-    // Generar contraseña por defecto al abrir edición
-    setWorkerAccessPassword(generatePassword());
+    // No generar contraseña automáticamente al abrir edición
+    setWorkerAccessPassword('');
     setIsEditModalOpen(true);
   };
 
@@ -1412,7 +1411,7 @@ export default function WorkersPage() {
                     id='worker-password-input'
                     className='w-full h-11 bg-white text-gray-900 placeholder:text-gray-400'
                     type={showWorkerPassword ? 'text' : 'password'}
-                    placeholder='Generada automáticamente'
+                    placeholder='Introduce o genera una contraseña'
                     value={workerAccessPassword}
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setWorkerAccessPassword(e.target.value)
@@ -1563,17 +1562,31 @@ export default function WorkersPage() {
                     setError('La contraseña debe tener al menos 6 caracteres.');
                     return;
                   }
-                  ensureWorkerAuthAccount({
-                    email: editingWorker.email,
-                    name: editingWorker.name,
-                    password: pwd,
-                  })
-                    .then((res) => {
-                      if (res.success)
+                  // eslint-disable-next-line @typescript-eslint/no-floating-promises
+                  (async () => {
+                    try {
+                      const resp = await fetch('/api/workers/auth', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          email: editingWorker.email,
+                          name: editingWorker.name,
+                          password: pwd,
+                        }),
+                      });
+                      const json = (await resp.json()) as {
+                        success: boolean;
+                        message: string;
+                      };
+                      if (json.success) {
                         setSuccessMessage('Acceso de trabajadora configurado.');
-                      else setError(res.message);
-                    })
-                    .catch(() => setError('Error generando acceso'));
+                      } else {
+                        setError(json.message ?? 'Error generando acceso');
+                      }
+                    } catch {
+                      setError('Error generando acceso');
+                    }
+                  })();
                 }}
               >
                 🔐 Generar/Resetear Acceso

@@ -410,15 +410,38 @@ export default function AssignmentForm({
     field: 'start' | 'end',
     value: string
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      holiday_timeSlots: prev.holiday_timeSlots.map((slot) => {
-        if (slot.id === slotId) {
-          return { ...slot, [field]: value };
-        }
-        return slot;
-      }),
-    }));
+    // Limpiar el valor de entrada (solo números)
+    const cleanValue = value.replace(/[^0-9]/g, '');
+
+    // Formatear automáticamente
+    let formattedValue = '';
+    if (cleanValue.length >= 1) {
+      formattedValue = cleanValue.substring(0, 2);
+      if (cleanValue.length >= 3) {
+        formattedValue = `${formattedValue}:${cleanValue.substring(2, 4)}`;
+      }
+    }
+
+    // Validar formato completo cuando tenga 5 caracteres (HH:MM)
+    if (formattedValue.length === 5) {
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(formattedValue)) {
+        return; // No actualizar si el formato no es válido
+      }
+    }
+
+    // Permitir escritura parcial (ej: "11", "11:", "11:15")
+    if (formattedValue.length <= 5) {
+      setFormData((prev) => ({
+        ...prev,
+        holiday_timeSlots: prev.holiday_timeSlots.map((slot) => {
+          if (slot.id === slotId) {
+            return { ...slot, [field]: formattedValue };
+          }
+          return slot;
+        }),
+      }));
+    }
   };
 
   const addTimeSlot = (day: string) => {
@@ -464,23 +487,46 @@ export default function AssignmentForm({
     field: 'start' | 'end',
     value: string
   ) => {
-    setFormData((prev) => ({
-      ...prev,
-      schedule: {
-        ...prev.schedule,
-        [day]: {
-          ...prev.schedule[day as keyof typeof prev.schedule],
-          timeSlots: prev.schedule[
-            day as keyof typeof prev.schedule
-          ].timeSlots.map((slot) => {
-            if (slot.id === slotId) {
-              return { ...slot, [field]: value };
-            }
-            return slot;
-          }),
+    // Limpiar el valor de entrada (solo números)
+    const cleanValue = value.replace(/[^0-9]/g, '');
+
+    // Formatear automáticamente
+    let formattedValue = '';
+    if (cleanValue.length >= 1) {
+      formattedValue = cleanValue.substring(0, 2);
+      if (cleanValue.length >= 3) {
+        formattedValue = `${formattedValue}:${cleanValue.substring(2, 4)}`;
+      }
+    }
+
+    // Validar formato completo cuando tenga 5 caracteres (HH:MM)
+    if (formattedValue.length === 5) {
+      const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+      if (!timeRegex.test(formattedValue)) {
+        return; // No actualizar si el formato no es válido
+      }
+    }
+
+    // Permitir escritura parcial (ej: "11", "11:", "11:15")
+    if (formattedValue.length <= 5) {
+      setFormData((prev) => ({
+        ...prev,
+        schedule: {
+          ...prev.schedule,
+          [day]: {
+            ...prev.schedule[day as keyof typeof prev.schedule],
+            timeSlots: prev.schedule[
+              day as keyof typeof prev.schedule
+            ].timeSlots.map((slot) => {
+              if (slot.id === slotId) {
+                return { ...slot, [field]: formattedValue };
+              }
+              return slot;
+            }),
+          },
         },
-      },
-    }));
+      }));
+    }
   };
 
   const calculateRegularHours = (schedule: typeof formData.schedule) => {
@@ -818,7 +864,7 @@ export default function AssignmentForm({
                           className='flex items-center space-x-2'
                         >
                           <Input
-                            type='time'
+                            type='text'
                             value={slot.start}
                             onChange={(e) =>
                               updateTimeSlot(
@@ -828,12 +874,14 @@ export default function AssignmentForm({
                                 e.target.value
                               )
                             }
+                            placeholder='HH:MM'
                             disabled={mode === 'view'}
-                            className='w-24'
+                            className='w-24 text-center'
+                            maxLength={5}
                           />
                           <span className='text-gray-500'>a</span>
                           <Input
-                            type='time'
+                            type='text'
                             value={slot.end}
                             onChange={(e) =>
                               updateTimeSlot(
@@ -843,8 +891,10 @@ export default function AssignmentForm({
                                 e.target.value
                               )
                             }
+                            placeholder='HH:MM'
                             disabled={mode === 'view'}
-                            className='w-24'
+                            className='w-24 text-center'
+                            maxLength={5}
                           />
                           {formData.schedule[
                             day.key as keyof typeof formData.schedule
@@ -901,7 +951,7 @@ export default function AssignmentForm({
                   {formData.holiday_timeSlots.map((slot) => (
                     <div key={slot.id} className='flex items-center space-x-2'>
                       <Input
-                        type='time'
+                        type='text'
                         value={slot.start}
                         onChange={(e) =>
                           updateHolidayTimeSlot(
@@ -910,18 +960,22 @@ export default function AssignmentForm({
                             e.target.value
                           )
                         }
+                        placeholder='HH:MM'
                         disabled={mode === 'view'}
-                        className='w-24'
+                        className='w-24 text-center'
+                        maxLength={5}
                       />
                       <span className='text-gray-500'>a</span>
                       <Input
-                        type='time'
+                        type='text'
                         value={slot.end}
                         onChange={(e) =>
                           updateHolidayTimeSlot(slot.id, 'end', e.target.value)
                         }
+                        placeholder='HH:MM'
                         disabled={mode === 'view'}
-                        className='w-24'
+                        className='w-24 text-center'
+                        maxLength={5}
                       />
                       {formData.holiday_timeSlots.length > 1 && (
                         <Button

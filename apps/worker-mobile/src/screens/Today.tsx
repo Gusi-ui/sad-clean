@@ -32,6 +32,10 @@ export default function TodayScreen(): React.JSX.Element {
       setLoading(true);
       try {
         const email = user?.email ?? '';
+        if (email.trim() === '') {
+          setRows([]);
+          return;
+        }
         const { data: w, error: werr } = await supabase
           .from('workers')
           .select('id')
@@ -39,14 +43,17 @@ export default function TodayScreen(): React.JSX.Element {
           .single();
         const workerId =
           werr === null ? (w?.id as string | undefined) : undefined;
-        const base = supabase
+        if (workerId === undefined) {
+          // No hay correspondencia de email con una trabajadora registrada
+          setRows([]);
+          return;
+        }
+        const { data, error } = await supabase
           .from('assignments')
           .select('id, assignment_type, schedule, start_date, end_date')
           .lte('start_date', todayKey)
-          .or(`end_date.is.null,end_date.gte.${todayKey}`);
-        const { data, error } = workerId
-          ? await base.eq('worker_id', workerId)
-          : await base;
+          .or(`end_date.is.null,end_date.gte.${todayKey}`)
+          .eq('worker_id', workerId);
         if (error === null) setRows((data as Row[]) ?? []);
       } finally {
         setLoading(false);
