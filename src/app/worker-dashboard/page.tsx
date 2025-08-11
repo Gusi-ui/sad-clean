@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import Link from 'next/link';
 
@@ -27,50 +33,84 @@ export default function WorkerDashboard(): React.JSX.Element {
   const [activeUsers, setActiveUsers] = useState<number>(0);
   const todayRef = useRef<HTMLDivElement | null>(null);
 
-  const getFirstSlot = (
-    schedule: unknown
-  ): { start: string; end: string } | null => {
-    try {
-      const sc =
-        typeof schedule === 'string'
-          ? (JSON.parse(schedule) as Record<string, unknown>)
-          : (schedule as Record<string, unknown>);
-      const today = new Date().getDay();
-      const dayNames = [
-        'sunday',
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-      ];
-      const dayName = dayNames[today] ?? 'monday';
-      const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-      const enabled = (dayConfig?.['enabled'] as boolean) ?? false;
-      if (enabled === false) return null;
-      const slots = (
-        Array.isArray(dayConfig?.['timeSlots'])
+  type TimeSlotRange = { start: string; end: string };
+
+  const getTodaySlots = useCallback(
+    (
+      schedule: unknown,
+      assignmentType: string,
+      useHoliday: boolean
+    ): TimeSlotRange[] => {
+      try {
+        const sc =
+          typeof schedule === 'string'
+            ? (JSON.parse(schedule) as Record<string, unknown>)
+            : (schedule as Record<string, unknown>);
+        const today = new Date().getDay();
+        const dayNames = [
+          'sunday',
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+        ];
+        const dayName = dayNames[today] ?? 'monday';
+
+        const parseSlots = (raw: unknown[]): TimeSlotRange[] =>
+          raw
+            .map((s: unknown) => {
+              const slot = s as Record<string, unknown>;
+              const start = (slot?.['start'] as string | undefined) ?? '';
+              const end = (slot?.['end'] as string | undefined) ?? '';
+              const ok = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
+              if (ok(start) && ok(end)) {
+                const pad = (t: string) =>
+                  t
+                    .split(':')
+                    .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
+                    .join(':');
+                return { start: pad(start), end: pad(end) };
+              }
+              return null;
+            })
+            .filter((v): v is TimeSlotRange => v !== null);
+
+        // Tramos del día normal
+        const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
+        const enabled = (dayConfig?.['enabled'] as boolean) ?? true; // si no viene, asumimos activo
+        const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
           ? (dayConfig['timeSlots'] as unknown[])
-          : []
-      ) as Array<Record<string, unknown>>;
-      const first = slots[0];
-      const startRaw = (first?.['start'] as string | undefined) ?? '';
-      const endRaw = (first?.['end'] as string | undefined) ?? '';
-      const timeOk = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
-      if (timeOk(startRaw) && timeOk(endRaw)) {
-        const pad = (t: string) =>
-          t
-            .split(':')
-            .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
-            .join(':');
-        return { start: pad(startRaw), end: pad(endRaw) };
+          : [];
+        const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
+
+        // Festivos: soportar schedule.holiday.timeSlots y holiday_config.holiday_timeSlots
+        const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
+        const holidayDayRaw = Array.isArray(holidayDay?.['timeSlots'])
+          ? (holidayDay['timeSlots'] as unknown[])
+          : [];
+        const holidayCfg =
+          (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
+          undefined;
+        const holidayCfgRaw = Array.isArray(holidayCfg?.['holiday_timeSlots'])
+          ? (holidayCfg?.['holiday_timeSlots'] as unknown[])
+          : [];
+        const holidaySlots = parseSlots(
+          holidayCfgRaw.length > 0 ? holidayCfgRaw : holidayDayRaw
+        );
+
+        const type = (assignmentType ?? '').toLowerCase();
+        const mustUseHoliday = useHoliday || type === 'festivos';
+        if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
+        if (daySlots.length > 0) return daySlots;
+        return holidaySlots;
+      } catch {
+        return [];
       }
-    } catch {
-      // noop
-    }
-    return null;
-  };
+    },
+    []
+  );
 
   const todayKey = useMemo(() => {
     const toKey = (dt: Date) =>
@@ -147,38 +187,14 @@ export default function WorkerDashboard(): React.JSX.Element {
 
         if (err === null && rows !== null) {
           const filtered = rows.filter((a) => {
-            const primarySlot = getFirstSlot(a.schedule);
-            let slot = primarySlot;
-
-            if (slot === null && useHoliday) {
-              try {
-                const sc =
-                  typeof a.schedule === 'string'
-                    ? (JSON.parse(a.schedule) as Record<string, unknown>)
-                    : (a.schedule as Record<string, unknown>);
-                const hcfg =
-                  (sc?.['holiday_config'] as Record<string, unknown>) ?? {};
-                const slots = (
-                  Array.isArray(hcfg?.['holiday_timeSlots'])
-                    ? (hcfg['holiday_timeSlots'] as unknown[])
-                    : []
-                ) as Array<Record<string, unknown>>;
-                const first = slots[0];
-                const start = (first?.['start'] as string | undefined) ?? '';
-                const end = (first?.['end'] as string | undefined) ?? '';
-                if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
-                  slot = { start, end };
-                }
-              } catch {
-                // noop
-              }
-            }
-
-            if (slot === null) return false;
+            const slots = getTodaySlots(
+              a.schedule,
+              a.assignment_type,
+              useHoliday
+            );
+            if (slots.length === 0) return false;
             const t = (a.assignment_type ?? '').toLowerCase();
-            if (useHoliday) {
-              return t === 'festivos' || t === 'flexible';
-            }
+            if (useHoliday) return t === 'festivos' || t === 'flexible';
             return t === 'laborables' || t === 'flexible';
           });
           setTodayAssignments(filtered);
@@ -228,7 +244,7 @@ export default function WorkerDashboard(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [todayKey, weekRange.end, weekRange.start, user?.email]);
+  }, [getTodaySlots, todayKey, weekRange.end, weekRange.start, user?.email]);
 
   const displayName = useMemo(() => {
     const meta = user?.name;
@@ -261,50 +277,7 @@ export default function WorkerDashboard(): React.JSX.Element {
     }
   };
 
-  const getSlotForToday = (
-    schedule: unknown
-  ): { start: string; end: string } | null => {
-    try {
-      const sc =
-        typeof schedule === 'string'
-          ? (JSON.parse(schedule) as Record<string, unknown>)
-          : (schedule as Record<string, unknown>);
-      const today = new Date().getDay();
-      const dayNames = [
-        'sunday',
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-      ];
-      const dayName = dayNames[today] ?? 'monday';
-      const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-      const enabled = (dayConfig?.['enabled'] as boolean) ?? false;
-      if (enabled === false) return null;
-      const slots = (
-        Array.isArray(dayConfig?.['timeSlots'])
-          ? (dayConfig['timeSlots'] as unknown[])
-          : []
-      ) as Array<Record<string, unknown>>;
-      const first = slots[0];
-      const startRaw = (first?.['start'] as string | undefined) ?? '';
-      const endRaw = (first?.['end'] as string | undefined) ?? '';
-      const timeOk = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
-      if (timeOk(startRaw) && timeOk(endRaw)) {
-        const pad = (t: string) =>
-          t
-            .split(':')
-            .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
-            .join(':');
-        return { start: pad(startRaw), end: pad(endRaw) };
-      }
-    } catch {
-      // noop
-    }
-    return null;
-  };
+  // (Si se requiere ordenación futura por inicio, reutilizar getTodaySlots y calcular minutos)
 
   return (
     <ProtectedRoute requiredRole='worker'>
@@ -416,8 +389,8 @@ export default function WorkerDashboard(): React.JSX.Element {
             </div>
           </div>
 
-          {/* Estadísticas - Triple Layout Optimizado */}
-          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
+          {/* Estadísticas - Layout responsive mejorado (1 columna en móvil) */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
             <button
               onClick={scrollToToday}
               className='bg-white hover:bg-blue-50 active:bg-blue-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-blue-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
@@ -436,7 +409,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                       : `${todayAssignments.length} asignaciones activas`}
                   </p>
                 </div>
-                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-xl flex items-center justify-center'>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-full flex items-center justify-center'>
                   <span className='text-base md:text-lg lg:text-2xl'>📅</span>
                 </div>
               </div>
@@ -455,7 +428,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                     Sin cambios vs semana pasada
                   </p>
                 </div>
-                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-green-100 rounded-xl flex items-center justify-center'>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-green-100 rounded-full flex items-center justify-center'>
                   <span className='text-base md:text-lg lg:text-2xl'>⏰</span>
                 </div>
               </div>
@@ -474,7 +447,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                     {loading ? 'Cargando...' : `${activeUsers} registrados`}
                   </p>
                 </div>
-                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-full flex items-center justify-center'>
                   <span className='text-base md:text-lg lg:text-2xl'>👤</span>
                 </div>
               </div>
@@ -496,14 +469,18 @@ export default function WorkerDashboard(): React.JSX.Element {
               ) : (
                 <div className='space-y-4'>
                   {todayAssignments.map((a, idx) => {
-                    const slot = getSlotForToday(a.schedule);
+                    const slots = getTodaySlots(
+                      a.schedule,
+                      a.assignment_type,
+                      new Date().getDay() === 0
+                    );
                     return (
                       <div
                         key={a.id}
                         className='flex items-center justify-between p-4 bg-gray-50 rounded-xl'
                       >
                         <div className='flex items-center space-x-4'>
-                          <div className='w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center'>
+                          <div className='w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center'>
                             <span className='text-white font-bold'>
                               {idx + 1}
                             </span>
@@ -516,10 +493,19 @@ export default function WorkerDashboard(): React.JSX.Element {
                             <p className='text-sm text-gray-600'>
                               {a.start_date} → {a.end_date ?? '—'}
                             </p>
-                            {slot !== null && (
-                              <p className='text-sm text-blue-600'>
-                                {slot.start} - {slot.end}
-                              </p>
+                            {slots.length > 0 ? (
+                              <div className='mt-1 flex flex-wrap gap-2'>
+                                {slots.map((s, i) => (
+                                  <span
+                                    key={`${a.id}-slot-${i}`}
+                                    className='inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-medium'
+                                  >
+                                    {s.start} - {s.end}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <p className='text-sm text-gray-500'>—</p>
                             )}
                           </div>
                         </div>
