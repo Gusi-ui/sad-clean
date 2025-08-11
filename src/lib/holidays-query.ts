@@ -246,11 +246,9 @@ export const isHoliday = async (
       .eq('day', day)
       .eq('month', month)
       .eq('year', year)
-      .single();
+      .maybeSingle();
 
-    if (error !== null) {
-      return false;
-    }
+    if (error !== null) return false;
 
     return data !== null;
   } catch (error) {

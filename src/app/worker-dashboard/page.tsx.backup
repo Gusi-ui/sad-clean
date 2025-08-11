@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
+import { isHoliday } from '@/lib/holidays-query';
 
 interface AssignmentRow {
   id: string;
@@ -23,157 +24,113 @@ export default function WorkerDashboard(): React.JSX.Element {
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
   const [weeklyHours, setWeeklyHours] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
-
+  const [useHolidayDay, setUseHolidayDay] = useState<boolean>(false);
   const [activeUsers, setActiveUsers] = useState<number>(0);
   const todayRef = useRef<HTMLDivElement | null>(null);
 
-  const getFirstSlot = (
-    schedule: unknown
-  ): { start: string; end: string } | null => {
-    try {
-      const sc =
-        typeof schedule === 'string'
-          ? (JSON.parse(schedule) as Record<string, unknown>)
-          : (schedule as Record<string, unknown>);
-      const today = new Date().getDay();
-      const dayNames = [
-        'sunday',
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-      ];
-      const dayName = dayNames[today] ?? 'monday';
-      const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-      const enabled = (dayConfig?.['enabled'] as boolean) ?? false;
-      if (enabled === false) return null;
-      const slots = (
-        Array.isArray(dayConfig?.['timeSlots'])
-          ? (dayConfig['timeSlots'] as unknown[])
-          : []
-      ) as Array<Record<string, unknown>>;
-      const first = slots[0];
-      const startRaw = (first?.['start'] as string | undefined) ?? '';
-      const endRaw = (first?.['end'] as string | undefined) ?? '';
-      const timeOk = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
-      if (timeOk(startRaw) && timeOk(endRaw)) {
-        const pad = (t: string) =>
-          t
-            .split(':')
-            .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
-            .join(':');
-        return { start: pad(startRaw), end: pad(endRaw) };
-      }
-    } catch {
-      // noop
-    }
-    return null;
-  };
-
   const todayKey = useMemo(() => {
-    const toKey = (dt: Date) =>
-      `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
-    return toKey(new Date());
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
   }, []);
 
   const weekRange = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
+    const d = new Date();
+    const day = d.getDay(); // 0..6 (0=Domingo)
+    const start = new Date(d);
+    start.setDate(d.getDate() - day); // Domingo
     const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    };
+    end.setDate(start.getDate() + 6); // Sábado
+    const toKey = (dt: Date) =>
+      `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+    return { start: toKey(start), end: toKey(end) };
   }, []);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
-        setTodayAssignments([]);
-        setLoading(false);
-        return;
-      }
-
+      setLoading(true);
       try {
-        setLoading(true);
-
-        // Buscar trabajadora por email
-        const { data: workerData, error: workerError } = await supabase
-          .from('workers')
-          .select('id')
-          .ilike('email', user.email)
-          .maybeSingle();
-
-        if (workerError !== null || workerData === null) {
+        const email = typeof user?.email === 'string' ? user.email : '';
+        if (email.trim() === '') {
           setTodayAssignments([]);
-          setLoading(false);
+          setWeeklyHours(0);
           return;
         }
-
-        const workerId = workerData.id;
-
-        // Verificar si hoy es festivo
-        const { data: holidayData } = await supabase
-          .from('holidays')
-          .select('id')
-          .eq('day', new Date().getDate())
-          .eq('month', new Date().getMonth() + 1)
-          .eq('year', new Date().getFullYear())
+        // Resolver worker_id por email
+        const { data: worker, error: werr } = await supabase
+          .from('workers')
+          .select('id, name, surname')
+          .ilike('email', email)
           .maybeSingle();
+        if (werr !== null || worker === null) {
+          setTodayAssignments([]);
+          setWeeklyHours(0);
+          return;
+        }
+        const workerId = worker.id;
 
-        const useHoliday = holidayData !== null || new Date().getDay() === 0;
-
-        // Obtener asignaciones de hoy
-        const { data: rows, error: err } = await supabase
+        // Servicios activos que abarcan hoy
+        const { data: todayData, error: tErr } = await supabase
           .from('assignments')
           .select(
-            `
-            id,
-            assignment_type,
-            schedule,
-            start_date,
-            end_date,
-            users(name, surname)
-          `
+            'id, assignment_type, schedule, start_date, end_date, users(name, surname)'
           )
-          .eq('worker_id', workerId)
-          .eq('status', 'active')
           .lte('start_date', todayKey)
-          .or(`end_date.is.null,end_date.gte.${todayKey}`);
-
-        if (err === null && rows !== null) {
+          .or(`end_date.is.null,end_date.gte.${todayKey}`)
+          .eq('worker_id', workerId);
+        if (tErr === null) {
+          const rows = (todayData as AssignmentRow[]) ?? [];
+          // Calcular si hoy es fin de semana o festivo
+          const now = new Date();
+          const dow = now.getDay();
+          const isWeekend = dow === 0 || dow === 6;
+          const holiday = await isHoliday(
+            now.getDate(),
+            now.getMonth() + 1,
+            now.getFullYear()
+          );
+          const useHoliday = isWeekend || holiday;
+          setUseHolidayDay(useHoliday);
           const filtered = rows.filter((a) => {
             const primarySlot = getFirstSlot(a.schedule);
             let slot = primarySlot;
-
             if (slot === null && useHoliday) {
-              try {
-                const sc =
-                  typeof a.schedule === 'string'
-                    ? (JSON.parse(a.schedule) as Record<string, unknown>)
-                    : (a.schedule as Record<string, unknown>);
-                const hcfg =
-                  (sc?.['holiday_config'] as Record<string, unknown>) ?? {};
-                const slots = (
-                  Array.isArray(hcfg?.['holiday_timeSlots'])
-                    ? (hcfg['holiday_timeSlots'] as unknown[])
-                    : []
-                ) as Array<Record<string, unknown>>;
-                const first = slots[0];
-                const start = (first?.['start'] as string | undefined) ?? '';
-                const end = (first?.['end'] as string | undefined) ?? '';
-                if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
-                  slot = { start, end };
-                }
-              } catch {
-                // noop
-              }
-            }
-
+                ? ((): { start: string; end: string } | null => {
+                      try {
+                        const sc =
+                          typeof a.schedule === 'string'
+                            ? (JSON.parse(a.schedule) as Record<
+                                string,
+                                unknown
+                              >)
+                            : (a.schedule as Record<string, unknown>);
+                        const hcfg =
+                          (sc?.['holiday_config'] as Record<string, unknown>) ??
+                          {};
+                        const slots = (
+                          Array.isArray(hcfg?.['holiday_timeSlots'])
+                            ? (hcfg['holiday_timeSlots'] as unknown[])
+                            : []
+                        ) as Array<Record<string, unknown>>;
+                        const first = slots[0];
+                        const start =
+                          (first?.['start'] as string | undefined) ?? '';
+                        const end =
+                          (first?.['end'] as string | undefined) ?? '';
+                        if (
+                          /^\d{2}:\d{2}$/.test(start) &&
+                          /^\d{2}:\d{2}$/.test(end)
+                        ) {
+                          return { start, end };
+                        }
+                      } catch {
+                        // noop
+                      }
+                      return null;
+                    })()
+                  : null;
             if (slot === null) return false;
             const t = (a.assignment_type ?? '').toLowerCase();
             if (useHoliday) {
@@ -244,14 +201,12 @@ export default function WorkerDashboard(): React.JSX.Element {
       day: 'numeric',
       month: 'long',
     });
-
   const greeting = useMemo(() => {
     const h = new Date().getHours();
     if (h < 12) return 'Buenos días';
     if (h < 18) return 'Buenas tardes';
     return 'Buenas noches';
   }, []);
-
   const scrollToToday = (): void => {
     if (todayRef.current !== null) {
       todayRef.current.scrollIntoView({
@@ -261,16 +216,11 @@ export default function WorkerDashboard(): React.JSX.Element {
     }
   };
 
-  const getSlotForToday = (
-    schedule: unknown
-  ): { start: string; end: string } | null => {
-    try {
-      const sc =
-        typeof schedule === 'string'
-          ? (JSON.parse(schedule) as Record<string, unknown>)
-          : (schedule as Record<string, unknown>);
-      const today = new Date().getDay();
-      const dayNames = [
+  const dayKey = useMemo(() => {
+    const d = new Date();
+    const dow = d.getDay();
+    return (
+      [
         'sunday',
         'monday',
         'tuesday',
@@ -278,14 +228,59 @@ export default function WorkerDashboard(): React.JSX.Element {
         'thursday',
         'friday',
         'saturday',
-      ];
-      const dayName = dayNames[today] ?? 'monday';
-      const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-      const enabled = (dayConfig?.['enabled'] as boolean) ?? false;
-      if (enabled === false) return null;
+      ][dow] ?? 'monday'
+    );
+  }, []);
+
+  const getFirstSlot = (
+    schedule: unknown
+  ): { start: string; end: string } | null => {
+    try {
+      const sc =
+        typeof schedule === 'string'
+          ? (JSON.parse(schedule) as Record<string, unknown>)
+          : (schedule as Record<string, unknown>);
+      const dayObj = (sc?.[dayKey] as Record<string, unknown>) ?? undefined;
+      const enabled = (dayObj?.['enabled'] as boolean | undefined) ?? false;
+      if (!enabled) return null;
       const slots = (
-        Array.isArray(dayConfig?.['timeSlots'])
-          ? (dayConfig['timeSlots'] as unknown[])
+        Array.isArray(dayObj?.['timeSlots'])
+          ? (dayObj?.['timeSlots'] as unknown[])
+          : []
+      ) as Array<Record<string, unknown>>;
+      const first = slots[0];
+      const startRaw = (first?.['start'] as string | undefined) ?? '';
+      const endRaw = (first?.['end'] as string | undefined) ?? '';
+      const timeOk = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
+      if (timeOk(startRaw) && timeOk(endRaw)) {
+        const pad = (t: string) =>
+          t
+            .split(':')
+            .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
+            .join(':');
+        return { start: pad(startRaw), end: pad(endRaw) };
+      }
+    } catch {
+      // noop
+    }
+    return null;
+  };
+
+  const getSlotForToday = (
+    schedule: unknown
+  ): { start: string; end: string } | null => {
+    const primary = getFirstSlot(schedule);
+    if (primary !== null) return primary;
+    if (!useHolidayDay) return null;
+    try {
+      const sc =
+        typeof schedule === 'string'
+          ? (JSON.parse(schedule) as Record<string, unknown>)
+          : (schedule as Record<string, unknown>);
+      const hcfg = (sc?.['holiday_config'] as Record<string, unknown>) ?? {};
+      const slots = (
+        Array.isArray(hcfg?.['holiday_timeSlots'])
+          ? (hcfg['holiday_timeSlots'] as unknown[])
           : []
       ) as Array<Record<string, unknown>>;
       const first = slots[0];
@@ -481,7 +476,7 @@ export default function WorkerDashboard(): React.JSX.Element {
             </div>
           </div>
 
-          <div className='bg-white rounded-2xl shadow-sm mb-8' ref={todayRef}>
+          <div className='bg-white rounded-2xl shadow-sm mb-8'>
             <div className='p-6 border-b border-gray-200'>
               <h2 className='text-xl font-bold text-gray-900'>
                 Horario de Hoy

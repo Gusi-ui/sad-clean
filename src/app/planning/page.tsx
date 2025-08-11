@@ -471,7 +471,7 @@ export default function PlanningPage() {
   };
 
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRole='admin'>
       <div className='bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen flex flex-col'>
         {/* Header - Visible en todos los dispositivos */}
         <header className='bg-white shadow-sm border-b border-gray-200'>

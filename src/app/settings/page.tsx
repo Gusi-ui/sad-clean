@@ -1,7 +1,5 @@
 'use client';
 
-import React from 'react';
-
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import Layout from '@/components/layout/Layout';
 import Button from '@/components/ui/Button';
@@ -9,7 +7,7 @@ import Card from '@/components/ui/Card';
 
 export default function SettingsPage() {
   return (
-    <ProtectedRoute>
+    <ProtectedRoute requiredRole='admin'>
       <Layout>
         <div className='p-4 lg:p-6'>
           <div className='max-w-7xl mx-auto'>
