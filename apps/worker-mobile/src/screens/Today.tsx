@@ -78,28 +78,90 @@ export default function TodayScreen(): React.JSX.Element {
     );
   }, []);
 
-  const getStartMinutes = (schedule: unknown): number => {
+  type TimeSlotRange = { start: string; end: string };
+
+  const getTodaySlots = (
+    schedule: unknown,
+    assignmentType: string
+  ): TimeSlotRange[] => {
     try {
       const sc =
         typeof schedule === 'string'
           ? (JSON.parse(schedule) as Record<string, unknown>)
           : (schedule as Record<string, unknown>);
-      const dayObj = (sc?.[dayKey] as Record<string, unknown>) ?? undefined;
-      const slots = (
-        Array.isArray(dayObj?.['timeSlots'])
-          ? (dayObj?.['timeSlots'] as unknown[])
-          : []
-      ) as Array<Record<string, unknown>>;
-      const first = slots[0];
-      const start = (first?.['start'] as string | undefined) ?? '';
-      if (/^\d{2}:\d{2}$/.test(start)) {
-        const [hh, mm] = start.split(':');
-        return Number(hh) * 60 + Number(mm);
+
+      const isSunday: boolean = new Date().getDay() === 0;
+      const type = (assignmentType ?? '').toLowerCase();
+      const shouldUseHoliday: boolean = isSunday || type === 'festivos';
+
+      // 1) Intentar leer tramos del día normal
+      const dayConfig = (sc?.[dayKey] as Record<string, unknown>) ?? undefined;
+      const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
+        ? (dayConfig?.['timeSlots'] as unknown[])
+        : [];
+      const daySlots: TimeSlotRange[] = daySlotsRaw
+        .map((slot: unknown) => {
+          const s = slot as Record<string, unknown>;
+          const start = (s?.['start'] as string | undefined) ?? '';
+          const end = (s?.['end'] as string | undefined) ?? '';
+          if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
+            return { start, end };
+          }
+          return null;
+        })
+        .filter((v): v is TimeSlotRange => v !== null);
+
+      // 2) Si es festivo/domingo o no hay tramos del día, intentar festivos
+      if (shouldUseHoliday || daySlots.length === 0) {
+        // Soportar dos esquemas: holiday_config.holiday_timeSlots y schedule.holiday.timeSlots
+        const holidayConfig =
+          (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
+          undefined;
+        const holidayFromConfig = Array.isArray(
+          holidayConfig?.['holiday_timeSlots']
+        )
+          ? (holidayConfig?.['holiday_timeSlots'] as unknown[])
+          : [];
+
+        const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
+        const holidayFromDay = Array.isArray(holidayDay?.['timeSlots'])
+          ? (holidayDay?.['timeSlots'] as unknown[])
+          : [];
+
+        const rawHoliday =
+          holidayFromConfig.length > 0 ? holidayFromConfig : holidayFromDay;
+
+        const holidaySlots: TimeSlotRange[] = rawHoliday
+          .map((slot: unknown) => {
+            const s = slot as Record<string, unknown>;
+            const start = (s?.['start'] as string | undefined) ?? '';
+            const end = (s?.['end'] as string | undefined) ?? '';
+            if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
+              return { start, end };
+            }
+            return null;
+          })
+          .filter((v): v is TimeSlotRange => v !== null);
+
+        if (holidaySlots.length > 0) return holidaySlots;
       }
+
+      return daySlots;
     } catch {
-      // ignore
+      return [];
     }
-    return 24 * 60 + 1; // al final si no hay hora
+  };
+
+  const getStartMinutes = (
+    schedule: unknown,
+    assignmentType: string
+  ): number => {
+    const slots = getTodaySlots(schedule, assignmentType);
+    if (slots.length > 0) {
+      const [hh, mm] = slots[0].start.split(':');
+      return Number(hh) * 60 + Number(mm);
+    }
+    return 24 * 60 + 1;
   };
 
   const sortedRows = useMemo(() => {
@@ -107,8 +169,8 @@ export default function TodayScreen(): React.JSX.Element {
       const aCompleted = completedIds.has(a.id) ? 1 : 0;
       const bCompleted = completedIds.has(b.id) ? 1 : 0;
       if (aCompleted !== bCompleted) return aCompleted - bCompleted; // no completados primero
-      const ta = getStartMinutes(a.schedule);
-      const tb = getStartMinutes(b.schedule);
+      const ta = getStartMinutes(a.schedule, a.assignment_type);
+      const tb = getStartMinutes(b.schedule, b.assignment_type);
       return ta - tb;
     });
   }, [rows, completedIds]);
@@ -140,26 +202,40 @@ export default function TodayScreen(): React.JSX.Element {
         <FlatList
           data={sortedRows}
           keyExtractor={(item) => item.id}
-          renderItem={({ item }: { item: Row }) => (
-            <View style={styles.card}>
-              <Text style={styles.cardTitle}>{item.assignment_type}</Text>
-              <Text style={styles.cardMeta}>
-                {item.start_date} → {item.end_date ?? '—'}
-              </Text>
-              {completedIds.has(item.id) ? (
-                <Text style={{ color: '#16a34a', fontWeight: '600' }}>
-                  Completado
+          renderItem={({ item }: { item: Row }) => {
+            const slots = getTodaySlots(item.schedule, item.assignment_type);
+            return (
+              <View style={styles.card}>
+                <Text style={styles.cardTitle}>{item.assignment_type}</Text>
+                <Text style={styles.cardMeta}>
+                  {item.start_date} → {item.end_date ?? '—'}
                 </Text>
-              ) : (
-                <Button
-                  title='Marcar completado'
-                  onPress={() => {
-                    void handleComplete(item.id);
-                  }}
-                />
-              )}
-            </View>
-          )}
+                <View style={{ marginTop: 4, gap: 2 }}>
+                  {slots.length > 0 ? (
+                    slots.map((s, idx) => (
+                      <Text key={`${item.id}-slot-${idx}`} style={styles.slot}>
+                        {s.start} - {s.end}
+                      </Text>
+                    ))
+                  ) : (
+                    <Text style={styles.slot}>—</Text>
+                  )}
+                </View>
+                {completedIds.has(item.id) ? (
+                  <Text style={{ color: '#16a34a', fontWeight: '600' }}>
+                    Completado
+                  </Text>
+                ) : (
+                  <Button
+                    title='Marcar completado'
+                    onPress={() => {
+                      void handleComplete(item.id);
+                    }}
+                  />
+                )}
+              </View>
+            );
+          }}
         />
       )}
     </View>
@@ -180,4 +256,5 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 16, fontWeight: '600' },
   cardMeta: { color: '#6b7280' },
+  slot: { color: '#111827', fontWeight: '500' },
 });
