@@ -1,6 +1,12 @@
 'use client';
 
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 
 import Link from 'next/link';
 
@@ -18,6 +24,133 @@ interface AssignmentRow {
   users?: { name: string | null; surname: string | null } | null;
 }
 
+// Lista de servicios por tramos con prioridad por estado y hora
+const ServicesTodayList = (props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getTodaySlots: (
+    schedule: unknown,
+    assignmentType: string,
+    useHoliday: boolean
+  ) => Array<{ start: string; end: string }>;
+}): React.JSX.Element => {
+  const { assignments, getTodaySlots } = props;
+
+  const isHoliday = new Date().getDay() === 0;
+  type Row = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+    startMinutes: number;
+    state: 'pending' | 'inprogress' | 'done';
+  };
+
+  const toMinutes = (hhmm: string): number => {
+    const [h, m] = hhmm.split(':');
+    return Number(h) * 60 + Number(m);
+  };
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const rows: Row[] = assignments.flatMap((a) => {
+    const slots = getTodaySlots(a.schedule, a.assignment_type, isHoliday);
+    const label =
+      `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
+    return slots.map((s) => {
+      const sm = toMinutes(s.start);
+      const em = toMinutes(s.end);
+      let state: Row['state'] = 'pending';
+      if (nowMinutes >= sm && nowMinutes < em) state = 'inprogress';
+      else if (nowMinutes >= em) state = 'done';
+      return {
+        assignmentId: a.id,
+        userLabel: label,
+        start: s.start,
+        end: s.end,
+        startMinutes: sm,
+        state,
+      };
+    });
+  });
+
+  // Orden: inprogress (verde) primero, luego pending (ámbar), luego done (rojo). Dentro, por hora de inicio
+  const stateRank: Record<Row['state'], number> = {
+    inprogress: 0,
+    pending: 1,
+    done: 2,
+  };
+  rows.sort((a, b) => {
+    const sr = stateRank[a.state] - stateRank[b.state];
+    if (sr !== 0) return sr;
+    return a.startMinutes - b.startMinutes;
+  });
+
+  const badgeClassByState: Record<Row['state'], string> = {
+    pending: 'bg-white/80 text-amber-800 ring-1 ring-amber-300',
+    inprogress: 'bg-white/80 text-green-800 ring-1 ring-green-300',
+    done: 'bg-white/80 text-rose-800 ring-1 ring-rose-300',
+  };
+  const containerClassByState: Record<Row['state'], string> = {
+    // Colores más intensos para mejor contraste y visibilidad
+    pending: 'bg-amber-100 border-amber-300 shadow-sm hover:bg-amber-50',
+    inprogress: 'bg-green-100 border-green-300 shadow-sm hover:bg-green-50',
+    done: 'bg-rose-100 border-rose-300 shadow-sm hover:bg-rose-50',
+  };
+
+  return (
+    <div className='space-y-3'>
+      {rows.map((r, idx) => (
+        <div
+          key={`${r.assignmentId}-${r.start}-${r.end}`}
+          className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 md:p-6 rounded-2xl border text-gray-900 ${containerClassByState[r.state]}`}
+        >
+          <div className='flex items-start md:items-center gap-4'>
+            <div className='w-10 h-10 md:w-12 md:h-12 bg-white text-blue-700 rounded-full flex items-center justify-center ring-2 ring-blue-200 shadow-sm'>
+              <span className='font-bold'>{idx + 1}</span>
+            </div>
+            <div>
+              <h3 className='text-base md:text-lg font-semibold text-gray-900 leading-tight'>
+                {r.userLabel}
+              </h3>
+              <p className='mt-1 text-sm text-gray-700'>
+                <span className='font-medium text-gray-900'>{r.start}</span>
+                <span className='mx-1 text-gray-500'>a</span>
+                <span className='font-medium text-gray-900'>{r.end}</span>
+              </p>
+              <span
+                className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClassByState[r.state]}`}
+              >
+                {r.state === 'pending' && 'Pendiente'}
+                {r.state === 'inprogress' && 'En curso'}
+                {r.state === 'done' && 'Completado'}
+              </span>
+            </div>
+          </div>
+          <Link
+            href={`/worker-dashboard/assignment/${r.assignmentId}?start=${r.start}&end=${r.end}`}
+          >
+            <Button
+              size='sm'
+              variant='outline'
+              className='self-start md:self-auto'
+            >
+              Ver Detalles
+            </Button>
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function WorkerDashboard(): React.JSX.Element {
   const { user } = useAuth();
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
@@ -26,50 +159,92 @@ export default function WorkerDashboard(): React.JSX.Element {
 
   const [activeUsers, setActiveUsers] = useState<number>(0);
   const todayRef = useRef<HTMLDivElement | null>(null);
+  const [completedTodayIds, setCompletedTodayIds] = useState<Set<string>>(
+    new Set()
+  );
 
-  const getFirstSlot = (
-    schedule: unknown
-  ): { start: string; end: string } | null => {
-    try {
-      const sc =
-        typeof schedule === 'string'
-          ? (JSON.parse(schedule) as Record<string, unknown>)
-          : (schedule as Record<string, unknown>);
-      const today = new Date().getDay();
-      const dayNames = [
-        'sunday',
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-      ];
-      const dayName = dayNames[today] ?? 'monday';
-      const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-      const enabled = (dayConfig?.['enabled'] as boolean) ?? false;
-      if (enabled === false) return null;
-      const slots = (
-        Array.isArray(dayConfig?.['timeSlots'])
+  type TimeSlotRange = { start: string; end: string };
+
+  const getTodaySlots = useCallback(
+    (
+      schedule: unknown,
+      assignmentType: string,
+      useHoliday: boolean
+    ): TimeSlotRange[] => {
+      try {
+        const sc =
+          typeof schedule === 'string'
+            ? (JSON.parse(schedule) as Record<string, unknown>)
+            : (schedule as Record<string, unknown>);
+        const today = new Date().getDay();
+        const dayNames = [
+          'sunday',
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+        ];
+        const dayName = dayNames[today] ?? 'monday';
+
+        const parseSlots = (raw: unknown[]): TimeSlotRange[] =>
+          raw
+            .map((s: unknown) => {
+              const slot = s as Record<string, unknown>;
+              const start = (slot?.['start'] as string | undefined) ?? '';
+              const end = (slot?.['end'] as string | undefined) ?? '';
+              const ok = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
+              if (ok(start) && ok(end)) {
+                const pad = (t: string) =>
+                  t
+                    .split(':')
+                    .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
+                    .join(':');
+                return { start: pad(start), end: pad(end) };
+              }
+              return null;
+            })
+            .filter((v): v is TimeSlotRange => v !== null);
+
+        // Tramos del día normal
+        const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
+        const enabled = (dayConfig?.['enabled'] as boolean) ?? true; // si no viene, asumimos activo
+        const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
           ? (dayConfig['timeSlots'] as unknown[])
-          : []
-      ) as Array<Record<string, unknown>>;
-      const first = slots[0];
-      const startRaw = (first?.['start'] as string | undefined) ?? '';
-      const endRaw = (first?.['end'] as string | undefined) ?? '';
-      const timeOk = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
-      if (timeOk(startRaw) && timeOk(endRaw)) {
-        const pad = (t: string) =>
-          t
-            .split(':')
-            .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
-            .join(':');
-        return { start: pad(startRaw), end: pad(endRaw) };
+          : [];
+        const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
+
+        // Festivos: soportar schedule.holiday.timeSlots y holiday_config.holiday_timeSlots
+        const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
+        const holidayDayRaw = Array.isArray(holidayDay?.['timeSlots'])
+          ? (holidayDay['timeSlots'] as unknown[])
+          : [];
+        const holidayCfg =
+          (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
+          undefined;
+        const holidayCfgRaw = Array.isArray(holidayCfg?.['holiday_timeSlots'])
+          ? (holidayCfg?.['holiday_timeSlots'] as unknown[])
+          : [];
+        const holidaySlots = parseSlots(
+          holidayCfgRaw.length > 0 ? holidayCfgRaw : holidayDayRaw
+        );
+
+        const type = (assignmentType ?? '').toLowerCase();
+        const mustUseHoliday = useHoliday || type === 'festivos';
+        if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
+        if (daySlots.length > 0) return daySlots;
+        return holidaySlots;
+      } catch {
+        return [];
       }
-    } catch {
-      // noop
-    }
-    return null;
+    },
+    []
+  );
+
+  const toMinutes = (hhmm: string): number => {
+    const [h, m] = hhmm.split(':');
+    return Number(h) * 60 + Number(m);
   };
 
   const todayKey = useMemo(() => {
@@ -147,41 +322,42 @@ export default function WorkerDashboard(): React.JSX.Element {
 
         if (err === null && rows !== null) {
           const filtered = rows.filter((a) => {
-            const primarySlot = getFirstSlot(a.schedule);
-            let slot = primarySlot;
-
-            if (slot === null && useHoliday) {
-              try {
-                const sc =
-                  typeof a.schedule === 'string'
-                    ? (JSON.parse(a.schedule) as Record<string, unknown>)
-                    : (a.schedule as Record<string, unknown>);
-                const hcfg =
-                  (sc?.['holiday_config'] as Record<string, unknown>) ?? {};
-                const slots = (
-                  Array.isArray(hcfg?.['holiday_timeSlots'])
-                    ? (hcfg['holiday_timeSlots'] as unknown[])
-                    : []
-                ) as Array<Record<string, unknown>>;
-                const first = slots[0];
-                const start = (first?.['start'] as string | undefined) ?? '';
-                const end = (first?.['end'] as string | undefined) ?? '';
-                if (/^\d{2}:\d{2}$/.test(start) && /^\d{2}:\d{2}$/.test(end)) {
-                  slot = { start, end };
-                }
-              } catch {
-                // noop
-              }
-            }
-
-            if (slot === null) return false;
+            const slots = getTodaySlots(
+              a.schedule,
+              a.assignment_type,
+              useHoliday
+            );
+            if (slots.length === 0) return false;
             const t = (a.assignment_type ?? '').toLowerCase();
-            if (useHoliday) {
-              return t === 'festivos' || t === 'flexible';
-            }
+            if (useHoliday) return t === 'festivos' || t === 'flexible';
             return t === 'laborables' || t === 'flexible';
           });
           setTodayAssignments(filtered);
+
+          // Calcular automáticamente los servicios completados basándose en el tiempo
+          const now = new Date();
+          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+          const completedSlots = new Set<string>();
+
+          filtered.forEach((assignment) => {
+            const slots = getTodaySlots(
+              assignment.schedule,
+              assignment.assignment_type,
+              useHoliday
+            );
+            slots.forEach((slot) => {
+              const endMinutes = toMinutes(slot.end);
+              // Si la hora actual es posterior al final del servicio, está completado
+              if (nowMinutes >= endMinutes) {
+                // Crear un identificador único para cada tramo horario
+                const slotId = `${assignment.id}-${slot.start}-${slot.end}`;
+                completedSlots.add(slotId);
+              }
+            });
+          });
+
+          setCompletedTodayIds(completedSlots);
         } else {
           setTodayAssignments([]);
         }
@@ -228,7 +404,14 @@ export default function WorkerDashboard(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [todayKey, weekRange.end, weekRange.start, user?.email]);
+  }, [
+    getTodaySlots,
+    todayKey,
+    weekRange.end,
+    weekRange.start,
+    user?.email,
+    user?.id,
+  ]);
 
   const displayName = useMemo(() => {
     const meta = user?.name;
@@ -261,50 +444,7 @@ export default function WorkerDashboard(): React.JSX.Element {
     }
   };
 
-  const getSlotForToday = (
-    schedule: unknown
-  ): { start: string; end: string } | null => {
-    try {
-      const sc =
-        typeof schedule === 'string'
-          ? (JSON.parse(schedule) as Record<string, unknown>)
-          : (schedule as Record<string, unknown>);
-      const today = new Date().getDay();
-      const dayNames = [
-        'sunday',
-        'monday',
-        'tuesday',
-        'wednesday',
-        'thursday',
-        'friday',
-        'saturday',
-      ];
-      const dayName = dayNames[today] ?? 'monday';
-      const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-      const enabled = (dayConfig?.['enabled'] as boolean) ?? false;
-      if (enabled === false) return null;
-      const slots = (
-        Array.isArray(dayConfig?.['timeSlots'])
-          ? (dayConfig['timeSlots'] as unknown[])
-          : []
-      ) as Array<Record<string, unknown>>;
-      const first = slots[0];
-      const startRaw = (first?.['start'] as string | undefined) ?? '';
-      const endRaw = (first?.['end'] as string | undefined) ?? '';
-      const timeOk = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
-      if (timeOk(startRaw) && timeOk(endRaw)) {
-        const pad = (t: string) =>
-          t
-            .split(':')
-            .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
-            .join(':');
-        return { start: pad(startRaw), end: pad(endRaw) };
-      }
-    } catch {
-      // noop
-    }
-    return null;
-  };
+  // (Si se requiere ordenación futura por inicio, reutilizar getTodaySlots y calcular minutos)
 
   return (
     <ProtectedRoute requiredRole='worker'>
@@ -353,10 +493,10 @@ export default function WorkerDashboard(): React.JSX.Element {
             </div>
             <Link
               href='/auth'
-              className='text-gray-600 hover:text-gray-900 transition-colors'
+              className='inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-colors'
             >
               <svg
-                className='w-6 h-6'
+                className='w-4 h-4'
                 fill='none'
                 stroke='currentColor'
                 viewBox='0 0 24 24'
@@ -368,6 +508,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                   d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
                 />
               </svg>
+              <span>Cerrar sesión</span>
             </Link>
           </div>
         </header>
@@ -416,8 +557,8 @@ export default function WorkerDashboard(): React.JSX.Element {
             </div>
           </div>
 
-          {/* Estadísticas - Triple Layout Optimizado */}
-          <div className='grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
+          {/* Estadísticas - 4 tarjetas en tablet vertical (2x2) */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
             <button
               onClick={scrollToToday}
               className='bg-white hover:bg-blue-50 active:bg-blue-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-blue-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
@@ -436,7 +577,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                       : `${todayAssignments.length} asignaciones activas`}
                   </p>
                 </div>
-                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-xl flex items-center justify-center'>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-blue-100 rounded-full flex items-center justify-center'>
                   <span className='text-base md:text-lg lg:text-2xl'>📅</span>
                 </div>
               </div>
@@ -455,7 +596,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                     Sin cambios vs semana pasada
                   </p>
                 </div>
-                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-green-100 rounded-xl flex items-center justify-center'>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-green-100 rounded-full flex items-center justify-center'>
                   <span className='text-base md:text-lg lg:text-2xl'>⏰</span>
                 </div>
               </div>
@@ -474,8 +615,28 @@ export default function WorkerDashboard(): React.JSX.Element {
                     {loading ? 'Cargando...' : `${activeUsers} registrados`}
                   </p>
                 </div>
-                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-xl flex items-center justify-center'>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-purple-100 rounded-full flex items-center justify-center'>
                   <span className='text-base md:text-lg lg:text-2xl'>👤</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Nueva tarjeta: Completados Hoy */}
+            <div className='bg-white hover:bg-rose-50 active:bg-rose-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-rose-200 transition-all duration-200'>
+              <div className='flex items-center justify-between'>
+                <div className='text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-1'>
+                    Completados Hoy
+                  </p>
+                  <p className='text-lg md:text-xl lg:text-2xl font-bold text-gray-900'>
+                    {completedTodayIds.size}
+                  </p>
+                  <p className='text-xs md:text-xs text-rose-600 mt-1'>
+                    Registros de finalización
+                  </p>
+                </div>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-rose-100 rounded-full flex items-center justify-center'>
+                  <span className='text-base md:text-lg lg:text-2xl'>✅</span>
                 </div>
               </div>
             </div>
@@ -494,44 +655,10 @@ export default function WorkerDashboard(): React.JSX.Element {
               ) : todayAssignments.length === 0 ? (
                 <p className='text-gray-600'>No tienes servicios para hoy.</p>
               ) : (
-                <div className='space-y-4'>
-                  {todayAssignments.map((a, idx) => {
-                    const slot = getSlotForToday(a.schedule);
-                    return (
-                      <div
-                        key={a.id}
-                        className='flex items-center justify-between p-4 bg-gray-50 rounded-xl'
-                      >
-                        <div className='flex items-center space-x-4'>
-                          <div className='w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center'>
-                            <span className='text-white font-bold'>
-                              {idx + 1}
-                            </span>
-                          </div>
-                          <div>
-                            <h3 className='font-semibold text-gray-900'>
-                              {`${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-                                'Servicio'}
-                            </h3>
-                            <p className='text-sm text-gray-600'>
-                              {a.start_date} → {a.end_date ?? '—'}
-                            </p>
-                            {slot !== null && (
-                              <p className='text-sm text-blue-600'>
-                                {slot.start} - {slot.end}
-                              </p>
-                            )}
-                          </div>
-                        </div>
-                        <Link href={`/worker-dashboard/assignment/${a.id}`}>
-                          <Button size='sm' variant='outline'>
-                            Ver Detalles
-                          </Button>
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ServicesTodayList
+                  assignments={todayAssignments}
+                  getTodaySlots={getTodaySlots}
+                />
               )}
             </div>
           </div>
