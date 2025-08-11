@@ -100,36 +100,49 @@ const ServicesTodayList = (props: {
     inprogress: 'bg-green-100 text-green-800',
     done: 'bg-rose-100 text-rose-800',
   };
+  const containerClassByState: Record<Row['state'], string> = {
+    pending:
+      'bg-amber-50/70 border-amber-200 hover:bg-amber-50 transition-colors',
+    inprogress:
+      'bg-green-50/70 border-green-200 hover:bg-green-50 transition-colors',
+    done: 'bg-rose-50/70 border-rose-200 hover:bg-rose-50 transition-colors',
+  };
 
   return (
     <div className='space-y-3'>
       {rows.map((r, idx) => (
         <div
           key={`${r.assignmentId}-${r.start}-${r.end}`}
-          className='flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100'
+          className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 md:p-6 rounded-2xl border ${containerClassByState[r.state]}`}
         >
-          <div className='flex items-center space-x-4'>
-            <div className='w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-full flex items-center justify-center'>
-              <span className='text-white font-bold'>{idx + 1}</span>
+          <div className='flex items-start md:items-center gap-4'>
+            <div className='w-10 h-10 md:w-12 md:h-12 bg-white text-blue-700 rounded-full flex items-center justify-center ring-2 ring-blue-200 shadow-sm'>
+              <span className='font-bold'>{idx + 1}</span>
             </div>
             <div>
-              <h3 className='font-semibold text-gray-900'>{r.userLabel}</h3>
-              <div className='mt-1 flex items-center gap-2'>
-                <span
-                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeClassByState[r.state]}`}
-                >
-                  {r.state === 'pending' && 'Pendiente'}
-                  {r.state === 'inprogress' && 'En curso'}
-                  {r.state === 'done' && 'Completado'}
-                </span>
-                <span className='text-sm text-blue-700 font-medium'>
-                  {r.start} - {r.end}
-                </span>
-              </div>
+              <h3 className='text-base md:text-lg font-semibold text-gray-900 leading-tight'>
+                {r.userLabel}
+              </h3>
+              <p className='mt-1 text-sm text-gray-700'>
+                <span className='font-medium text-gray-900'>{r.start}</span>
+                <span className='mx-1 text-gray-500'>a</span>
+                <span className='font-medium text-gray-900'>{r.end}</span>
+              </p>
+              <span
+                className={`mt-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${badgeClassByState[r.state]}`}
+              >
+                {r.state === 'pending' && 'Pendiente'}
+                {r.state === 'inprogress' && 'En curso'}
+                {r.state === 'done' && 'Completado'}
+              </span>
             </div>
           </div>
           <Link href={`/worker-dashboard/assignment/${r.assignmentId}`}>
-            <Button size='sm' variant='outline'>
+            <Button
+              size='sm'
+              variant='outline'
+              className='self-start md:self-auto'
+            >
               Ver Detalles
             </Button>
           </Link>
