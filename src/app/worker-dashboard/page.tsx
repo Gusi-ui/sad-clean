@@ -24,6 +24,121 @@ interface AssignmentRow {
   users?: { name: string | null; surname: string | null } | null;
 }
 
+// Lista de servicios por tramos con prioridad por estado y hora
+const ServicesTodayList = (props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getTodaySlots: (
+    schedule: unknown,
+    assignmentType: string,
+    useHoliday: boolean
+  ) => Array<{ start: string; end: string }>;
+  completedTodayIds: Set<string>;
+}): React.JSX.Element => {
+  const { assignments, getTodaySlots, completedTodayIds } = props;
+
+  const isHoliday = new Date().getDay() === 0;
+  type Row = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+    startMinutes: number;
+    state: 'pending' | 'inprogress' | 'done';
+  };
+
+  const toMinutes = (hhmm: string): number => {
+    const [h, m] = hhmm.split(':');
+    return Number(h) * 60 + Number(m);
+  };
+
+  const now = new Date();
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+  const rows: Row[] = assignments.flatMap((a) => {
+    const slots = getTodaySlots(a.schedule, a.assignment_type, isHoliday);
+    const label =
+      `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
+    return slots.map((s) => {
+      const sm = toMinutes(s.start);
+      const em = toMinutes(s.end);
+      let state: Row['state'] = 'pending';
+      if (completedTodayIds.has(a.id)) state = 'done';
+      else if (nowMinutes >= sm && nowMinutes < em) state = 'inprogress';
+      else if (nowMinutes >= em) state = 'done';
+      return {
+        assignmentId: a.id,
+        userLabel: label,
+        start: s.start,
+        end: s.end,
+        startMinutes: sm,
+        state,
+      };
+    });
+  });
+
+  // Orden: inprogress (verde) primero, luego pending (ámbar), luego done (rojo). Dentro, por hora de inicio
+  const stateRank: Record<Row['state'], number> = {
+    inprogress: 0,
+    pending: 1,
+    done: 2,
+  };
+  rows.sort((a, b) => {
+    const sr = stateRank[a.state] - stateRank[b.state];
+    if (sr !== 0) return sr;
+    return a.startMinutes - b.startMinutes;
+  });
+
+  const badgeClassByState: Record<Row['state'], string> = {
+    pending: 'bg-amber-100 text-amber-800',
+    inprogress: 'bg-green-100 text-green-800',
+    done: 'bg-rose-100 text-rose-800',
+  };
+
+  return (
+    <div className='space-y-3'>
+      {rows.map((r, idx) => (
+        <div
+          key={`${r.assignmentId}-${r.start}-${r.end}`}
+          className='flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100'
+        >
+          <div className='flex items-center space-x-4'>
+            <div className='w-10 h-10 md:w-12 md:h-12 bg-blue-600 rounded-full flex items-center justify-center'>
+              <span className='text-white font-bold'>{idx + 1}</span>
+            </div>
+            <div>
+              <h3 className='font-semibold text-gray-900'>{r.userLabel}</h3>
+              <div className='mt-1 flex items-center gap-2'>
+                <span
+                  className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeClassByState[r.state]}`}
+                >
+                  {r.state === 'pending' && 'Pendiente'}
+                  {r.state === 'inprogress' && 'En curso'}
+                  {r.state === 'done' && 'Completado'}
+                </span>
+                <span className='text-sm text-blue-700 font-medium'>
+                  {r.start} - {r.end}
+                </span>
+              </div>
+            </div>
+          </div>
+          <Link href={`/worker-dashboard/assignment/${r.assignmentId}`}>
+            <Button size='sm' variant='outline'>
+              Ver Detalles
+            </Button>
+          </Link>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function WorkerDashboard(): React.JSX.Element {
   const { user } = useAuth();
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
@@ -32,6 +147,9 @@ export default function WorkerDashboard(): React.JSX.Element {
 
   const [activeUsers, setActiveUsers] = useState<number>(0);
   const todayRef = useRef<HTMLDivElement | null>(null);
+  const [completedTodayIds, setCompletedTodayIds] = useState<Set<string>>(
+    new Set()
+  );
 
   type TimeSlotRange = { start: string; end: string };
 
@@ -198,6 +316,35 @@ export default function WorkerDashboard(): React.JSX.Element {
             return t === 'laborables' || t === 'flexible';
           });
           setTodayAssignments(filtered);
+
+          // Cargar servicios completados hoy para el usuario autenticado
+          try {
+            const authUserId = user?.id as string | undefined;
+            if (authUserId !== undefined) {
+              const startOfDay = new Date();
+              startOfDay.setHours(0, 0, 0, 0);
+              const endOfDay = new Date();
+              endOfDay.setHours(23, 59, 59, 999);
+              const { data: doneRows } = await supabase
+                .from('system_activities')
+                .select('entity_id, created_at')
+                .eq('activity_type', 'service_completed')
+                .eq('entity_type', 'assignment')
+                .eq('user_id', authUserId)
+                .gte('created_at', startOfDay.toISOString())
+                .lte('created_at', endOfDay.toISOString());
+              const ids = new Set<string>(
+                (doneRows ?? [])
+                  .map((r) => (r as { entity_id: string | null }).entity_id)
+                  .filter((v): v is string => typeof v === 'string')
+              );
+              setCompletedTodayIds(ids);
+            } else {
+              setCompletedTodayIds(new Set());
+            }
+          } catch {
+            setCompletedTodayIds(new Set());
+          }
         } else {
           setTodayAssignments([]);
         }
@@ -244,7 +391,14 @@ export default function WorkerDashboard(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [getTodaySlots, todayKey, weekRange.end, weekRange.start, user?.email]);
+  }, [
+    getTodaySlots,
+    todayKey,
+    weekRange.end,
+    weekRange.start,
+    user?.email,
+    user?.id,
+  ]);
 
   const displayName = useMemo(() => {
     const meta = user?.name;
@@ -326,10 +480,10 @@ export default function WorkerDashboard(): React.JSX.Element {
             </div>
             <Link
               href='/auth'
-              className='text-gray-600 hover:text-gray-900 transition-colors'
+              className='inline-flex items-center space-x-2 px-3 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg border border-gray-200 transition-colors'
             >
               <svg
-                className='w-6 h-6'
+                className='w-4 h-4'
                 fill='none'
                 stroke='currentColor'
                 viewBox='0 0 24 24'
@@ -341,6 +495,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                   d='M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1'
                 />
               </svg>
+              <span>Cerrar sesión</span>
             </Link>
           </div>
         </header>
@@ -389,8 +544,8 @@ export default function WorkerDashboard(): React.JSX.Element {
             </div>
           </div>
 
-          {/* Estadísticas - Layout responsive mejorado (1 columna en móvil) */}
-          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
+          {/* Estadísticas - 4 tarjetas en tablet vertical (2x2) */}
+          <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 lg:gap-6 mb-8'>
             <button
               onClick={scrollToToday}
               className='bg-white hover:bg-blue-50 active:bg-blue-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-blue-200 transition-all duration-200 w-full cursor-pointer transform hover:scale-105'
@@ -452,6 +607,26 @@ export default function WorkerDashboard(): React.JSX.Element {
                 </div>
               </div>
             </div>
+
+            {/* Nueva tarjeta: Completados Hoy */}
+            <div className='bg-white hover:bg-rose-50 active:bg-rose-100 rounded-2xl shadow-lg hover:shadow-xl p-3 md:p-4 lg:p-6 border border-gray-100 hover:border-rose-200 transition-all duration-200'>
+              <div className='flex items-center justify-between'>
+                <div className='text-left'>
+                  <p className='text-xs md:text-sm text-gray-600 mb-1'>
+                    Completados Hoy
+                  </p>
+                  <p className='text-lg md:text-xl lg:text-2xl font-bold text-gray-900'>
+                    {completedTodayIds.size}
+                  </p>
+                  <p className='text-xs md:text-xs text-rose-600 mt-1'>
+                    Registros de finalización
+                  </p>
+                </div>
+                <div className='w-8 h-8 md:w-10 md:h-10 lg:w-12 lg:h-12 bg-rose-100 rounded-full flex items-center justify-center'>
+                  <span className='text-base md:text-lg lg:text-2xl'>✅</span>
+                </div>
+              </div>
+            </div>
           </div>
 
           <div className='bg-white rounded-2xl shadow-sm mb-8' ref={todayRef}>
@@ -467,57 +642,11 @@ export default function WorkerDashboard(): React.JSX.Element {
               ) : todayAssignments.length === 0 ? (
                 <p className='text-gray-600'>No tienes servicios para hoy.</p>
               ) : (
-                <div className='space-y-4'>
-                  {todayAssignments.map((a, idx) => {
-                    const slots = getTodaySlots(
-                      a.schedule,
-                      a.assignment_type,
-                      new Date().getDay() === 0
-                    );
-                    return (
-                      <div
-                        key={a.id}
-                        className='flex items-center justify-between p-4 bg-gray-50 rounded-xl'
-                      >
-                        <div className='flex items-center space-x-4'>
-                          <div className='w-12 h-12 bg-blue-600 rounded-full flex items-center justify-center'>
-                            <span className='text-white font-bold'>
-                              {idx + 1}
-                            </span>
-                          </div>
-                          <div>
-                            <h3 className='font-semibold text-gray-900'>
-                              {`${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-                                'Servicio'}
-                            </h3>
-                            <p className='text-sm text-gray-600'>
-                              {a.start_date} → {a.end_date ?? '—'}
-                            </p>
-                            {slots.length > 0 ? (
-                              <div className='mt-1 flex flex-wrap gap-2'>
-                                {slots.map((s, i) => (
-                                  <span
-                                    key={`${a.id}-slot-${i}`}
-                                    className='inline-flex items-center rounded-full bg-blue-100 text-blue-700 px-2 py-0.5 text-xs font-medium'
-                                  >
-                                    {s.start} - {s.end}
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className='text-sm text-gray-500'>—</p>
-                            )}
-                          </div>
-                        </div>
-                        <Link href={`/worker-dashboard/assignment/${a.id}`}>
-                          <Button size='sm' variant='outline'>
-                            Ver Detalles
-                          </Button>
-                        </Link>
-                      </div>
-                    );
-                  })}
-                </div>
+                <ServicesTodayList
+                  assignments={todayAssignments}
+                  getTodaySlots={getTodaySlots}
+                  completedTodayIds={completedTodayIds}
+                />
               )}
             </div>
           </div>
