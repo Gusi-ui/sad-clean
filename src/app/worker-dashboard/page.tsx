@@ -96,16 +96,15 @@ const ServicesTodayList = (props: {
   });
 
   const badgeClassByState: Record<Row['state'], string> = {
-    pending: 'bg-amber-100 text-amber-800',
-    inprogress: 'bg-green-100 text-green-800',
-    done: 'bg-rose-100 text-rose-800',
+    pending: 'bg-white/80 text-amber-800 ring-1 ring-amber-300',
+    inprogress: 'bg-white/80 text-green-800 ring-1 ring-green-300',
+    done: 'bg-white/80 text-rose-800 ring-1 ring-rose-300',
   };
   const containerClassByState: Record<Row['state'], string> = {
-    pending:
-      'bg-amber-50/70 border-amber-200 hover:bg-amber-50 transition-colors',
-    inprogress:
-      'bg-green-50/70 border-green-200 hover:bg-green-50 transition-colors',
-    done: 'bg-rose-50/70 border-rose-200 hover:bg-rose-50 transition-colors',
+    // Colores más intensos para mejor contraste y visibilidad
+    pending: 'bg-amber-100 border-amber-300 shadow-sm hover:bg-amber-50',
+    inprogress: 'bg-green-100 border-green-300 shadow-sm hover:bg-green-50',
+    done: 'bg-rose-100 border-rose-300 shadow-sm hover:bg-rose-50',
   };
 
   return (
@@ -113,7 +112,7 @@ const ServicesTodayList = (props: {
       {rows.map((r, idx) => (
         <div
           key={`${r.assignmentId}-${r.start}-${r.end}`}
-          className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 md:p-6 rounded-2xl border ${containerClassByState[r.state]}`}
+          className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 md:p-6 rounded-2xl border text-gray-900 ${containerClassByState[r.state]}`}
         >
           <div className='flex items-start md:items-center gap-4'>
             <div className='w-10 h-10 md:w-12 md:h-12 bg-white text-blue-700 rounded-full flex items-center justify-center ring-2 ring-blue-200 shadow-sm'>
@@ -137,7 +136,9 @@ const ServicesTodayList = (props: {
               </span>
             </div>
           </div>
-          <Link href={`/worker-dashboard/assignment/${r.assignmentId}`}>
+          <Link
+            href={`/worker-dashboard/assignment/${r.assignmentId}?start=${r.start}&end=${r.end}`}
+          >
             <Button
               size='sm'
               variant='outline'
@@ -243,6 +244,11 @@ export default function WorkerDashboard(): React.JSX.Element {
     []
   );
 
+  const toMinutes = (hhmm: string): number => {
+    const [h, m] = hhmm.split(':');
+    return Number(h) * 60 + Number(m);
+  };
+
   const todayKey = useMemo(() => {
     const toKey = (dt: Date) =>
       `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
@@ -330,34 +336,28 @@ export default function WorkerDashboard(): React.JSX.Element {
           });
           setTodayAssignments(filtered);
 
-          // Cargar servicios completados hoy para el usuario autenticado
-          try {
-            const authUserId = user?.id as string | undefined;
-            if (authUserId !== undefined) {
-              const startOfDay = new Date();
-              startOfDay.setHours(0, 0, 0, 0);
-              const endOfDay = new Date();
-              endOfDay.setHours(23, 59, 59, 999);
-              const { data: doneRows } = await supabase
-                .from('system_activities')
-                .select('entity_id, created_at')
-                .eq('activity_type', 'service_completed')
-                .eq('entity_type', 'assignment')
-                .eq('user_id', authUserId)
-                .gte('created_at', startOfDay.toISOString())
-                .lte('created_at', endOfDay.toISOString());
-              const ids = new Set<string>(
-                (doneRows ?? [])
-                  .map((r) => (r as { entity_id: string | null }).entity_id)
-                  .filter((v): v is string => typeof v === 'string')
-              );
-              setCompletedTodayIds(ids);
-            } else {
-              setCompletedTodayIds(new Set());
-            }
-          } catch {
-            setCompletedTodayIds(new Set());
-          }
+          // Calcular automáticamente los servicios completados basándose en el tiempo
+          const now = new Date();
+          const nowMinutes = now.getHours() * 60 + now.getMinutes();
+
+          const completedIds = new Set<string>();
+
+          filtered.forEach((assignment) => {
+            const slots = getTodaySlots(
+              assignment.schedule,
+              assignment.assignment_type,
+              useHoliday
+            );
+            slots.forEach((slot) => {
+              const endMinutes = toMinutes(slot.end);
+              // Si la hora actual es posterior al final del servicio, está completado
+              if (nowMinutes >= endMinutes) {
+                completedIds.add(assignment.id);
+              }
+            });
+          });
+
+          setCompletedTodayIds(completedIds);
         } else {
           setTodayAssignments([]);
         }
