@@ -327,6 +327,48 @@ export type Database = {
           },
         ];
       };
+      worker_notes: {
+        Row: {
+          id: string;
+          assignment_id: string;
+          worker_id: string;
+          content: string;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          assignment_id: string;
+          worker_id: string;
+          content: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          assignment_id?: string;
+          worker_id?: string;
+          content?: string;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'worker_notes_assignment_id_fkey';
+            columns: ['assignment_id'];
+            isOneToOne: false;
+            referencedRelation: 'assignments';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'worker_notes_worker_id_fkey';
+            columns: ['worker_id'];
+            isOneToOne: false;
+            referencedRelation: 'workers';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
     };
     Views: {
       [_ in never]: never;
