@@ -107,11 +107,10 @@ const WeekServicesList = (props: {
     }
   };
 
-  // Calcular el rango de la semana (misma lógica que el componente principal)
-  const weekStart = new Date();
-  weekStart.setDate(weekStart.getDate() + 1); // Empezar desde mañana
-  const weekEnd = new Date(weekStart);
-  weekEnd.setDate(weekStart.getDate() + 6); // Hasta 7 días después
+  // Calcular el rango de la semana usando las utilidades de fecha española
+  const weekRange = getNextWeekRange();
+  const weekStart = new Date(weekRange.start);
+  const weekEnd = new Date(weekRange.end);
 
   const rows: Row[] = assignments.flatMap((a) => {
     const label =
@@ -427,17 +426,9 @@ export default function ThisWeekPage(): React.JSX.Element {
       month: 'long',
     });
 
-  const weekStart = useMemo(() => {
-    const start = new Date();
-    start.setDate(start.getDate() + 1);
-    return start;
-  }, []);
+  const weekStart = useMemo(() => new Date(weekRange.start), [weekRange.start]);
 
-  const weekEnd = useMemo(() => {
-    const end = new Date(weekStart);
-    end.setDate(end.getDate() + 6);
-    return end;
-  }, [weekStart]);
+  const weekEnd = useMemo(() => new Date(weekRange.end), [weekRange.end]);
 
   return (
     <ProtectedRoute requiredRole='worker'>

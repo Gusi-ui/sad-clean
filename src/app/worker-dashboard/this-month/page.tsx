@@ -8,7 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
-import { getRemainingMonthRange } from '@/lib/date-utils';
+import { getMondayOfWeek, getRemainingMonthRange } from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -107,14 +107,10 @@ const MonthServicesList = (props: {
     }
   };
 
-  // Calcular el rango del mes (misma lógica que el componente principal)
-  const monthStart = new Date();
-  monthStart.setDate(monthStart.getDate() + 1); // Empezar desde mañana
-  const monthEnd = new Date(
-    monthStart.getFullYear(),
-    monthStart.getMonth() + 1,
-    0
-  ); // Último día del mes
+  // Calcular el rango del mes usando las utilidades de fecha española
+  const monthRange = getRemainingMonthRange();
+  const monthStart = new Date(monthRange.start);
+  const monthEnd = new Date(monthRange.end);
 
   const rows: Row[] = assignments.flatMap((a) => {
     const label =
@@ -178,12 +174,11 @@ const MonthServicesList = (props: {
     done: 'bg-rose-100 border-rose-300 shadow-sm hover:bg-rose-50',
   };
 
-  // Agrupar por semana
+  // Agrupar por semana usando el formato español (lunes a domingo)
   const groupedByWeek = rows.reduce<Record<string, Row[]>>((acc, row) => {
     const date = new Date(row.date);
-    const weekStart = new Date(date);
-    weekStart.setDate(date.getDate() - date.getDay());
-    const weekKey = weekStart.toISOString().split('T')[0] ?? '';
+    const monday = getMondayOfWeek(date);
+    const weekKey = monday.toISOString().split('T')[0] ?? '';
 
     if (!(weekKey in acc)) {
       acc[weekKey] = [];
