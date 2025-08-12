@@ -8,6 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
+import { getNextWeekRange } from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -323,17 +324,7 @@ export default function ThisWeekPage(): React.JSX.Element {
     []
   );
 
-  const weekRange = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setDate(now.getDate() + 1); // Empezar desde mañana
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6); // Hasta 7 días después
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    };
-  }, []);
+  const weekRange = useMemo(() => getNextWeekRange(), []);
 
   useEffect(() => {
     const load = async (): Promise<void> => {

@@ -1,4 +1,11 @@
-import { Alert, Button, FlatList, StyleSheet, Text, View } from 'react-native';
+import {
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 
 import React, { useEffect, useMemo, useState } from 'react';
 
@@ -11,6 +18,23 @@ type Row = {
   schedule: unknown;
   start_date: string;
   end_date: string | null;
+  user_name?: string;
+  user_address?: string;
+};
+
+type QuickAction = {
+  id: string;
+  title: string;
+  icon: string;
+  onPress: () => void;
+};
+
+type InfoCard = {
+  id: string;
+  title: string;
+  value: string;
+  subtitle?: string;
+  color: string;
 };
 
 export default function TodayScreen(): React.JSX.Element {
@@ -18,6 +42,12 @@ export default function TodayScreen(): React.JSX.Element {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
+  const [stats, setStats] = useState({
+    totalServices: 0,
+    completedServices: 0,
+    pendingServices: 0,
+    totalHours: 0,
+  });
 
   const todayKey = useMemo(() => {
     const d = new Date();
@@ -44,27 +74,71 @@ export default function TodayScreen(): React.JSX.Element {
         const workerId =
           werr === null ? (w?.id as string | undefined) : undefined;
         if (workerId === undefined) {
-          // No hay correspondencia de email con una trabajadora registrada
           setRows([]);
           return;
         }
+
+        // Cargar asignaciones con información del usuario
         const { data, error } = await supabase
           .from('assignments')
-          .select('id, assignment_type, schedule, start_date, end_date')
+          .select(
+            `
+            id,
+            assignment_type,
+            schedule,
+            start_date,
+            end_date,
+            users!inner(name, address)
+          `
+          )
           .lte('start_date', todayKey)
           .or(`end_date.is.null,end_date.gte.${todayKey}`)
           .eq('worker_id', workerId);
-        if (error === null) setRows((data as Row[]) ?? []);
+
+        if (error === null) {
+          const processedData =
+            (data as any[])?.map((item) => ({
+              ...item,
+              user_name: item.users?.name,
+              user_address: item.users?.address,
+            })) ?? [];
+          setRows(processedData);
+
+          // Calcular estadísticas
+          const totalServices = processedData.length;
+          const completedServices = completedIds.size;
+          const pendingServices = totalServices - completedServices;
+          const totalHours = processedData.reduce((acc, item) => {
+            const slots = getTodaySlots(item.schedule, item.assignment_type);
+            return (
+              acc +
+              slots.reduce((slotAcc, slot) => {
+                const [startH, startM] = slot.start.split(':').map(Number);
+                const [endH, endM] = slot.end.split(':').map(Number);
+                return (
+                  slotAcc + (endH * 60 + endM - (startH * 60 + startM)) / 60
+                );
+              }, 0)
+            );
+          }, 0);
+
+          setStats({
+            totalServices,
+            completedServices,
+            pendingServices,
+            totalHours: Math.round(totalHours * 10) / 10,
+          });
+        }
       } finally {
         setLoading(false);
       }
     };
     load().catch(() => setLoading(false));
-  }, [todayKey, user?.email]);
+  }, [todayKey, user?.email, completedIds]);
 
   const dayKey = useMemo(() => {
     const d = new Date();
-    const dow = d.getDay(); // 0..6
+    const dow = d.getDay();
     return (
       [
         'sunday',
@@ -94,7 +168,6 @@ export default function TodayScreen(): React.JSX.Element {
       const type = (assignmentType ?? '').toLowerCase();
       const shouldUseHoliday: boolean = isSunday || type === 'festivos';
 
-      // 1) Intentar leer tramos del día normal
       const dayConfig = (sc?.[dayKey] as Record<string, unknown>) ?? undefined;
       const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
         ? (dayConfig?.['timeSlots'] as unknown[])
@@ -111,9 +184,7 @@ export default function TodayScreen(): React.JSX.Element {
         })
         .filter((v): v is TimeSlotRange => v !== null);
 
-      // 2) Si es festivo/domingo o no hay tramos del día, intentar festivos
       if (shouldUseHoliday || daySlots.length === 0) {
-        // Soportar dos esquemas: holiday_config.holiday_timeSlots y schedule.holiday.timeSlots
         const holidayConfig =
           (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
           undefined;
@@ -168,12 +239,21 @@ export default function TodayScreen(): React.JSX.Element {
     return [...rows].sort((a, b) => {
       const aCompleted = completedIds.has(a.id) ? 1 : 0;
       const bCompleted = completedIds.has(b.id) ? 1 : 0;
-      if (aCompleted !== bCompleted) return aCompleted - bCompleted; // no completados primero
+      if (aCompleted !== bCompleted) return aCompleted - bCompleted;
       const ta = getStartMinutes(a.schedule, a.assignment_type);
       const tb = getStartMinutes(b.schedule, b.assignment_type);
       return ta - tb;
     });
   }, [rows, completedIds]);
+
+  // Separar servicios de hoy y próximos
+  const todayServices = useMemo(() => {
+    return sortedRows.filter((row) => row.start_date === todayKey);
+  }, [sortedRows, todayKey]);
+
+  const upcomingServices = useMemo(() => {
+    return sortedRows.filter((row) => row.start_date > todayKey).slice(0, 3);
+  }, [sortedRows, todayKey]);
 
   const handleComplete = async (assignmentId: string): Promise<void> => {
     setCompletedIds((prev) => {
@@ -193,68 +273,340 @@ export default function TodayScreen(): React.JSX.Element {
     }
   };
 
+  const quickActions: QuickAction[] = [
+    {
+      id: '1',
+      title: 'Marcar Inicio',
+      icon: '▶️',
+      onPress: () => Alert.alert('Acción', 'Marcar inicio de jornada'),
+    },
+    {
+      id: '2',
+      title: 'Marcar Fin',
+      icon: '⏹️',
+      onPress: () => Alert.alert('Acción', 'Marcar fin de jornada'),
+    },
+    {
+      id: '3',
+      title: 'Pausa',
+      icon: '⏸️',
+      onPress: () => Alert.alert('Acción', 'Marcar pausa'),
+    },
+    {
+      id: '4',
+      title: 'Emergencia',
+      icon: '🚨',
+      onPress: () => Alert.alert('Acción', 'Reportar emergencia'),
+    },
+  ];
+
+  const infoCards: InfoCard[] = [
+    {
+      id: '1',
+      title: 'Servicios Hoy',
+      value: stats.totalServices.toString(),
+      subtitle: 'Total programados',
+      color: '#3b82f6',
+    },
+    {
+      id: '2',
+      title: 'Completados',
+      value: stats.completedServices.toString(),
+      subtitle: 'Servicios finalizados',
+      color: '#22c55e',
+    },
+    {
+      id: '3',
+      title: 'Horas',
+      value: `${stats.totalHours}h`,
+      subtitle: 'Tiempo total',
+      color: '#f97316',
+    },
+    {
+      id: '4',
+      title: 'Pendientes',
+      value: stats.pendingServices.toString(),
+      subtitle: 'Por completar',
+      color: '#f59e0b',
+    },
+  ];
+
+  const renderServiceCard = (item: Row, isToday: boolean = true) => {
+    const slots = getTodaySlots(item.schedule, item.assignment_type);
+    const isCompleted = completedIds.has(item.id);
+
+    return (
+      <View style={[styles.card, isCompleted && styles.completedCard]}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>{item.assignment_type}</Text>
+          {isCompleted && (
+            <Text style={styles.completedBadge}>✓ Completado</Text>
+          )}
+        </View>
+
+        {item.user_name && (
+          <Text style={styles.userName}>{item.user_name}</Text>
+        )}
+
+        <Text style={styles.cardMeta}>
+          {item.start_date} → {item.end_date ?? '—'}
+        </Text>
+
+        <View style={styles.slotsContainer}>
+          {slots.length > 0 ? (
+            slots.map((s, idx) => (
+              <Text key={`${item.id}-slot-${idx}`} style={styles.slot}>
+                🕐 {s.start} - {s.end}
+              </Text>
+            ))
+          ) : (
+            <Text style={styles.slot}>—</Text>
+          )}
+        </View>
+
+        {!isCompleted && isToday && (
+          <TouchableOpacity
+            style={styles.completeButton}
+            onPress={() => void handleComplete(item.id)}
+          >
+            <Text style={styles.completeButtonText}>Marcar completado</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    );
+  };
+
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Cargando servicios...</Text>
+      </View>
+    );
+  }
+
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Servicios de hoy</Text>
-      {loading ? (
-        <Text>Cargando…</Text>
-      ) : (
-        <FlatList
-          data={sortedRows}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }: { item: Row }) => {
-            const slots = getTodaySlots(item.schedule, item.assignment_type);
-            return (
-              <View style={styles.card}>
-                <Text style={styles.cardTitle}>{item.assignment_type}</Text>
-                <Text style={styles.cardMeta}>
-                  {item.start_date} → {item.end_date ?? '—'}
-                </Text>
-                <View style={{ marginTop: 4, gap: 2 }}>
-                  {slots.length > 0 ? (
-                    slots.map((s, idx) => (
-                      <Text key={`${item.id}-slot-${idx}`} style={styles.slot}>
-                        {s.start} - {s.end}
-                      </Text>
-                    ))
-                  ) : (
-                    <Text style={styles.slot}>—</Text>
-                  )}
-                </View>
-                {completedIds.has(item.id) ? (
-                  <Text style={{ color: '#16a34a', fontWeight: '600' }}>
-                    Completado
-                  </Text>
-                ) : (
-                  <Button
-                    title='Marcar completado'
-                    onPress={() => {
-                      void handleComplete(item.id);
-                    }}
-                  />
-                )}
-              </View>
-            );
-          }}
-        />
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+      {/* Horarios de Hoy */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🕐 Horarios de Hoy</Text>
+        {todayServices.length > 0 ? (
+          todayServices.map((item) => renderServiceCard(item, true))
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>
+              No hay servicios programados para hoy
+            </Text>
+          </View>
+        )}
+      </View>
+
+      {/* Próximos Servicios */}
+      {upcomingServices.length > 0 && (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>📅 Próximos Servicios</Text>
+          {upcomingServices.map((item) => renderServiceCard(item, false))}
+        </View>
       )}
-    </View>
+
+      {/* Acciones Rápidas */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>⚡ Acciones Rápidas</Text>
+        <View style={styles.quickActionsContainer}>
+          {quickActions.map((action) => (
+            <TouchableOpacity
+              key={action.id}
+              style={styles.quickActionButton}
+              onPress={action.onPress}
+            >
+              <Text style={styles.quickActionIcon}>{action.icon}</Text>
+              <Text style={styles.quickActionTitle}>{action.title}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+      </View>
+
+      {/* Tarjetas Informativas */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>📊 Resumen del Día</Text>
+        <View style={styles.infoCardsContainer}>
+          {infoCards.map((card) => (
+            <View
+              key={card.id}
+              style={[styles.infoCard, { borderLeftColor: card.color }]}
+            >
+              <Text style={styles.infoCardValue}>{card.value}</Text>
+              <Text style={styles.infoCardTitle}>{card.title}</Text>
+              {card.subtitle && (
+                <Text style={styles.infoCardSubtitle}>{card.subtitle}</Text>
+              )}
+            </View>
+          ))}
+        </View>
+      </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, padding: 16, gap: 8 },
-  title: { fontSize: 20, fontWeight: '600', marginBottom: 8 },
-  card: {
-    borderWidth: 1,
-    borderColor: '#e5e7eb',
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  loadingText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginTop: 50,
+    color: '#64748b',
+  },
+  section: {
+    padding: 16,
+    marginBottom: 8,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    marginBottom: 12,
+    color: '#1e293b',
+  },
+  infoCardsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  infoCard: {
+    flex: 1,
+    minWidth: '45%',
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 12,
-    marginBottom: 8,
-    gap: 6,
+    padding: 16,
+    borderLeftWidth: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  cardTitle: { fontSize: 16, fontWeight: '600' },
-  cardMeta: { color: '#6b7280' },
-  slot: { color: '#111827', fontWeight: '500' },
+  infoCardValue: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  infoCardTitle: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#475569',
+    marginBottom: 2,
+  },
+  infoCardSubtitle: {
+    fontSize: 12,
+    color: '#64748b',
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  completedCard: {
+    backgroundColor: '#f0fdf4',
+    borderColor: '#22c55e',
+    borderWidth: 1,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cardTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  completedBadge: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#22c55e',
+    backgroundColor: '#dcfce7',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  userName: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#3b82f6',
+    marginBottom: 4,
+  },
+  cardMeta: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 8,
+  },
+  slotsContainer: {
+    marginBottom: 12,
+  },
+  slot: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+    marginBottom: 2,
+  },
+  completeButton: {
+    backgroundColor: '#22c55e',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  completeButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  emptyState: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 24,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    fontSize: 14,
+    color: '#64748b',
+    textAlign: 'center',
+  },
+  quickActionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  quickActionButton: {
+    flex: 1,
+    minWidth: '45%',
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  quickActionIcon: {
+    fontSize: 24,
+    marginBottom: 8,
+  },
+  quickActionTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#374151',
+    textAlign: 'center',
+  },
 });
