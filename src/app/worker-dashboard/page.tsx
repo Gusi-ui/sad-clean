@@ -39,9 +39,8 @@ const ServicesTodayList = (props: {
     assignmentType: string,
     useHoliday: boolean
   ) => Array<{ start: string; end: string }>;
-  completedTodayIds: Set<string>;
 }): React.JSX.Element => {
-  const { assignments, getTodaySlots, completedTodayIds } = props;
+  const { assignments, getTodaySlots } = props;
 
   const isHoliday = new Date().getDay() === 0;
   type Row = {
@@ -69,8 +68,7 @@ const ServicesTodayList = (props: {
       const sm = toMinutes(s.start);
       const em = toMinutes(s.end);
       let state: Row['state'] = 'pending';
-      if (completedTodayIds.has(a.id)) state = 'done';
-      else if (nowMinutes >= sm && nowMinutes < em) state = 'inprogress';
+      if (nowMinutes >= sm && nowMinutes < em) state = 'inprogress';
       else if (nowMinutes >= em) state = 'done';
       return {
         assignmentId: a.id,
@@ -340,7 +338,7 @@ export default function WorkerDashboard(): React.JSX.Element {
           const now = new Date();
           const nowMinutes = now.getHours() * 60 + now.getMinutes();
 
-          const completedIds = new Set<string>();
+          const completedSlots = new Set<string>();
 
           filtered.forEach((assignment) => {
             const slots = getTodaySlots(
@@ -352,12 +350,14 @@ export default function WorkerDashboard(): React.JSX.Element {
               const endMinutes = toMinutes(slot.end);
               // Si la hora actual es posterior al final del servicio, está completado
               if (nowMinutes >= endMinutes) {
-                completedIds.add(assignment.id);
+                // Crear un identificador único para cada tramo horario
+                const slotId = `${assignment.id}-${slot.start}-${slot.end}`;
+                completedSlots.add(slotId);
               }
             });
           });
 
-          setCompletedTodayIds(completedIds);
+          setCompletedTodayIds(completedSlots);
         } else {
           setTodayAssignments([]);
         }
@@ -658,7 +658,6 @@ export default function WorkerDashboard(): React.JSX.Element {
                 <ServicesTodayList
                   assignments={todayAssignments}
                   getTodaySlots={getTodaySlots}
-                  completedTodayIds={completedTodayIds}
                 />
               )}
             </div>
