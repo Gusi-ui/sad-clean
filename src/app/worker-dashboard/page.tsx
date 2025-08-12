@@ -874,40 +874,82 @@ export default function WorkerDashboard(): React.JSX.Element {
                 Acceso directo a funciones principales
               </p>
             </div>
-            <div className='p-6'>
-              <div className='space-y-3'>
+            <div className='p-4 sm:p-6'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
+                <Link href='/worker-dashboard/schedule'>
+                  <Button
+                    className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
+                    variant='outline'
+                  >
+                    <div className='flex items-center space-x-3'>
+                      <span className='text-xl sm:text-lg'>📋</span>
+                      <div className='text-left'>
+                        <div className='font-medium text-sm sm:text-base'>
+                          Ver Mi Horario
+                        </div>
+                        <div className='text-xs text-gray-500 hidden sm:block'>
+                          Completo
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                </Link>
+
                 <Button
-                  className='w-full justify-start'
+                  className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
                   variant='outline'
-                  disabled
-                  aria-disabled='true'
+                  onClick={() => window.open('tel:+34600000000', '_blank')}
                 >
-                  📋 Ver Mi Horario Completo
+                  <div className='flex items-center space-x-3'>
+                    <span className='text-xl sm:text-lg'>📞</span>
+                    <div className='text-left'>
+                      <div className='font-medium text-sm sm:text-base'>
+                        Contactar
+                      </div>
+                      <div className='text-xs text-gray-500 hidden sm:block'>
+                        Coordinación
+                      </div>
+                    </div>
+                  </div>
                 </Button>
-                <Button
-                  className='w-full justify-start'
-                  variant='outline'
-                  disabled
-                  aria-disabled='true'
-                >
-                  📊 Mis Estadísticas
-                </Button>
-                <Button
-                  className='w-full justify-start'
-                  variant='outline'
-                  disabled
-                  aria-disabled='true'
-                >
-                  📞 Contactar Administración
-                </Button>
-                <Button
-                  className='w-full justify-start'
-                  variant='outline'
-                  disabled
-                  aria-disabled='true'
-                >
-                  ⚙️ Configuración
-                </Button>
+
+                <Link href='/worker-dashboard/route'>
+                  <Button
+                    className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
+                    variant='outline'
+                  >
+                    <div className='flex items-center space-x-3'>
+                      <span className='text-xl sm:text-lg'>🗺️</span>
+                      <div className='text-left'>
+                        <div className='font-medium text-sm sm:text-base'>
+                          Ruta de Hoy
+                        </div>
+                        <div className='text-xs text-gray-500 hidden sm:block'>
+                          Servicios
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                </Link>
+
+                <Link href='/worker-dashboard/notes'>
+                  <Button
+                    className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
+                    variant='outline'
+                  >
+                    <div className='flex items-center space-x-3'>
+                      <span className='text-xl sm:text-lg'>📝</span>
+                      <div className='text-left'>
+                        <div className='font-medium text-sm sm:text-base'>
+                          Notas Rápidas
+                        </div>
+                        <div className='text-xs text-gray-500 hidden sm:block'>
+                          Por servicio
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                </Link>
               </div>
             </div>
           </div>
