@@ -21,6 +21,11 @@ export const metadata: Metadata = {
   title: 'SAD LAS - Sistema de Gestión',
   description:
     'Sistema de gestión de horas y asignaciones para trabajadores de servicios asistenciales domiciliarios',
+  icons: [
+    { rel: 'icon', url: '/favicon.ico' },
+    { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
+    { rel: 'apple-touch-icon', url: '/favicon.ico' },
+  ],
 };
 
 export default function RootLayout({
