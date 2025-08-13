@@ -9,11 +9,9 @@ export default function WorkerDashboardSectionLayout(
 ): React.JSX.Element {
   const { children } = props;
   return (
-    <div className='pb-16 sm:pb-0'>
+    <div className='pb-16'>
       {children}
-      <div className='sm:hidden'>
-        <WorkerBottomNav />
-      </div>
+      <WorkerBottomNav />
     </div>
   );
 }

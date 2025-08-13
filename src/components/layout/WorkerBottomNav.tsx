@@ -28,34 +28,61 @@ export default function WorkerBottomNav(): React.JSX.Element {
   };
 
   return (
-    <nav
-      className='fixed bottom-0 left-0 right-0 z-40 border-t border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/80'
-      role='navigation'
-      aria-label='Navegación principal trabajadora'
-    >
-      <ul className='mx-auto grid max-w-3xl grid-cols-5 px-2 py-1.5 sm:px-4 sm:py-2'>
-        {NAV_ITEMS.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <li key={item.href} className='flex justify-center'>
+    <>
+      {/* Mobile: solo iconos, estilo como en panel administrativo */}
+      <nav
+        className='fixed bottom-0 left-0 right-0 bg-white border-t-2 border-blue-300 shadow-2xl z-50 h-20 sm:hidden'
+        role='navigation'
+        aria-label='Navegación principal trabajadora'
+      >
+        <div className='flex justify-around items-center h-full px-2'>
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
               <Link
+                key={item.href}
                 href={item.href}
-                className={
+                className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 py-2 rounded-xl ${
                   active
-                    ? 'flex h-12 w-full max-w-[88px] flex-col items-center justify-center rounded-xl bg-blue-50 text-blue-700'
-                    : 'flex h-12 w-full max-w-[88px] flex-col items-center justify-center rounded-xl text-gray-600 hover:bg-gray-50'
-                }
+                    ? 'text-blue-600 bg-blue-50 shadow-md'
+                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
+                }`}
                 aria-current={active ? 'page' : undefined}
               >
-                <span className='text-base leading-none'>{item.icon}</span>
-                <span className='mt-1 text-[10px] font-medium tracking-wide'>
-                  {item.label}
-                </span>
+                <span className='text-3xl'>{item.icon}</span>
               </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </nav>
+            );
+          })}
+        </div>
+      </nav>
+
+      {/* Desktop/Tablet: icono + etiqueta, ancho completo, fijo inferior */}
+      <nav
+        className='hidden sm:flex fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-md z-40 h-16'
+        role='navigation'
+        aria-label='Navegación principal trabajadora'
+      >
+        <div className='mx-auto flex w-full max-w-5xl items-center justify-between px-4'>
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  active
+                    ? 'text-blue-700 bg-blue-50 border border-blue-200'
+                    : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50'
+                }`}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className='text-xl'>{item.icon}</span>
+                <span className='text-sm font-medium'>{item.label}</span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+    </>
   );
 }
