@@ -40,10 +40,9 @@ const ServicesTodayList = (props: {
     assignmentType: string,
     useHoliday: boolean
   ) => Array<{ start: string; end: string }>;
+  isHoliday: boolean;
 }): React.JSX.Element => {
-  const { assignments, getTodaySlots } = props;
-
-  const isHoliday = new Date().getDay() === 0;
+  const { assignments, getTodaySlots, isHoliday } = props;
   type Row = {
     assignmentId: string;
     userLabel: string;
@@ -110,7 +109,7 @@ const ServicesTodayList = (props: {
     <div className='space-y-3'>
       {rows.map((r, idx) => (
         <div
-          key={`${r.assignmentId}-${r.start}-${r.end}`}
+          key={`${r.assignmentId}-${r.start}-${r.end}-${idx}`}
           className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 md:p-6 rounded-2xl border text-gray-900 ${containerClassByState[r.state]}`}
         >
           <div className='flex items-start md:items-center gap-4'>
@@ -163,6 +162,9 @@ export default function WorkerDashboard(): React.JSX.Element {
   const [completedTodayIds, setCompletedTodayIds] = useState<Set<string>>(
     new Set()
   );
+  const [isHolidayToday, setIsHolidayToday] = useState<boolean>(false);
+  const [allTodayServicesDone, setAllTodayServicesDone] =
+    useState<boolean>(false);
   const [upcomingServices, setUpcomingServices] = useState<{
     tomorrow: number;
     thisWeek: number;
@@ -226,6 +228,84 @@ export default function WorkerDashboard(): React.JSX.Element {
         const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
 
         // Festivos: soportar schedule.holiday.timeSlots y holiday_config.holiday_timeSlots
+        const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
+        const holidayDayRaw = Array.isArray(holidayDay?.['timeSlots'])
+          ? (holidayDay['timeSlots'] as unknown[])
+          : [];
+        const holidayCfg =
+          (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
+          undefined;
+        const holidayCfgRaw = Array.isArray(holidayCfg?.['holiday_timeSlots'])
+          ? (holidayCfg?.['holiday_timeSlots'] as unknown[])
+          : [];
+        const holidaySlots = parseSlots(
+          holidayCfgRaw.length > 0 ? holidayCfgRaw : holidayDayRaw
+        );
+
+        const type = (assignmentType ?? '').toLowerCase();
+        const mustUseHoliday = useHoliday || type === 'festivos';
+        if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
+        if (daySlots.length > 0) return daySlots;
+        return holidaySlots;
+      } catch {
+        return [];
+      }
+    },
+    []
+  );
+
+  // Obtener tramos para una fecha específica (p. ej., mañana)
+  const getSlotsForDate = useCallback(
+    (
+      schedule: unknown,
+      assignmentType: string,
+      useHoliday: boolean,
+      targetDate: Date
+    ): TimeSlotRange[] => {
+      try {
+        const sc =
+          typeof schedule === 'string'
+            ? (JSON.parse(schedule) as Record<string, unknown>)
+            : (schedule as Record<string, unknown>);
+
+        const parseSlots = (raw: unknown[]): TimeSlotRange[] =>
+          raw
+            .map((s: unknown) => {
+              const slot = s as Record<string, unknown>;
+              const start = (slot?.['start'] as string | undefined) ?? '';
+              const end = (slot?.['end'] as string | undefined) ?? '';
+              const ok = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
+              if (ok(start) && ok(end)) {
+                const pad = (t: string) =>
+                  t
+                    .split(':')
+                    .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
+                    .join(':');
+                return { start: pad(start), end: pad(end) };
+              }
+              return null;
+            })
+            .filter((v): v is TimeSlotRange => v !== null);
+
+        const dayOfWeek = targetDate.getDay();
+        const dayNames = [
+          'sunday',
+          'monday',
+          'tuesday',
+          'wednesday',
+          'thursday',
+          'friday',
+          'saturday',
+        ];
+        const dayName = dayNames[dayOfWeek] ?? 'monday';
+
+        const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
+        const enabled = (dayConfig?.['enabled'] as boolean) ?? true;
+        const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
+          ? (dayConfig['timeSlots'] as unknown[])
+          : [];
+        const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
+
         const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
         const holidayDayRaw = Array.isArray(holidayDay?.['timeSlots'])
           ? (holidayDay['timeSlots'] as unknown[])
@@ -322,6 +402,7 @@ export default function WorkerDashboard(): React.JSX.Element {
           .maybeSingle();
 
         const useHoliday = holidayData !== null || new Date().getDay() === 0;
+        setIsHolidayToday(useHoliday);
 
         // Obtener asignaciones de hoy
         const { data: rows, error: err } = await supabase
@@ -361,12 +442,15 @@ export default function WorkerDashboard(): React.JSX.Element {
 
           const completedSlots = new Set<string>();
 
+          let pendingExists = false;
+          let totalSlotsCount = 0;
           filtered.forEach((assignment) => {
             const slots = getTodaySlots(
               assignment.schedule,
               assignment.assignment_type,
               useHoliday
             );
+            totalSlotsCount += slots.length;
             slots.forEach((slot) => {
               const endMinutes = toMinutes(slot.end);
               // Si la hora actual es posterior al final del servicio, está completado
@@ -374,11 +458,18 @@ export default function WorkerDashboard(): React.JSX.Element {
                 // Crear un identificador único para cada tramo horario
                 const slotId = `${assignment.id}-${slot.start}-${slot.end}`;
                 completedSlots.add(slotId);
+              } else {
+                pendingExists = true;
               }
             });
           });
 
           setCompletedTodayIds(completedSlots);
+
+          // Actualizar estado de completado para hoy
+          setAllTodayServicesDone(
+            totalSlotsCount > 0 && pendingExists === false
+          );
         } else {
           setTodayAssignments([]);
         }
@@ -589,7 +680,43 @@ export default function WorkerDashboard(): React.JSX.Element {
     thisMonthRange.end,
     user?.email,
     user?.id,
+    getSlotsForDate,
   ]);
+
+  // Recalcular automáticamente si todos los servicios de hoy han terminado para ocultar lista
+  useEffect(() => {
+    const recompute = (): void => {
+      if (todayAssignments.length === 0) {
+        setAllTodayServicesDone(false);
+        return;
+      }
+      const now = new Date();
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      let pendingExists = false;
+      let totalSlots = 0;
+      for (const a of todayAssignments) {
+        const slots = getTodaySlots(
+          a.schedule,
+          a.assignment_type,
+          isHolidayToday
+        );
+        totalSlots += slots.length;
+        for (const s of slots) {
+          const [hh, mm] = s.end.split(':');
+          const endMin = Number(hh) * 60 + Number(mm);
+          if (nowMinutes < endMin) {
+            pendingExists = true;
+            break;
+          }
+        }
+        if (pendingExists) break;
+      }
+      setAllTodayServicesDone(totalSlots > 0 && pendingExists === false);
+    };
+    recompute();
+    const id = window.setInterval(recompute, 30000);
+    return () => window.clearInterval(id);
+  }, [todayAssignments, getTodaySlots, isHolidayToday]);
 
   const displayName = useMemo(() => {
     const meta = user?.name;
@@ -748,10 +875,17 @@ export default function WorkerDashboard(): React.JSX.Element {
                 <p className='text-gray-600'>Cargando…</p>
               ) : todayAssignments.length === 0 ? (
                 <p className='text-gray-600'>No tienes servicios para hoy.</p>
+              ) : allTodayServicesDone ? (
+                <div className='text-center text-green-700 bg-green-50 border border-green-200 rounded-xl p-4'>
+                  <p className='font-medium'>
+                    Todos los servicios de hoy están completados.
+                  </p>
+                </div>
               ) : (
                 <ServicesTodayList
                   assignments={todayAssignments}
                   getTodaySlots={getTodaySlots}
+                  isHoliday={isHolidayToday}
                 />
               )}
             </div>

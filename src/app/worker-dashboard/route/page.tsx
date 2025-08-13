@@ -136,7 +136,9 @@ const DailyRoute = (props: {
       ) : (
         <div className='space-y-4'>
           {routeStops.map((stop, index) => (
-            <div key={`${stop.assignmentId}-${stop.start}-${stop.end}`}>
+            <div
+              key={`${stop.assignmentId}-${stop.start}-${stop.end}-${index}`}
+            >
               {/* Línea conectora */}
               {index > 0 && (
                 <div className='flex justify-center mb-4'>
@@ -384,7 +386,7 @@ export default function RoutePage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname)
+            users(name, surname, address)
           `
           )
           .eq('worker_id', workerId)

@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Google Maps API - Versión Simple</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 1px solid #ddd;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      .warning {
+        background-color: #fff3cd;
+        color: #856404;
+        border: 1px solid #ffeaa7;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+      .instructions {
+        background-color: #e7f3ff;
+        border: 1px solid #b3d9ff;
+        border-radius: 8px;
+        padding: 15px;
+        margin: 20px 0;
+      }
+      .instructions h3 {
+        margin-top: 0;
+        color: #0056b3;
+      }
+      .instructions ol {
+        margin: 10px 0;
+        padding-left: 20px;
+      }
+      .instructions li {
+        margin: 5px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 Test Google Maps API - Versión Simple</h1>
+
+      <div class="instructions">
+        <h3>⚠️ Configuración Requerida</h3>
+        <p>
+          Para que Google Maps funcione correctamente, necesitas configurar tu
+          API key:
+        </p>
+        <ol>
+          <li>
+            Ve a
+            <a href="https://console.cloud.google.com/" target="_blank"
+              >Google Cloud Console</a
+            >
+          </li>
+          <li>Selecciona tu proyecto</li>
+          <li>Ve a "APIs & Services" > "Credentials"</li>
+          <li>
+            Edita tu API key:
+            <code>AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ</code>
+          </li>
+          <li>En "Application restrictions" selecciona "HTTP referrers"</li>
+          <li>
+            Agrega estos dominios (sin /* al final):
+            <ul>
+              <li><code>http://localhost:8080</code></li>
+              <li><code>http://localhost:3001</code></li>
+              <li><code>http://127.0.0.1:8080</code></li>
+              <li><code>http://127.0.0.1:3001</code></li>
+            </ul>
+          </li>
+          <li>Habilita las APIs: Maps JavaScript, Geocoding, Directions</li>
+          <li>Guarda los cambios</li>
+        </ol>
+        <p>
+          <strong>⚠️ IMPORTANTE:</strong> Según las nuevas reglas de Google, NO
+          uses <code>/*</code> al final de las URLs.
+        </p>
+      </div>
+
+      <div id="status"></div>
+
+      <div>
+        <button onclick="testGeocoding()">Test Geocoding</button>
+        <button onclick="testMap()">Test Map</button>
+        <button onclick="testDirections()">Test Directions</button>
+        <button onclick="checkApiKey()">Verificar API Key</button>
+      </div>
+
+      <div id="map"></div>
+
+      <div id="results"></div>
+    </div>
+
+    <script>
+      const API_KEY = 'AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ';
+      let map;
+      let geocoder;
+      let directionsService;
+      let directionsRenderer;
+
+      function updateStatus(message, type = 'info') {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+      }
+
+      function updateResults(message) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML += `<p>${message}</p>`;
+      }
+
+      function clearResults() {
+        document.getElementById('results').innerHTML = '';
+      }
+
+      function checkApiKey() {
+        clearResults();
+        updateStatus('🔍 Verificando configuración de API key...', 'info');
+
+        // Verificar si la API key está configurada
+        if (!API_KEY || API_KEY === 'your_google_maps_api_key') {
+          updateStatus('❌ API key no configurada', 'error');
+          updateResults(
+            'Por favor, configura tu API key de Google Maps en el archivo.'
+          );
+          return;
+        }
+
+        // Verificar si Google Maps está disponible
+        if (typeof window.google === 'undefined' || !window.google.maps) {
+          updateStatus('⚠️ Google Maps API no cargada', 'warning');
+          updateResults(
+            'La API de Google Maps no se ha cargado. Verifica la configuración de dominios autorizados.'
+          );
+          return;
+        }
+
+        updateStatus(
+          '✅ API key configurada y Google Maps disponible',
+          'success'
+        );
+        updateResults('La API key está configurada correctamente.');
+        updateResults('Google Maps API está cargada y disponible.');
+      }
+
+      // Cargar Google Maps API usando el patrón recomendado
+      function loadGoogleMapsAPI() {
+        return new Promise((resolve, reject) => {
+          if (window.google && window.google.maps) {
+            resolve();
+            return;
+          }
+
+          // Usar el patrón de carga recomendado
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&loading=async&callback=initMap`;
+          script.async = true;
+          script.defer = true;
+
+          // Definir la función callback global
+          window.initMap = () => {
+            updateStatus('✅ Google Maps API cargada correctamente', 'success');
+            resolve();
+          };
+
+          script.onerror = () => {
+            updateStatus('❌ Error al cargar Google Maps API', 'error');
+            reject(new Error('Failed to load Google Maps API'));
+          };
+
+          document.head.appendChild(script);
+        });
+      }
+
+      async function testGeocoding() {
+        clearResults();
+        updateStatus('🔄 Probando geocodificación...', 'info');
+
+        try {
+          await loadGoogleMapsAPI();
+
+          geocoder = new google.maps.Geocoder();
+
+          const testAddress = 'Calle Gran Vía 1, Madrid, Spain';
+
+          geocoder.geocode({ address: testAddress }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+              const location = results[0].geometry.location;
+              updateStatus(
+                `✅ Geocodificación exitosa: ${testAddress} → ${location.lat()}, ${location.lng()}`,
+                'success'
+              );
+              updateResults(`📍 Dirección: ${testAddress}`);
+              updateResults(
+                `🌍 Coordenadas: ${location.lat()}, ${location.lng()}`
+              );
+            } else {
+              updateStatus(`❌ Error en geocodificación: ${status}`, 'error');
+              updateResults(`Error: ${status}`);
+              if (status === 'REQUEST_DENIED') {
+                updateResults(
+                  'Verifica que tu API key tenga habilitada la Geocoding API y los dominios autorizados.'
+                );
+              }
+            }
+          });
+        } catch (error) {
+          updateStatus(`❌ Error: ${error.message}`, 'error');
+        }
+      }
+
+      async function testMap() {
+        clearResults();
+        updateStatus('🔄 Probando mapa...', 'info');
+
+        try {
+          await loadGoogleMapsAPI();
+
+          const mapElement = document.getElementById('map');
+          if (!mapElement) {
+            throw new Error('Elemento del mapa no encontrado');
+          }
+
+          map = new google.maps.Map(mapElement, {
+            zoom: 12,
+            center: { lat: 40.4168, lng: -3.7038 }, // Madrid
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+          });
+
+          // Agregar un marcador de prueba usando el nuevo patrón recomendado
+          try {
+            const marker = new google.maps.marker.AdvancedMarkerElement({
+              position: { lat: 40.4168, lng: -3.7038 },
+              map: map,
+              title: 'Madrid - Punto de prueba',
+            });
+            updateResults('📍 Marcador avanzado agregado en el centro');
+          } catch (markerError) {
+            // Fallback al marcador tradicional si el avanzado no está disponible
+            new google.maps.Marker({
+              position: { lat: 40.4168, lng: -3.7038 },
+              map: map,
+              title: 'Madrid - Punto de prueba',
+            });
+            updateResults('📍 Marcador tradicional agregado en el centro');
+          }
+
+          updateStatus('✅ Mapa cargado correctamente con marcador', 'success');
+          updateResults('🗺️ Mapa inicializado en Madrid');
+        } catch (error) {
+          updateStatus(`❌ Error: ${error.message}`, 'error');
+          if (error.message.includes('RefererNotAllowedMapError')) {
+            updateResults(
+              'Verifica que tu API key tenga configurados los dominios autorizados.'
+            );
+          }
+        }
+      }
+
+      async function testDirections() {
+        clearResults();
+        updateStatus('🔄 Probando direcciones...', 'info');
+
+        try {
+          await loadGoogleMapsAPI();
+
+          if (!map) {
+            await testMap();
+          }
+
+          directionsService = new google.maps.DirectionsService();
+          directionsRenderer = new google.maps.DirectionsRenderer();
+          directionsRenderer.setMap(map);
+
+          const request = {
+            origin: 'Calle Gran Vía 1, Madrid',
+            destination: 'Plaza Mayor, Madrid',
+            travelMode: google.maps.TravelMode.DRIVING,
+          };
+
+          directionsService.route(request, (result, status) => {
+            if (status === 'OK') {
+              directionsRenderer.setDirections(result);
+              const route = result.routes[0];
+              const leg = route.legs[0];
+
+              updateStatus(
+                '✅ Direcciones calculadas correctamente',
+                'success'
+              );
+              updateResults(`🚗 Origen: ${leg.start_address}`);
+              updateResults(`🎯 Destino: ${leg.end_address}`);
+              updateResults(`⏱️ Duración: ${leg.duration.text}`);
+              updateResults(`📏 Distancia: ${leg.distance.text}`);
+            } else {
+              updateStatus(`❌ Error en direcciones: ${status}`, 'error');
+              updateResults(`Error: ${status}`);
+              if (status === 'REQUEST_DENIED') {
+                updateResults(
+                  'Verifica que tu API key tenga habilitada la Directions API y los dominios autorizados.'
+                );
+              }
+            }
+          });
+        } catch (error) {
+          updateStatus(`❌ Error: ${error.message}`, 'error');
+        }
+      }
+
+      // Inicializar al cargar la página
+      window.onload = async () => {
+        updateStatus('🚀 Iniciando test de Google Maps API...', 'info');
+        try {
+          await loadGoogleMapsAPI();
+          updateStatus('✅ Todo listo para las pruebas', 'success');
+        } catch (error) {
+          updateStatus(`❌ Error de inicialización: ${error.message}`, 'error');
+          updateResults(
+            'Verifica la configuración de tu API key en Google Cloud Console.'
+          );
+        }
+      };
+    </script>
+  </body>
+</html>

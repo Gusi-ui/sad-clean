@@ -86,7 +86,7 @@ const TomorrowServicesList = (props: {
     <div className='space-y-3'>
       {rows.map((r, idx) => (
         <div
-          key={`${r.assignmentId}-${r.start}-${r.end}`}
+          key={`${r.assignmentId}-${r.start}-${r.end}-${idx}`}
           className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-5 md:p-6 rounded-2xl border text-gray-900 ${containerClassByState[r.state]}`}
         >
           <div className='flex items-start md:items-center gap-4'>
