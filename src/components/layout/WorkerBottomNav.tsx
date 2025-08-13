@@ -56,9 +56,39 @@ export default function WorkerBottomNav(): React.JSX.Element {
         </div>
       </nav>
 
+      {/* Tablet: icono + etiqueta en columna, fijo inferior, ancho completo */}
+      <nav
+        className='hidden md:flex lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t-2 border-blue-300 shadow-2xl z-50 h-20'
+        role='navigation'
+        aria-label='Navegación principal trabajadora'
+      >
+        <div className='mx-auto flex w-full max-w-4xl items-center justify-around px-3'>
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`flex h-16 w-20 flex-col items-center justify-center rounded-xl transition-all ${
+                  active
+                    ? 'text-blue-700 bg-blue-50 border border-blue-200 shadow-md'
+                    : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50'
+                }`}
+                aria-current={active ? 'page' : undefined}
+              >
+                <span className='text-2xl leading-none'>{item.icon}</span>
+                <span className='mt-1 text-[10px] font-medium tracking-wide'>
+                  {item.label}
+                </span>
+              </Link>
+            );
+          })}
+        </div>
+      </nav>
+
       {/* Desktop/Tablet: icono + etiqueta, ancho completo, fijo inferior */}
       <nav
-        className='hidden sm:flex fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-md z-40 h-16'
+        className='hidden lg:flex fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-md z-40 h-16'
         role='navigation'
         aria-label='Navegación principal trabajadora'
       >
