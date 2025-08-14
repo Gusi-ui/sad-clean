@@ -9,8 +9,8 @@ import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
 import {
+  getMonthRange,
   getNextWeekRange,
-  getRemainingMonthRange,
   getWeekRange,
 } from '@/lib/date-utils';
 
@@ -249,6 +249,218 @@ const WeeklySchedule = (props: {
   );
 };
 
+// Componente mensual similar al planning, filtrado por la trabajadora logueada
+const MonthlySchedule = (props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getScheduleSlots: (
+    schedule: unknown,
+    assignmentType: string,
+    date: Date
+  ) => Array<{ start: string; end: string }>;
+  monthStart: Date;
+  monthEnd: Date;
+  holidaySet?: ReadonlySet<string>;
+}): React.JSX.Element => {
+  const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
+    props;
+
+  type Row = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+    startMinutes: number;
+    date: string;
+    dayName: string;
+  };
+
+  const toMinutes = (hhmm: string): number => {
+    const [h, m] = hhmm.split(':');
+    return Number(h) * 60 + Number(m);
+  };
+
+  const formatDate = (dateStr: string): string => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString('es-ES', {
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+    });
+  };
+
+  const isKnownHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    if (m === 8 && d === 15) return true;
+    return false;
+  };
+
+  const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
+    const dayOfWeek = date.getDay();
+    const type = assignmentType.toLowerCase();
+    const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate()
+    ).padStart(2, '0')}`;
+    const isHoliday = holidaySet?.has(dateKey) === true || isKnownHoliday(date);
+
+    switch (type) {
+      case 'laborables':
+        return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+      case 'festivos':
+        return isSaturday || isSunday || isHoliday;
+      case 'flexible':
+      case 'daily':
+        return true;
+      default:
+        return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+    }
+  };
+
+  const rows: Row[] = assignments.flatMap((a) => {
+    const label =
+      `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
+    const services: Row[] = [];
+    const current = new Date(monthStart);
+    while (current.getTime() <= monthEnd.getTime()) {
+      const currentDate = new Date(current);
+      const assignmentType = a.assignment_type ?? '';
+      if (!shouldWorkOnDate(currentDate, assignmentType)) {
+        current.setDate(current.getDate() + 1);
+        continue;
+      }
+      const slots = getScheduleSlots(
+        a.schedule,
+        a.assignment_type,
+        currentDate
+      );
+      if (slots.length > 0) {
+        slots.forEach((s) => {
+          const sm = toMinutes(s.start);
+          const dateStr = `${currentDate.getFullYear()}-${String(
+            currentDate.getMonth() + 1
+          ).padStart(
+            2,
+            '0'
+          )}-${String(currentDate.getDate()).padStart(2, '0')}`;
+          services.push({
+            assignmentId: a.id,
+            userLabel: label,
+            start: s.start,
+            end: s.end,
+            startMinutes: sm,
+            date: dateStr,
+            dayName: formatDate(dateStr),
+          });
+        });
+      }
+      current.setDate(current.getDate() + 1);
+    }
+    return services;
+  });
+
+  rows.sort((a, b) => {
+    const dateCompare = a.date.localeCompare(b.date);
+    if (dateCompare !== 0) return dateCompare;
+    return a.startMinutes - b.startMinutes;
+  });
+
+  const groupedByWeek = rows.reduce<Record<string, Row[]>>((acc, row) => {
+    const date = new Date(row.date);
+    const day = date.getDay();
+    const monday = new Date(date);
+    const diff = date.getDate() - day + (day === 0 ? -6 : 1);
+    monday.setDate(diff);
+    const weekKey = `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, '0')}-${String(
+      monday.getDate()
+    ).padStart(2, '0')}`;
+    (acc[weekKey] ??= []).push(row);
+    return acc;
+  }, {});
+
+  const formatWeekLabel = (weekStartStr: string): string => {
+    const parts = weekStartStr.split('-');
+    const rawStart = new Date(
+      Number(parts[0]),
+      Number(parts[1]) - 1,
+      Number(parts[2]),
+      12,
+      0,
+      0
+    );
+    const start = new Date(Math.max(rawStart.getTime(), monthStart.getTime()));
+    const rawEnd = new Date(rawStart);
+    rawEnd.setDate(rawStart.getDate() + 6);
+    const end = new Date(Math.min(rawEnd.getTime(), monthEnd.getTime()));
+
+    return `${start.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+    })} - ${end.toLocaleDateString('es-ES', {
+      day: 'numeric',
+      month: 'short',
+    })}`;
+  };
+
+  return (
+    <div>
+      <div className='mb-4 sm:mb-6'>
+        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
+          Este Mes
+        </h3>
+        <p className='text-sm sm:text-base text-gray-600'>
+          Desde {monthStart.toLocaleDateString('es-ES')} hasta{' '}
+          {monthEnd.toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
+      {Object.entries(groupedByWeek).map(([weekStartStr, weekRows]) => (
+        <div key={weekStartStr} className='space-y-3 mb-6'>
+          <h4 className='text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2'>
+            Semana del {formatWeekLabel(weekStartStr)}
+          </h4>
+          {weekRows.map((r, idx) => (
+            <div
+              key={`${r.assignmentId}-${r.start}-${r.end}-${idx}`}
+              className='flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 md:p-5 rounded-xl border text-gray-900 bg-white'
+            >
+              <div className='flex items-start md:items-center gap-3'>
+                <div className='w-8 h-8 md:w-10 md:h-10 bg-white text-blue-700 rounded-full flex items-center justify-center ring-2 ring-blue-200 shadow-sm'>
+                  <span className='font-bold text-sm'>{idx + 1}</span>
+                </div>
+                <div>
+                  <h3 className='text-sm md:text-base font-semibold text-gray-900 leading-tight'>
+                    {r.userLabel}
+                  </h3>
+                  <p className='mt-1 text-xs md:text-sm text-gray-700'>
+                    <span className='font-medium text-gray-900'>{r.start}</span>
+                    <span className='mx-1 text-gray-500'>a</span>
+                    <span className='font-medium text-gray-900'>{r.end}</span>
+                    <span className='ml-2 text-gray-600'>({r.dayName})</span>
+                  </p>
+                </div>
+              </div>
+              <div>
+                <span className='inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
+                  Programado
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export default function SchedulePage(): React.JSX.Element {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
@@ -357,7 +569,7 @@ export default function SchedulePage(): React.JSX.Element {
   // Calcular rangos de fechas
   const weekRange = useMemo(() => getWeekRange(), []);
   const nextWeekRange = useMemo(() => getNextWeekRange(), []);
-  const monthRange = useMemo(() => getRemainingMonthRange(), []);
+  const monthRange = useMemo(() => getMonthRange(), []);
 
   const currentWeekStart = useMemo(
     () => new Date(weekRange.start),
@@ -625,30 +837,13 @@ export default function SchedulePage(): React.JSX.Element {
                       </div>
                     </div>
                   ) : (
-                    <div>
-                      <div className='mb-4 sm:mb-6'>
-                        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
-                          Este Mes
-                        </h3>
-                        <p className='text-sm sm:text-base text-gray-600'>
-                          Desde{' '}
-                          {new Date(monthRange.start).toLocaleDateString(
-                            'es-ES'
-                          )}{' '}
-                          hasta{' '}
-                          {new Date(monthRange.end).toLocaleDateString('es-ES')}
-                        </p>
-                      </div>
-
-                      <div className='text-center py-8'>
-                        <div className='w-16 h-16 mx-auto mb-4 bg-blue-100 rounded-full flex items-center justify-center'>
-                          <span className='text-2xl'>🚧</span>
-                        </div>
-                        <p className='text-gray-600 italic text-sm sm:text-base'>
-                          Vista mensual en desarrollo...
-                        </p>
-                      </div>
-                    </div>
+                    <MonthlySchedule
+                      assignments={assignments}
+                      getScheduleSlots={getScheduleSlots}
+                      monthStart={new Date(monthRange.start)}
+                      monthEnd={new Date(monthRange.end)}
+                      holidaySet={holidaySet}
+                    />
                   )}
                 </div>
               )}
