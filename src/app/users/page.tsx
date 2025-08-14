@@ -567,7 +567,11 @@ export default function UsersPage() {
               onClick={() => setFilterStatus('all')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>👤</div>
                   <div>
@@ -585,7 +589,11 @@ export default function UsersPage() {
               onClick={() => setFilterStatus('active')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-green-100 to-green-200 border-green-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'active' ? 'ring-2 ring-green-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>✅</div>
                   <div>
@@ -603,7 +611,11 @@ export default function UsersPage() {
               onClick={() => setFilterStatus('inactive')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 border-yellow-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'inactive' ? 'ring-2 ring-yellow-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>⏸️</div>
                   <div>
@@ -667,7 +679,7 @@ export default function UsersPage() {
               />
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Buttons and Filters */}
             <div className='flex flex-col sm:flex-row gap-3'>
               <Button
                 onClick={handleAddUser}
@@ -675,6 +687,46 @@ export default function UsersPage() {
               >
                 ➕ Agregar Usuario
               </Button>
+
+              {/* Filter Status */}
+              <select
+                className='px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900'
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+              >
+                <option className='bg-white text-gray-900' value='all'>
+                  Todos los estados
+                </option>
+                <option className='bg-white text-gray-900' value='active'>
+                  Activos
+                </option>
+                <option className='bg-white text-gray-900' value='inactive'>
+                  Inactivos
+                </option>
+              </select>
+
+              {/* Chip de estado seleccionado */}
+              {filterStatus !== 'all' && (
+                <span
+                  className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full border whitespace-nowrap ${
+                    filterStatus === 'active'
+                      ? 'bg-green-50 text-green-700 border-green-300'
+                      : 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                  }`}
+                >
+                  <span>
+                    {filterStatus === 'active' ? 'Activos' : 'Inactivos'}
+                  </span>
+                  <button
+                    type='button'
+                    aria-label='Limpiar filtro'
+                    className='hover:opacity-80'
+                    onClick={() => setFilterStatus('all')}
+                  >
+                    ✕
+                  </button>
+                </span>
+              )}
             </div>
           </div>
 
