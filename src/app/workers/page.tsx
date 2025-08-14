@@ -404,6 +404,38 @@ export default function WorkersPage() {
 
         const updatedWorker = await updateWorker(selectedWorker.id, workerData);
         if (updatedWorker) {
+          // Si el admin ha introducido una contraseña válida, también actualizamos el acceso de Supabase Auth
+          const trimmedPassword = workerAccessPassword.trim();
+          if (
+            trimmedPassword.length >= 6 &&
+            isValidField(updatedWorker.email) &&
+            isValidField(updatedWorker.name)
+          ) {
+            try {
+              const resp = await fetch('/api/workers/auth', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  email: updatedWorker.email.trim(),
+                  name: updatedWorker.name.trim(),
+                  password: trimmedPassword,
+                }),
+              });
+              const json = (await resp.json()) as {
+                success: boolean;
+                message: string;
+              };
+              if (!json.success) {
+                setError(json.message ?? 'Error generando acceso');
+              } else {
+                setSuccessMessage(
+                  'Trabajadora actualizada y acceso configurado.'
+                );
+              }
+            } catch {
+              setError('Error generando acceso');
+            }
+          }
           const updatedWorkers = workers.map((w) => {
             if (w.id === selectedWorker.id) {
               return updatedWorker;
@@ -568,11 +600,15 @@ export default function WorkersPage() {
               onClick={() => setFilterStatus('all')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-blue-100 to-blue-200 border-blue-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'all' ? 'ring-2 ring-blue-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>👥</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className='text-sm lg:text-base font-medium text-gray-800'>
                       Total Trabajadoras
                     </p>
                     <p className='text-xl lg:text-2xl font-bold text-gray-900'>
@@ -586,11 +622,15 @@ export default function WorkersPage() {
               onClick={() => setFilterStatus('activa')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-green-100 to-green-200 border-green-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'activa' ? 'ring-2 ring-green-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>✅</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className='text-sm lg:text-base font-medium text-gray-800'>
                       Activas
                     </p>
                     <p className='text-xl lg:text-2xl font-bold text-gray-900'>
@@ -604,11 +644,15 @@ export default function WorkersPage() {
               onClick={() => setFilterStatus('inactiva')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-yellow-100 to-yellow-200 border-yellow-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'inactiva' ? 'ring-2 ring-yellow-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>⏸️</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className='text-sm lg:text-base font-medium text-gray-800'>
                       Inactivas
                     </p>
                     <p className='text-xl lg:text-2xl font-bold text-gray-900'>
@@ -622,11 +666,15 @@ export default function WorkersPage() {
               onClick={() => setFilterStatus('vacaciones')}
               className='cursor-pointer'
             >
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200 hover:shadow-lg transition-all duration-200'>
+              <Card
+                className={`p-4 lg:p-6 bg-gradient-to-br from-purple-100 to-purple-200 border-purple-300 hover:shadow-lg transition-all duration-200 ${
+                  filterStatus === 'vacaciones' ? 'ring-2 ring-purple-500' : ''
+                }`}
+              >
                 <div className='flex items-center'>
                   <div className='text-2xl lg:text-3xl mr-3'>🏖️</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className='text-sm lg:text-base font-medium text-gray-800'>
                       Vacaciones
                     </p>
                     <p className='text-xl lg:text-2xl font-bold text-gray-900'>
@@ -678,17 +726,58 @@ export default function WorkersPage() {
 
               {/* Filter Status */}
               <select
-                className='px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                className='px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900'
                 value={filterStatus}
                 onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
                   setFilterStatus(e.target.value)
                 }
               >
-                <option value='all'>Todos los estados</option>
-                <option value='activa'>Activas</option>
-                <option value='inactiva'>Inactivas</option>
-                <option value='vacaciones'>Vacaciones</option>
+                <option className='bg-white text-gray-900' value='all'>
+                  Todos los estados
+                </option>
+                <option className='bg-white text-gray-900' value='activa'>
+                  Activas
+                </option>
+                <option className='bg-white text-gray-900' value='inactiva'>
+                  Inactivas
+                </option>
+                <option className='bg-white text-gray-900' value='vacaciones'>
+                  Vacaciones
+                </option>
               </select>
+
+              {/* Chip de estado seleccionado */}
+              {filterStatus !== 'all' && (
+                <span
+                  className={`inline-flex items-center gap-2 px-3 py-1 text-xs font-semibold rounded-full border whitespace-nowrap ${
+                    filterStatus === 'activa'
+                      ? 'bg-green-50 text-green-700 border-green-300'
+                      : filterStatus === 'inactiva'
+                        ? 'bg-yellow-50 text-yellow-700 border-yellow-300'
+                        : filterStatus === 'vacaciones'
+                          ? 'bg-purple-50 text-purple-700 border-purple-300'
+                          : 'bg-blue-50 text-blue-700 border-blue-300'
+                  }`}
+                >
+                  <span>
+                    {filterStatus === 'activa'
+                      ? 'Activas'
+                      : filterStatus === 'inactiva'
+                        ? 'Inactivas'
+                        : filterStatus === 'vacaciones'
+                          ? 'Vacaciones'
+                          : 'Todos'}
+                  </span>
+                  <button
+                    type='button'
+                    aria-label='Limpiar filtro'
+                    className='hover:opacity-80'
+                    onClick={() => setFilterStatus('all')}
+                  >
+                    ✕
+                  </button>
+                </span>
+              )}
             </div>
           </div>
 

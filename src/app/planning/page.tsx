@@ -145,16 +145,39 @@ export default function PlanningPage() {
     return result;
   }, [entriesByDate, selectedUser, selectedWorker]);
 
-  // Construir la grilla del mes (6 filas x 7 columnas)
+  // Construir la grilla del mes mostrando solo días del mes actual.
+  // Rellenamos con placeholders (celdas vacías) antes/después para completar filas.
   const monthGrid: MonthGridCell[] = useMemo(() => {
     const start = new Date(firstDayOfMonth);
-    const startDay = (start.getDay() + 6) % 7; // 0=Lunes ... 6=Domingo
-    start.setDate(start.getDate() - startDay);
+    const startDay = (start.getDay() + 6) % 7; // 0=Lunes ... 6=Domingo (lunes-based)
+
+    const daysInMonth = lastDayOfMonth.getDate();
+    const leadingPlaceholders = startDay; // celdas vacías antes del día 1
+    const trailingPlaceholders =
+      (7 - ((leadingPlaceholders + daysInMonth) % 7)) % 7; // celdas vacías al final
 
     const grid: MonthGridCell[] = [];
-    for (let i = 0; i < 42; i++) {
-      const date = new Date(start);
-      date.setDate(start.getDate() + i);
+
+    // 1) Placeholders previos
+    for (let i = 0; i < leadingPlaceholders; i++) {
+      // Fecha dummy (no se usa para interacción)
+      const date = new Date(firstDayOfMonth);
+      date.setDate(1 - (leadingPlaceholders - i));
+      grid.push({
+        date,
+        isCurrentMonth: false,
+        isToday: false,
+        isWeekend: false,
+        isHoliday: false,
+        holidayName: undefined,
+        entries: [],
+      });
+    }
+
+    // 2) Días reales del mes
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(firstDayOfMonth);
+      date.setDate(d);
       const dateKey = getDateKeyLocal(date);
       const isHoliday: boolean = holidays.some(
         (h) => h.day === date.getDate() && h.month === month && h.year === year
@@ -167,7 +190,7 @@ export default function PlanningPage() {
         : undefined;
       grid.push({
         date,
-        isCurrentMonth: date.getMonth() === firstDayOfMonth.getMonth(),
+        isCurrentMonth: true,
         isToday: date.toDateString() === new Date().toDateString(),
         isWeekend: date.getDay() === 0 || date.getDay() === 6,
         isHoliday,
@@ -175,8 +198,31 @@ export default function PlanningPage() {
         entries: visibleEntriesByDate[dateKey] ?? [],
       });
     }
+
+    // 3) Placeholders finales
+    for (let i = 0; i < trailingPlaceholders; i++) {
+      const date = new Date(lastDayOfMonth);
+      date.setDate(lastDayOfMonth.getDate() + (i + 1));
+      grid.push({
+        date,
+        isCurrentMonth: false,
+        isToday: false,
+        isWeekend: false,
+        isHoliday: false,
+        holidayName: undefined,
+        entries: [],
+      });
+    }
+
     return grid;
-  }, [visibleEntriesByDate, firstDayOfMonth, holidays, month, year]);
+  }, [
+    visibleEntriesByDate,
+    firstDayOfMonth,
+    lastDayOfMonth,
+    holidays,
+    month,
+    year,
+  ]);
 
   // Utilidad: parsear schedule de la BD en forma segura
   const parseSchedule = (raw: unknown): Record<string, DaySchedule> => {
@@ -705,8 +751,8 @@ export default function PlanningPage() {
           {/* Month Grid */}
           {!loading && (
             <div className='mb-8'>
-              {/* Cabecera de días solo en desktop grande */}
-              <div className='hidden lg:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
+              {/* Cabecera de días en tablet y desktop */}
+              <div className='hidden md:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
                 {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
                   <div
                     key={d}
@@ -717,8 +763,8 @@ export default function PlanningPage() {
                 ))}
               </div>
 
-              {/* Grid responsive mobile-first */}
-              <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
+              {/* Grid responsive: móvil 1 col, sm 2 cols, tablet/desktop 7 cols */}
+              <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 lg:grid-cols-7 gap-2 md:gap-3'>
                 {monthGrid.map((cell, idx) => {
                   const dateKey = getDateKeyLocal(cell.date);
                   const headerClasses = cell.isCurrentMonth
@@ -732,15 +778,28 @@ export default function PlanningPage() {
                   return (
                     <Card
                       key={idx}
-                      role='button'
-                      tabIndex={0}
+                      role={cell.isCurrentMonth ? 'button' : undefined}
+                      tabIndex={cell.isCurrentMonth ? 0 : -1}
+                      aria-disabled={cell.isCurrentMonth ? undefined : true}
                       aria-label={`Día ${cell.date.getDate()} ${cell.isHoliday ? `festivo ${cell.holidayName ?? ''}` : ''}`}
-                      className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 ${todayRing}`}
-                      onClick={() => handleOpenCell(dateKey)}
-                      onKeyDown={(e: KeyboardEvent<HTMLDivElement>) => {
-                        if (e.key === 'Enter' || e.key === ' ')
-                          handleOpenCell(dateKey);
-                      }}
+                      className={`p-2 sm:p-3 border ${borderHighlight} ${
+                        cell.isCurrentMonth
+                          ? 'bg-white'
+                          : 'bg-gray-50 border-dashed text-gray-300 pointer-events-none'
+                      } min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 ${todayRing}`}
+                      onClick={
+                        cell.isCurrentMonth
+                          ? () => handleOpenCell(dateKey)
+                          : undefined
+                      }
+                      onKeyDown={
+                        cell.isCurrentMonth
+                          ? (e: KeyboardEvent<HTMLDivElement>) => {
+                              if (e.key === 'Enter' || e.key === ' ')
+                                handleOpenCell(dateKey);
+                            }
+                          : undefined
+                      }
                     >
                       <div className='flex items-center justify-between mb-1'>
                         <div className='flex items-center gap-2'>
@@ -763,7 +822,7 @@ export default function PlanningPage() {
                           </span>
                         )}
                       </div>
-                      <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
+                      <div className='space-y-1 max-h-64 sm:max-h-56 md:max-h-48 overflow-y-auto pr-0.5'>
                         {(cell.entries ?? []).slice(0, 4).map((e, i) => (
                           <div
                             key={`${dateKey}-${i}`}

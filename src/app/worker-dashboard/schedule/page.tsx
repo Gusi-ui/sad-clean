@@ -404,7 +404,7 @@ const WorkerMonthCalendar = (props: {
             >
               <div className='flex items-center justify-between mb-1'>
                 <div className='flex items-center gap-2'>
-                  <span className='lg:hidden inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
+                  <span className='inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
                     {weekdayShort}
                   </span>
                   <span
@@ -1199,7 +1199,7 @@ export default function SchedulePage(): React.JSX.Element {
         </p>
       </div>
 
-      <div className='hidden lg:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
+      <div className='hidden md:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
         {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
           <div
             key={d}
