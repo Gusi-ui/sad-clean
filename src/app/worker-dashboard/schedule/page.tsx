@@ -249,8 +249,211 @@ const WeeklySchedule = (props: {
   );
 };
 
-// Componente mensual similar al planning, filtrado por la trabajadora logueada
-const MonthlySchedule = (props: {
+// Calendario mensual estilo Planning para la trabajadora logueada (declaración superior para evitar no-use-before-define)
+const WorkerMonthCalendar = (props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getScheduleSlots: (
+    schedule: unknown,
+    assignmentType: string,
+    date: Date
+  ) => Array<{ start: string; end: string }>;
+  monthStart: Date;
+  monthEnd: Date;
+  holidaySet?: ReadonlySet<string>;
+}): React.JSX.Element => {
+  const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
+    props;
+
+  const isKnownHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    if (m === 8 && d === 15) return true;
+    return false;
+  };
+
+  const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
+    const dayOfWeek = date.getDay();
+    const type = (assignmentType ?? '').toLowerCase();
+    const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate()
+    ).padStart(2, '0')}`;
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+    if (type === 'laborables')
+      return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+    if (type === 'festivos') return isSaturday || isSunday || isHoliday;
+    if (type === 'flexible' || type === 'daily') return true;
+    return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+  };
+
+  type ExpandedEntry = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+  };
+
+  const getDateKeyLocal = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`;
+
+  const todayKey = getDateKeyLocal(new Date());
+
+  const firstDayOfMonth = new Date(
+    monthStart.getFullYear(),
+    monthStart.getMonth(),
+    1,
+    12,
+    0,
+    0
+  );
+  const lastDayOfMonth = new Date(
+    monthEnd.getFullYear(),
+    monthEnd.getMonth(),
+    monthEnd.getDate(),
+    12,
+    0,
+    0
+  );
+
+  // Construir solo los días del mes actual (no arrastrar semanas completas)
+  const daysInMonth = lastDayOfMonth.getDate();
+  const monthGrid = Array.from({ length: daysInMonth }, (_, idx) => {
+    const date = new Date(firstDayOfMonth);
+    date.setDate(firstDayOfMonth.getDate() + idx);
+    const key = getDateKeyLocal(date);
+    const isCurrentMonth = true;
+    const isToday = key === todayKey;
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+
+    const entries: ExpandedEntry[] = [];
+    for (const a of assignments) {
+      const aStart = new Date(a.start_date);
+      const aEnd =
+        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+      if (date < aStart || date > aEnd) continue;
+      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+      const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
+      if (slots.length > 0) {
+        const userLabel =
+          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
+          'Servicio';
+        slots.forEach((s) => {
+          entries.push({
+            assignmentId: a.id,
+            userLabel,
+            start: s.start,
+            end: s.end,
+          });
+        });
+      }
+    }
+
+    return {
+      date,
+      key,
+      isCurrentMonth,
+      isToday,
+      isWeekend,
+      isHoliday,
+      entries,
+    };
+  });
+
+  return (
+    <div>
+      <div className='mb-4 sm:mb-6'>
+        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
+          Este Mes
+        </h3>
+        <p className='text-sm sm:text-base text-gray-600'>
+          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
+          {lastDayOfMonth.toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
+      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
+        {monthGrid.map((cell, idx) => {
+          const headerClasses = cell.isCurrentMonth
+            ? 'text-gray-900'
+            : 'text-gray-400';
+          const borderHighlight =
+            cell.isHoliday || cell.isWeekend
+              ? 'border-red-300'
+              : 'border-gray-200';
+          const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
+          const weekdayShort = cell.date
+            .toLocaleDateString('es-ES', { weekday: 'short' })
+            .replace('.', '')
+            .slice(0, 3);
+
+          return (
+            <div
+              key={idx}
+              className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 rounded-lg ${todayRing}`}
+            >
+              <div className='flex items-center justify-between mb-1'>
+                <div className='flex items-center gap-2'>
+                  <span className='lg:hidden inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
+                    {weekdayShort}
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-medium ${headerClasses}`}
+                  >
+                    {cell.date.getDate()}
+                  </span>
+                </div>
+                {cell.isHoliday && (
+                  <span className='text-[10px] sm:text-xs text-red-600 font-medium'>
+                    🎉
+                  </span>
+                )}
+              </div>
+
+              <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
+                {cell.entries.slice(0, 4).map((e, i) => (
+                  <div
+                    key={`${cell.key}-${e.assignmentId}-${i}`}
+                    className='rounded px-1.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50'
+                  >
+                    <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
+                      {e.userLabel}
+                    </div>
+                    <div className='flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
+                      <span>
+                        {e.start}–{e.end}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {cell.entries.length === 0 && (
+                  <div className='text-center py-2'>
+                    <p className='text-[10px] text-gray-400 italic'>
+                      Sin servicios
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// Eliminado: Componente mensual previo ya no se usa
+/* const MonthlySchedule = (props: {
   assignments: Array<{
     id: string;
     assignment_type: string;
@@ -459,7 +662,7 @@ const MonthlySchedule = (props: {
       ))}
     </div>
   );
-};
+}; */
 
 export default function SchedulePage(): React.JSX.Element {
   const { user } = useAuth();
@@ -570,6 +773,14 @@ export default function SchedulePage(): React.JSX.Element {
   const weekRange = useMemo(() => getWeekRange(), []);
   const nextWeekRange = useMemo(() => getNextWeekRange(), []);
   const monthRange = useMemo(() => getMonthRange(), []);
+  const monthStartLocal = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth(), 1, 12, 0, 0);
+  }, []);
+  const monthEndLocal = useMemo(() => {
+    const now = new Date();
+    return new Date(now.getFullYear(), now.getMonth() + 1, 0, 12, 0, 0);
+  }, []);
 
   const currentWeekStart = useMemo(
     () => new Date(weekRange.start),
@@ -837,11 +1048,11 @@ export default function SchedulePage(): React.JSX.Element {
                       </div>
                     </div>
                   ) : (
-                    <MonthlySchedule
+                    <WorkerMonthCalendar
                       assignments={assignments}
                       getScheduleSlots={getScheduleSlots}
-                      monthStart={new Date(monthRange.start)}
-                      monthEnd={new Date(monthRange.end)}
+                      monthStart={monthStartLocal}
+                      monthEnd={monthEndLocal}
                       holidaySet={holidaySet}
                     />
                   )}
@@ -854,3 +1065,217 @@ export default function SchedulePage(): React.JSX.Element {
     </ProtectedRoute>
   );
 }
+
+// Calendario mensual estilo Planning para la trabajadora logueada
+/* function WorkerMonthCalendar(props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getScheduleSlots: (
+    schedule: unknown,
+    assignmentType: string,
+    date: Date
+  ) => Array<{ start: string; end: string }>;
+  monthStart: Date;
+  monthEnd: Date;
+  holidaySet?: ReadonlySet<string>;
+}): React.JSX.Element {
+  const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
+    props;
+
+  const isKnownHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    if (m === 8 && d === 15) return true;
+    return false;
+  };
+
+  const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
+    const dayOfWeek = date.getDay();
+    const type = (assignmentType ?? '').toLowerCase();
+    const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
+      date.getDate()
+    ).padStart(2, '0')}`;
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+    if (type === 'laborables')
+      return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+    if (type === 'festivos') return isSaturday || isSunday || isHoliday;
+    if (type === 'flexible' || type === 'daily') return true;
+    return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+  };
+
+  type ExpandedEntry = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+  };
+
+  const getDateKeyLocal = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
+      d.getDate()
+    ).padStart(2, '0')}`;
+
+  const todayKey = getDateKeyLocal(new Date());
+
+  const firstDayOfMonth = new Date(
+    monthStart.getFullYear(),
+    monthStart.getMonth(),
+    1,
+    12,
+    0,
+    0
+  );
+  const lastDayOfMonth = new Date(
+    monthEnd.getFullYear(),
+    monthEnd.getMonth(),
+    monthEnd.getDate(),
+    12,
+    0,
+    0
+  );
+
+  // Construir solo los días del mes actual (no arrastrar semanas completas)
+  const daysInMonth = lastDayOfMonth.getDate();
+  const monthGrid = Array.from({ length: daysInMonth }, (_, idx) => {
+    const date = new Date(firstDayOfMonth);
+    date.setDate(firstDayOfMonth.getDate() + idx);
+    const key = getDateKeyLocal(date);
+    const isCurrentMonth = true;
+    const isToday = key === todayKey;
+    const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+
+    const entries: ExpandedEntry[] = [];
+    for (const a of assignments) {
+      const aStart = new Date(a.start_date);
+      const aEnd =
+        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+      if (date < aStart || date > aEnd) continue;
+      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+      const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
+      if (slots.length > 0) {
+        const userLabel =
+          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
+          'Servicio';
+        slots.forEach((s) => {
+          entries.push({
+            assignmentId: a.id,
+            userLabel,
+            start: s.start,
+            end: s.end,
+          });
+        });
+      }
+    }
+
+    return {
+      date,
+      key,
+      isCurrentMonth,
+      isToday,
+      isWeekend,
+      isHoliday,
+      entries,
+    };
+  });
+
+  return (
+    <div>
+      <div className='mb-4 sm:mb-6'>
+        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
+          Este Mes
+        </h3>
+        <p className='text-sm sm:text-base text-gray-600'>
+          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
+          {lastDayOfMonth.toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
+      <div className='hidden lg:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
+        {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
+          <div
+            key={d}
+            className='text-center text-sm font-semibold text-gray-700'
+          >
+            {d}
+          </div>
+        ))}
+      </div>
+
+      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
+        {monthGrid.map((cell, idx) => {
+          const headerClasses = cell.isCurrentMonth
+            ? 'text-gray-900'
+            : 'text-gray-400';
+          const borderHighlight =
+            cell.isHoliday || cell.isWeekend
+              ? 'border-red-300'
+              : 'border-gray-200';
+          const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
+          const weekdayShort = cell.date
+            .toLocaleDateString('es-ES', { weekday: 'short' })
+            .replace('.', '')
+            .slice(0, 3);
+
+          return (
+            <div
+              key={idx}
+              className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 rounded-lg ${todayRing}`}
+            >
+              <div className='flex items-center justify-between mb-1'>
+                <div className='flex items-center gap-2'>
+                  <span className='lg:hidden inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
+                    {weekdayShort}
+                  </span>
+                  <span
+                    className={`text-xs sm:text-sm font-medium ${headerClasses}`}
+                  >
+                    {cell.date.getDate()}
+                  </span>
+                </div>
+                {cell.isHoliday && (
+                  <span className='text-[10px] sm:text-xs text-red-600 font-medium'>
+                    🎉
+                  </span>
+                )}
+              </div>
+
+              <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
+                {cell.entries.slice(0, 4).map((e, i) => (
+                  <div
+                    key={`${cell.key}-${e.assignmentId}-${i}`}
+                    className='rounded px-1.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50'
+                  >
+                    <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
+                      {e.userLabel}
+                    </div>
+                    <div className='flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
+                      <span>
+                        {e.start}–{e.end}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+                {cell.entries.length === 0 && (
+                  <div className='text-center py-2'>
+                    <p className='text-[10px] text-gray-400 italic'>
+                      Sin servicios
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+} */
