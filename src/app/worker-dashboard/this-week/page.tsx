@@ -8,7 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
-import { getNextWeekRange } from '@/lib/date-utils';
+import { getNextWeekRange, getWeekRange } from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -34,8 +34,9 @@ const WeekServicesList = (props: {
     assignmentType: string,
     date: Date
   ) => Array<{ start: string; end: string }>;
+  holidaySet: ReadonlySet<string>;
 }): React.JSX.Element => {
-  const { assignments, getWeekSlots } = props;
+  const { assignments, getWeekSlots, holidaySet } = props;
 
   type Row = {
     assignmentId: string;
@@ -62,26 +63,23 @@ const WeekServicesList = (props: {
     });
   };
 
+  const isKnownHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    if (m === 8 && d === 15) return true;
+    return false;
+  };
+
   // Función para verificar si una trabajadora debe trabajar en una fecha específica
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
     const type = assignmentType.toLowerCase();
 
-    // Domingo (día 0)
+    // Domingo (0) y Sábado (6)
     const isSunday = dayOfWeek === 0;
-
-    // Festivos específicos (se pueden expandir)
-    const isHoliday = (() => {
-      if (year === 2025) {
-        // 15 de agosto (viernes)
-        if (month === 8 && day === 15) return true;
-        // Otros festivos se pueden agregar aquí
-      }
-      return false;
-    })();
+    const isSaturday = dayOfWeek === 6;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isHoliday = holidaySet.has(dateKey) || isKnownHoliday(date);
 
     // Lógica según tipo de trabajadora
     switch (type) {
@@ -90,8 +88,8 @@ const WeekServicesList = (props: {
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
 
       case 'festivos':
-        // Solo trabaja festivos y fines de semana
-        return isSunday || isHoliday;
+        // Solo trabaja festivos y fines de semana (sábado y domingo)
+        return isSaturday || isSunday || isHoliday;
 
       case 'flexible':
         // Trabaja todos los días
@@ -107,8 +105,8 @@ const WeekServicesList = (props: {
     }
   };
 
-  // Calcular el rango de la semana usando las utilidades de fecha española
-  const weekRange = getNextWeekRange();
+  // Calcular el rango de la semana actual usando las utilidades de fecha española
+  const weekRange = getWeekRange();
   const weekStart = new Date(weekRange.start);
   const weekEnd = new Date(weekRange.end);
 
@@ -241,6 +239,8 @@ export default function ThisWeekPage(): React.JSX.Element {
   const { user } = useAuth();
   const [weekAssignments, setWeekAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
 
   type TimeSlotRange = { start: string; end: string };
 
@@ -311,8 +311,11 @@ export default function ThisWeekPage(): React.JSX.Element {
         );
 
         const type = (assignmentType ?? '').toLowerCase();
-        const isHoliday = dayOfWeek === 0; // Domingo
-        const mustUseHoliday = isHoliday || type === 'festivos';
+        const dateKey = date.toISOString().split('T')[0] ?? '';
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isOfficialHoliday = holidaySet.has(dateKey);
+        const mustUseHoliday =
+          isWeekend || isOfficialHoliday || type === 'festivos';
         if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
         if (daySlots.length > 0) return daySlots;
         return holidaySlots;
@@ -320,7 +323,7 @@ export default function ThisWeekPage(): React.JSX.Element {
         return [];
       }
     },
-    []
+    [holidaySet]
   );
 
   const weekRange = useMemo(() => getNextWeekRange(), []);
@@ -334,7 +337,7 @@ export default function ThisWeekPage(): React.JSX.Element {
       }
 
       try {
-        setLoading(true);
+        if (!hasLoadedOnce) setLoading(true);
 
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
@@ -350,6 +353,22 @@ export default function ThisWeekPage(): React.JSX.Element {
         }
 
         const workerId = workerData.id;
+
+        // Cargar festivos para el rango de la semana
+        const ws = new Date(weekRange.start ?? '');
+        const we = new Date(weekRange.end ?? '');
+        const { data: holidayRows } = await supabase
+          .from('holidays')
+          .select('day, month, year')
+          .gte('year', ws.getFullYear())
+          .lte('year', we.getFullYear());
+        const hset = new Set<string>();
+        (holidayRows ?? []).forEach((row) => {
+          const r = row as { day: number; month: number; year: number };
+          const key = `${r.year}-${String(r.month).padStart(2, '0')}-${String(r.day).padStart(2, '0')}`;
+          hset.add(key);
+        });
+        setHolidaySet(hset);
 
         // Obtener todas las asignaciones activas de la trabajadora
         const { data: rows, error: err } = await supabase
@@ -412,12 +431,19 @@ export default function ThisWeekPage(): React.JSX.Element {
           setWeekAssignments([]);
         }
       } finally {
-        setLoading(false);
+        if (!hasLoadedOnce) setLoading(false);
+        setHasLoadedOnce(true);
       }
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [getWeekSlots, weekRange.start, weekRange.end, user?.email]);
+  }, [
+    getWeekSlots,
+    weekRange.start,
+    weekRange.end,
+    user?.email,
+    hasLoadedOnce,
+  ]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
@@ -497,6 +523,7 @@ export default function ThisWeekPage(): React.JSX.Element {
                 <WeekServicesList
                   assignments={weekAssignments}
                   getWeekSlots={getWeekSlots}
+                  holidaySet={holidaySet}
                 />
               )}
             </div>

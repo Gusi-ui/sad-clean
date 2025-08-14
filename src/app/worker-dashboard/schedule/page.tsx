@@ -40,8 +40,10 @@ const WeeklySchedule = (props: {
   ) => Array<{ start: string; end: string }>;
   weekStart: Date;
   weekEnd: Date;
+  holidaySet?: ReadonlySet<string>;
 }): React.JSX.Element => {
-  const { assignments, getScheduleSlots, weekStart, weekEnd } = props;
+  const { assignments, getScheduleSlots, weekStart, weekEnd, holidaySet } =
+    props;
 
   type TimeSlot = {
     assignmentId: string;
@@ -67,26 +69,24 @@ const WeeklySchedule = (props: {
     });
   };
 
+  const isKnownHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    // Asunción de la Virgen: 15 de agosto
+    if (m === 8 && d === 15) return true;
+    return false;
+  };
+
   // Función para verificar si una trabajadora debe trabajar en una fecha específica
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
     const type = assignmentType.toLowerCase();
 
-    // Domingo (día 0)
+    // Domingo (0) y Sábado (6)
     const isSunday = dayOfWeek === 0;
-
-    // Festivos específicos (se pueden expandir)
-    const isHoliday = (() => {
-      if (year === 2025) {
-        // 15 de agosto (viernes)
-        if (month === 8 && day === 15) return true;
-        // Otros festivos se pueden agregar aquí
-      }
-      return false;
-    })();
+    const isSaturday = dayOfWeek === 6;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isHoliday = holidaySet?.has(dateKey) === true || isKnownHoliday(date);
 
     // Lógica según tipo de trabajadora
     switch (type) {
@@ -95,8 +95,8 @@ const WeeklySchedule = (props: {
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
 
       case 'festivos':
-        // Solo trabaja festivos y fines de semana
-        return isSunday || isHoliday;
+        // Solo trabaja festivos y fines de semana (sábado y domingo)
+        return isSaturday || isSunday || isHoliday;
 
       case 'flexible':
         // Trabaja todos los días
@@ -256,13 +256,14 @@ export default function SchedulePage(): React.JSX.Element {
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>(
     'week'
   );
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
 
   type TimeSlotRange = { start: string; end: string };
 
   const getScheduleSlots = useCallback(
     (
       schedule: unknown,
-      _assignmentType: string,
+      assignmentType: string,
       date: Date
     ): TimeSlotRange[] => {
       try {
@@ -310,23 +311,47 @@ export default function SchedulePage(): React.JSX.Element {
           : [];
         const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
 
-        // Festivos
+        // Festivos: soportar schedule.holiday.timeSlots y holiday_config.holiday_timeSlots
         const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
         const holidayEnabled = (holidayDay?.['enabled'] as boolean) ?? false;
         const holidaySlotsRaw = Array.isArray(holidayDay?.['timeSlots'])
           ? (holidayDay['timeSlots'] as unknown[])
           : [];
-        const holidaySlots = holidayEnabled ? parseSlots(holidaySlotsRaw) : [];
 
-        // Determinar qué slots usar
-        const isHoliday = date.getDay() === 0; // Domingo
-        return isHoliday ? holidaySlots : daySlots;
+        const holidayCfg =
+          (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
+          undefined;
+        const holidayCfgRaw = Array.isArray(holidayCfg?.['holiday_timeSlots'])
+          ? (holidayCfg?.['holiday_timeSlots'] as unknown[])
+          : [];
+
+        const combinedHolidayRaw =
+          holidayCfgRaw.length > 0 ? holidayCfgRaw : holidaySlotsRaw;
+        const parsedHolidaySlots = holidayEnabled
+          ? parseSlots(combinedHolidayRaw)
+          : parseSlots(combinedHolidayRaw);
+
+        // Determinar qué slots usar: festivos = fines de semana o festivo oficial o tipo 'festivos'
+        const dow = date.getDay();
+        const isWeekend = dow === 0 || dow === 6;
+        const type = (assignmentType ?? '').toLowerCase();
+        const dateKey = `${date.getFullYear()}-${String(
+          date.getMonth() + 1
+        ).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+        const isOfficialHoliday = holidaySet.has(dateKey);
+        const mustUseHoliday =
+          isWeekend || isOfficialHoliday || type === 'festivos';
+
+        if (mustUseHoliday && parsedHolidaySlots.length > 0)
+          return parsedHolidaySlots;
+        if (daySlots.length > 0) return daySlots;
+        return parsedHolidaySlots;
       } catch {
         // Error parsing schedule
         return [];
       }
     },
-    []
+    [holidaySet]
   );
 
   // Calcular rangos de fechas
@@ -376,6 +401,38 @@ export default function SchedulePage(): React.JSX.Element {
         }
 
         const workerId = workerData.id;
+
+        // Cargar festivos para el rango que abarca semana actual, próxima semana y mes restante
+        const holidayStart = new Date(
+          Math.min(
+            new Date(weekRange.start).getTime(),
+            new Date(nextWeekRange.start).getTime(),
+            new Date(monthRange.start).getTime()
+          )
+        );
+        const holidayEnd = new Date(
+          Math.max(
+            new Date(weekRange.end).getTime(),
+            new Date(nextWeekRange.end).getTime(),
+            new Date(monthRange.end).getTime()
+          )
+        );
+        const startYear = holidayStart.getFullYear();
+        const endYear = holidayEnd.getFullYear();
+        const { data: holidayRows } = await supabase
+          .from('holidays')
+          .select('day, month, year')
+          .gte('year', startYear)
+          .lte('year', endYear);
+        const hset = new Set<string>();
+        (holidayRows ?? []).forEach((row) => {
+          const r = row as { day: number; month: number; year: number };
+          const key = `${r.year}-${String(r.month).padStart(2, '0')}-${String(
+            r.day
+          ).padStart(2, '0')}`;
+          hset.add(key);
+        });
+        setHolidaySet(hset);
 
         // Obtener todas las asignaciones activas de la trabajadora
         const { data: rows, error: err } = await supabase
@@ -538,6 +595,7 @@ export default function SchedulePage(): React.JSX.Element {
                         getScheduleSlots={getScheduleSlots}
                         weekStart={currentWeekStart}
                         weekEnd={currentWeekEnd}
+                        holidaySet={holidaySet}
                       />
 
                       <div className='mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200'>
@@ -554,6 +612,7 @@ export default function SchedulePage(): React.JSX.Element {
                           getScheduleSlots={getScheduleSlots}
                           weekStart={nextWeekStart}
                           weekEnd={nextWeekEnd}
+                          holidaySet={holidaySet}
                         />
                       </div>
                     </div>
