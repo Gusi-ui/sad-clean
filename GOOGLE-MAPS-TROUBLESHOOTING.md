@@ -165,7 +165,7 @@ Restricciones:
 
 ```env
 # .env.local
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=your_google_maps_api_key
 ```
 
 ### Navegador
