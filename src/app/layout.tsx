@@ -6,6 +6,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { AuthProvider } from '@/contexts/AuthContext';
 
 import './globals.css';
+import { metadata as sharedMetadata } from './metadata';
 
 const geist = Geist({
   variable: '--font-geist-sans',
@@ -18,14 +19,10 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  ...sharedMetadata,
   title: 'SAD LAS - Sistema de Gestión',
   description:
     'Sistema de gestión de horas y asignaciones para trabajadores de servicios asistenciales domiciliarios',
-  icons: [
-    { rel: 'icon', url: '/favicon.ico' },
-    { rel: 'icon', url: '/favicon.svg', type: 'image/svg+xml' },
-    { rel: 'apple-touch-icon', url: '/favicon.ico' },
-  ],
 };
 
 export default function RootLayout({

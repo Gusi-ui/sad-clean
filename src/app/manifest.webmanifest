@@ -1,0 +1,16 @@
+{
+  "name": "SAD LAS - Sistema de Gestión",
+  "short_name": "SAD LAS",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6"
+}
