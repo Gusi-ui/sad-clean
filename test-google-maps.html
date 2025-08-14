@@ -1,0 +1,258 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Test Google Maps API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background-color: #f5f5f5;
+      }
+      .container {
+        max-width: 800px;
+        margin: 0 auto;
+        background: white;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+      }
+      #map {
+        height: 400px;
+        width: 100%;
+        border-radius: 8px;
+        margin: 20px 0;
+        border: 1px solid #ddd;
+      }
+      .status {
+        padding: 10px;
+        border-radius: 4px;
+        margin: 10px 0;
+      }
+      .success {
+        background-color: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+      }
+      .error {
+        background-color: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+      }
+      .info {
+        background-color: #d1ecf1;
+        color: #0c5460;
+        border: 1px solid #bee5eb;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 10px 20px;
+        border-radius: 4px;
+        cursor: pointer;
+        margin: 5px;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+      button:disabled {
+        background-color: #6c757d;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🧪 Test Google Maps API</h1>
+
+      <div id="status"></div>
+
+      <div>
+        <button onclick="testGeocoding()">Test Geocoding</button>
+        <button onclick="testMap()">Test Map</button>
+        <button onclick="testDirections()">Test Directions</button>
+      </div>
+
+      <div id="map"></div>
+
+      <div id="results"></div>
+    </div>
+
+    <script>
+      const API_KEY = 'AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ';
+      let map;
+      let geocoder;
+      let directionsService;
+      let directionsRenderer;
+
+      function updateStatus(message, type = 'info') {
+        const statusDiv = document.getElementById('status');
+        statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+      }
+
+      function updateResults(message) {
+        const resultsDiv = document.getElementById('results');
+        resultsDiv.innerHTML += `<p>${message}</p>`;
+      }
+
+      function clearResults() {
+        document.getElementById('results').innerHTML = '';
+      }
+
+      // Cargar Google Maps API usando el patrón recomendado
+      function loadGoogleMapsAPI() {
+        return new Promise((resolve, reject) => {
+          if (window.google && window.google.maps) {
+            resolve();
+            return;
+          }
+
+          // Usar el patrón de carga recomendado
+          const script = document.createElement('script');
+          script.src = `https://maps.googleapis.com/maps/api/js?key=${API_KEY}&libraries=places&loading=async&callback=initMap`;
+          script.async = true;
+          script.defer = true;
+
+          // Definir la función callback global
+          window.initMap = () => {
+            updateStatus('✅ Google Maps API cargada correctamente', 'success');
+            resolve();
+          };
+
+          script.onerror = () => {
+            updateStatus('❌ Error al cargar Google Maps API', 'error');
+            reject(new Error('Failed to load Google Maps API'));
+          };
+
+          document.head.appendChild(script);
+        });
+      }
+
+      async function testGeocoding() {
+        clearResults();
+        updateStatus('🔄 Probando geocodificación...', 'info');
+
+        try {
+          await loadGoogleMapsAPI();
+
+          geocoder = new google.maps.Geocoder();
+
+          const testAddress = 'Calle Gran Vía 1, Madrid, Spain';
+
+          geocoder.geocode({ address: testAddress }, (results, status) => {
+            if (status === 'OK' && results && results[0]) {
+              const location = results[0].geometry.location;
+              updateStatus(
+                `✅ Geocodificación exitosa: ${testAddress} → ${location.lat()}, ${location.lng()}`,
+                'success'
+              );
+              updateResults(`📍 Dirección: ${testAddress}`);
+              updateResults(
+                `🌍 Coordenadas: ${location.lat()}, ${location.lng()}`
+              );
+            } else {
+              updateStatus(`❌ Error en geocodificación: ${status}`, 'error');
+              updateResults(`Error: ${status}`);
+            }
+          });
+        } catch (error) {
+          updateStatus(`❌ Error: ${error.message}`, 'error');
+        }
+      }
+
+      async function testMap() {
+        clearResults();
+        updateStatus('🔄 Probando mapa...', 'info');
+
+        try {
+          await loadGoogleMapsAPI();
+
+          const mapElement = document.getElementById('map');
+          if (!mapElement) {
+            throw new Error('Elemento del mapa no encontrado');
+          }
+
+          map = new google.maps.Map(mapElement, {
+            zoom: 12,
+            center: { lat: 40.4168, lng: -3.7038 }, // Madrid
+            mapTypeId: google.maps.MapTypeId.ROADMAP,
+            mapTypeControl: false,
+            streetViewControl: false,
+            fullscreenControl: true,
+          });
+
+          // Agregar un marcador de prueba usando el nuevo patrón recomendado
+          const marker = new google.maps.marker.AdvancedMarkerElement({
+            position: { lat: 40.4168, lng: -3.7038 },
+            map: map,
+            title: 'Madrid - Punto de prueba',
+          });
+
+          updateStatus('✅ Mapa cargado correctamente con marcador', 'success');
+          updateResults('🗺️ Mapa inicializado en Madrid');
+          updateResults('📍 Marcador agregado en el centro');
+        } catch (error) {
+          updateStatus(`❌ Error: ${error.message}`, 'error');
+        }
+      }
+
+      async function testDirections() {
+        clearResults();
+        updateStatus('🔄 Probando direcciones...', 'info');
+
+        try {
+          await loadGoogleMapsAPI();
+
+          if (!map) {
+            await testMap();
+          }
+
+          directionsService = new google.maps.DirectionsService();
+          directionsRenderer = new google.maps.DirectionsRenderer();
+          directionsRenderer.setMap(map);
+
+          const request = {
+            origin: 'Calle Gran Vía 1, Madrid',
+            destination: 'Plaza Mayor, Madrid',
+            travelMode: google.maps.TravelMode.DRIVING,
+          };
+
+          directionsService.route(request, (result, status) => {
+            if (status === 'OK') {
+              directionsRenderer.setDirections(result);
+              const route = result.routes[0];
+              const leg = route.legs[0];
+
+              updateStatus(
+                '✅ Direcciones calculadas correctamente',
+                'success'
+              );
+              updateResults(`🚗 Origen: ${leg.start_address}`);
+              updateResults(`🎯 Destino: ${leg.end_address}`);
+              updateResults(`⏱️ Duración: ${leg.duration.text}`);
+              updateResults(`📏 Distancia: ${leg.distance.text}`);
+            } else {
+              updateStatus(`❌ Error en direcciones: ${status}`, 'error');
+              updateResults(`Error: ${status}`);
+            }
+          });
+        } catch (error) {
+          updateStatus(`❌ Error: ${error.message}`, 'error');
+        }
+      }
+
+      // Inicializar al cargar la página
+      window.onload = async () => {
+        updateStatus('🚀 Iniciando test de Google Maps API...', 'info');
+        try {
+          await loadGoogleMapsAPI();
+          updateStatus('✅ Todo listo para las pruebas', 'success');
+        } catch (error) {
+          updateStatus(`❌ Error de inicialización: ${error.message}`, 'error');
+        }
+      };
+    </script>
+  </body>
+</html>

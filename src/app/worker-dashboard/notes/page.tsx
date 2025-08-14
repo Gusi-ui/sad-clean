@@ -9,202 +9,160 @@ import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
 
-interface Note {
-  id: string;
-  assignment_id: string;
-  worker_id: string;
-  content: string;
-  created_at: string | null;
-  updated_at: string | null;
-  assignment?: {
-    users?: {
-      name: string | null;
-      surname: string | null;
-    } | null;
-  } | null;
-}
-
 interface AssignmentRow {
   id: string;
   assignment_type: string;
   schedule: unknown;
   start_date: string;
   end_date: string | null;
-  users?: { name: string | null; surname: string | null } | null;
+  notes: string | null;
+  users: {
+    name: string | null;
+    surname: string | null;
+  } | null;
 }
 
-// Componente para crear/editar una nota
-const NoteEditor = (props: {
-  assignmentId: string;
-  assignmentLabel: string;
-  existingNote?: Note | null;
-  onSave: (note: Omit<Note, 'id' | 'created_at' | 'updated_at'>) => void;
-  onCancel: () => void;
-  isEditing: boolean;
+const NoteCard = ({
+  assignment,
+  onEdit,
+}: {
+  assignment: AssignmentRow;
+  onEdit: (assignment: AssignmentRow) => void;
 }): React.JSX.Element => {
-  const {
-    assignmentId,
-    assignmentLabel,
-    existingNote,
-    onSave,
-    onCancel,
-    isEditing,
-  } = props;
-  const [content, setContent] = useState(existingNote?.content ?? '');
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const userName = assignment.users?.name ?? '';
+  const userSurname = assignment.users?.surname ?? '';
+  const fullName = `${userName} ${userSurname}`.trim();
+  const userLabel = fullName !== '' ? fullName : 'Usuario';
 
-  const handleSave = (): void => {
-    if (content.trim() === '') return;
-
-    setIsSubmitting(true);
+  const formatDate = (dateString: string | null): string => {
+    if (dateString === null || dateString === '') {
+      return 'Sin fecha';
+    }
     try {
-      onSave({
-        assignment_id: assignmentId,
-        worker_id: '', // Se establecerá en el componente padre
-        content: content.trim(),
+      return new Date(dateString).toLocaleDateString('es-ES', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
       });
-      setContent('');
-    } finally {
-      setIsSubmitting(false);
+    } catch {
+      return 'Fecha inválida';
     }
   };
 
-  const handleCancel = (): void => {
-    setContent(existingNote?.content ?? '');
-    onCancel();
-  };
-
   return (
-    <div className='bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm'>
-      <div className='mb-3'>
-        <h3 className='text-base sm:text-lg font-semibold text-gray-900'>
-          {isEditing ? '✏️ Editar Nota' : '📝 Nueva Nota'}
-        </h3>
-        <p className='text-xs sm:text-sm text-gray-600'>
-          Servicio: {assignmentLabel}
-        </p>
+    <div className='bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden'>
+      <div className='p-4 border-b border-gray-200'>
+        <div className='flex items-center justify-between mb-2'>
+          <h3 className='text-lg font-semibold text-gray-900'>{userLabel}</h3>
+          <span className='inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
+            {assignment.assignment_type}
+          </span>
+        </div>
+        <div className='text-sm text-gray-600 space-y-1'>
+          <p>📅 Desde: {formatDate(assignment.start_date)}</p>
+          {assignment.end_date !== null && (
+            <p>📅 Hasta: {formatDate(assignment.end_date)}</p>
+          )}
+        </div>
       </div>
 
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
-        placeholder='Escribe tus notas sobre este servicio...'
-        className='w-full h-24 sm:h-32 p-2 sm:p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm sm:text-base'
-        disabled={isSubmitting}
-      />
+      <div className='p-4'>
+        {assignment.notes !== null && assignment.notes !== '' ? (
+          <div className='bg-gray-50 rounded-lg p-3'>
+            <p className='text-sm text-gray-700 whitespace-pre-wrap'>
+              {assignment.notes}
+            </p>
+          </div>
+        ) : (
+          <div className='text-center py-4'>
+            <p className='text-sm text-gray-500'>Sin notas</p>
+          </div>
+        )}
+      </div>
 
-      <div className='flex justify-end space-x-2 mt-3'>
+      <div className='p-4 border-t border-gray-200 bg-gray-50'>
         <Button
-          variant='outline'
+          onClick={(): void => {
+            onEdit(assignment);
+          }}
           size='sm'
-          onClick={handleCancel}
-          disabled={isSubmitting}
-          className='text-xs sm:text-sm'
+          className='w-full'
         >
-          Cancelar
-        </Button>
-        <Button
-          size='sm'
-          onClick={handleSave}
-          disabled={content.trim() === '' || isSubmitting}
-          className='text-xs sm:text-sm'
-        >
-          {isSubmitting ? 'Guardando...' : isEditing ? 'Actualizar' : 'Guardar'}
+          ✏️ Editar Nota
         </Button>
       </div>
     </div>
   );
 };
 
-// Componente para mostrar una nota
-const NoteCard = (props: {
-  note: Note;
-  onEdit: (note: Note) => void;
-  onDelete: (noteId: string) => void;
+const NoteEditor = ({
+  assignment,
+  onSave,
+  onCancel,
+}: {
+  assignment: AssignmentRow | null;
+  onSave: (assignmentId: string, content: string) => Promise<void>;
+  onCancel: () => void;
 }): React.JSX.Element => {
-  const { note, onEdit, onDelete } = props;
-  const [isDeleting, setIsDeleting] = useState(false);
+  const [content, setContent] = useState<string>('');
 
-  const formatDate = (dateString: string | null): string => {
-    if (dateString === null || dateString === '') return 'Fecha no disponible';
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  };
-
-  const handleDelete = (): void => {
-    // eslint-disable-next-line no-alert
-    if (!confirm('¿Estás seguro de que quieres eliminar esta nota?')) return;
-
-    setIsDeleting(true);
-    try {
-      onDelete(note.id);
-    } finally {
-      setIsDeleting(false);
+  React.useEffect(() => {
+    if (assignment) {
+      setContent(assignment.notes ?? '');
     }
+  }, [assignment]);
+
+  const handleSave = async (): Promise<void> => {
+    if (assignment === null) return;
+    await onSave(assignment.id, content);
   };
+
+  if (assignment === null) {
+    return <div />;
+  }
+
+  const userName = assignment.users?.name ?? '';
+  const userSurname = assignment.users?.surname ?? '';
+  const fullName = `${userName} ${userSurname}`.trim();
+  const userLabel = fullName !== '' ? fullName : 'Usuario';
 
   return (
-    <div className='bg-white rounded-xl p-3 sm:p-4 border border-gray-200 shadow-sm'>
-      <div className='flex items-start justify-between mb-3'>
-        <div className='flex-1'>
-          <h3 className='text-base sm:text-lg font-semibold text-gray-900'>
-            📝 Nota del Servicio
-          </h3>
-          <p className='text-xs sm:text-sm text-gray-600'>
-            {(() => {
-              const userName = note.assignment?.users?.name;
-              const userSurname = note.assignment?.users?.surname;
-              return userName !== null &&
-                userSurname !== null &&
-                userName !== '' &&
-                userSurname !== ''
-                ? `${userName} ${userSurname}`
-                : 'Servicio';
-            })()}
-          </p>
-        </div>
-        <div className='text-xs text-gray-500 ml-2'>
-          {formatDate(note.created_at)}
-        </div>
+    <div className='bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden'>
+      <div className='p-4 border-b border-gray-200'>
+        <h3 className='text-lg font-semibold text-gray-900'>
+          Editar Nota - {userLabel}
+        </h3>
+        <p className='text-sm text-gray-600'>Notas para esta asignación</p>
       </div>
 
-      <div className='bg-gray-50 rounded-lg p-2 sm:p-3 mb-3'>
-        <p className='text-gray-800 whitespace-pre-wrap text-sm sm:text-base'>
-          {note.content}
-        </p>
+      <div className='p-4'>
+        <textarea
+          value={content}
+          onChange={(e) => setContent(e.target.value)}
+          placeholder='Escribe las notas para esta asignación...'
+          className='w-full h-32 p-3 border border-gray-300 rounded-lg resize-none focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+        />
       </div>
 
-      <div className='flex justify-end space-x-2'>
+      <div className='p-4 border-t border-gray-200 bg-gray-50 flex space-x-3'>
         <Button
-          variant='outline'
+          onClick={(): void => {
+            // eslint-disable-next-line @typescript-eslint/no-floating-promises
+            handleSave();
+          }}
+          disabled={content.trim() === ''}
           size='sm'
-          onClick={() => onEdit(note)}
-          disabled={isDeleting}
-          className='text-xs sm:text-sm'
+          className='flex-1'
         >
-          <span className='hidden sm:inline'>✏️ Editar</span>
-          <span className='sm:hidden'>✏️</span>
+          💾 Guardar
         </Button>
         <Button
+          onClick={onCancel}
           variant='outline'
           size='sm'
-          onClick={handleDelete}
-          disabled={isDeleting}
-          className='text-red-600 hover:text-red-700 text-xs sm:text-sm'
+          className='flex-1'
         >
-          {isDeleting ? (
-            'Eliminando...'
-          ) : (
-            <>
-              <span className='hidden sm:inline'>🗑️ Eliminar</span>
-              <span className='sm:hidden'>🗑️</span>
-            </>
-          )}
+          ❌ Cancelar
         </Button>
       </div>
     </div>
@@ -214,18 +172,14 @@ const NoteCard = (props: {
 export default function NotesPage(): React.JSX.Element {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [notes, setNotes] = useState<Note[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [editingNote, setEditingNote] = useState<Note | null>(null);
-  const [selectedAssignment, setSelectedAssignment] = useState<string | null>(
-    null
-  );
+  const [editingAssignment, setEditingAssignment] =
+    useState<AssignmentRow | null>(null);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (user?.email === undefined || user.email === '') {
         setAssignments([]);
-        setNotes([]);
         setLoading(false);
         return;
       }
@@ -242,14 +196,13 @@ export default function NotesPage(): React.JSX.Element {
 
         if (workerError !== null || workerData === null) {
           setAssignments([]);
-          setNotes([]);
           setLoading(false);
           return;
         }
 
         const workerId = workerData.id;
 
-        // Obtener todas las asignaciones activas de la trabajadora
+        // Obtener todas las asignaciones activas de la trabajadora con notas
         const { data: assignmentRows, error: assignmentErr } = await supabase
           .from('assignments')
           .select(
@@ -259,6 +212,7 @@ export default function NotesPage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
+            notes,
             users(name, surname)
           `
           )
@@ -272,110 +226,48 @@ export default function NotesPage(): React.JSX.Element {
           });
           setAssignments(filtered);
         }
-
-        // Obtener todas las notas de la trabajadora
-        const { data: noteRows, error: noteErr } = await supabase
-          .from('worker_notes')
-          .select(
-            `
-            id,
-            assignment_id,
-            worker_id,
-            content,
-            created_at,
-            updated_at,
-            assignment:assignments(
-              users(name, surname)
-            )
-          `
-          )
-          .eq('worker_id', workerId)
-          .order('created_at', { ascending: false });
-
-        if (noteErr === null && noteRows !== null) {
-          setNotes(noteRows);
-        }
+      } catch (error) {
+        // eslint-disable-next-line no-console
+        console.error('Error loading assignments:', error);
       } finally {
         setLoading(false);
       }
     };
+
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
   }, [user?.email]);
 
   const handleSaveNote = async (
-    noteData: Omit<Note, 'id' | 'created_at' | 'updated_at'>
+    assignmentId: string,
+    content: string
   ): Promise<void> => {
-    if (user?.email === undefined || user.email === '') return;
-
     try {
-      // Buscar worker_id
-      const { data: workerData } = await supabase
-        .from('workers')
-        .select('id')
-        .ilike('email', user.email)
-        .maybeSingle();
+      // Actualizar la nota en la asignación
+      const { error } = await supabase
+        .from('assignments')
+        .update({
+          notes: content,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', assignmentId);
 
-      if (!workerData) return;
+      if (error) throw error;
 
-      const noteToSave = {
-        ...noteData,
-        worker_id: workerData.id,
-      };
+      // Actualizar estado local
+      setAssignments((prev) =>
+        prev.map((assignment) => {
+          if (assignment.id === assignmentId) {
+            return {
+              ...assignment,
+              notes: content,
+            };
+          }
+          return assignment;
+        })
+      );
 
-      if (editingNote) {
-        // Actualizar nota existente
-        const { error } = await supabase
-          .from('worker_notes')
-          .update({
-            content: noteToSave.content,
-            updated_at: new Date().toISOString(),
-          })
-          .eq('id', editingNote.id);
-
-        if (error) throw error;
-
-        // Actualizar estado local
-        setNotes((prev) =>
-          prev.map((note) => {
-            if (note.id === editingNote.id) {
-              return {
-                ...note,
-                content: noteToSave.content,
-                updated_at: new Date().toISOString(),
-              };
-            }
-            return note;
-          })
-        );
-      } else {
-        // Crear nueva nota
-        const { data, error } = await supabase
-          .from('worker_notes')
-          .insert([noteToSave])
-          .select(
-            `
-            id,
-            assignment_id,
-            worker_id,
-            content,
-            created_at,
-            updated_at,
-            assignment:assignments(
-              users(name, surname)
-            )
-          `
-          )
-          .single();
-
-        if (error) throw error;
-
-        // Agregar a estado local
-        setNotes((prev) => [data, ...prev]);
-      }
-
-      setEditingNote(null);
-      setSelectedAssignment(null);
+      setEditingAssignment(null);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error saving note:', error);
@@ -384,222 +276,84 @@ export default function NotesPage(): React.JSX.Element {
     }
   };
 
-  const handleDeleteNote = async (noteId: string): Promise<void> => {
-    try {
-      const { error } = await supabase
-        .from('worker_notes')
-        .delete()
-        .eq('id', noteId);
+  if (loading) {
+    return (
+      <ProtectedRoute>
+        <div className='min-h-screen bg-gray-50 p-4 sm:p-6'>
+          <div className='max-w-4xl mx-auto'>
+            <div className='mb-6'>
+              <Link href='/worker-dashboard'>
+                <Button variant='outline' size='sm'>
+                  ← Volver al Dashboard
+                </Button>
+              </Link>
+            </div>
 
-      if (error) throw error;
-
-      // Remover de estado local
-      setNotes((prev) => prev.filter((note) => note.id !== noteId));
-    } catch (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting note:', error);
-      // eslint-disable-next-line no-alert
-      alert('Error al eliminar la nota. Inténtalo de nuevo.');
-    }
-  };
-
-  const handleEditNote = (note: Note): void => {
-    setEditingNote(note);
-    setSelectedAssignment(note.assignment_id);
-  };
-
-  const handleCancelEdit = (): void => {
-    setEditingNote(null);
-    setSelectedAssignment(null);
-  };
-
-  const handleSaveWrapper = (
-    noteData: Omit<Note, 'id' | 'created_at' | 'updated_at'>
-  ): void => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    handleSaveNote(noteData);
-  };
-
-  const handleDeleteWrapper = (noteId: string): void => {
-    // eslint-disable-next-line @typescript-eslint/no-floating-promises
-    handleDeleteNote(noteId);
-  };
-
-  const getAssignmentLabel = (assignmentId: string): string => {
-    const assignment = assignments.find((a) => a.id === assignmentId);
-    if (assignment === undefined) return 'Servicio';
-
-    const name = assignment.users?.name ?? '';
-    const surname = assignment.users?.surname ?? '';
-    const fullName = `${name} ${surname}`.trim();
-    return fullName !== '' ? fullName : 'Servicio';
-  };
+            <div className='text-center py-12'>
+              <div className='animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4'></div>
+              <p className='text-gray-600'>Cargando notas...</p>
+            </div>
+          </div>
+        </div>
+      </ProtectedRoute>
+    );
+  }
 
   return (
-    <ProtectedRoute requiredRole='worker'>
-      <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
-        {/* Header */}
-        <header className='bg-white shadow-sm border-b border-gray-200'>
-          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-4'>
-                <Link
-                  href='/worker-dashboard'
-                  className='text-gray-600 hover:text-gray-900'
-                >
-                  <svg
-                    className='w-6 h-6'
-                    fill='none'
-                    stroke='currentColor'
-                    viewBox='0 0 24 24'
-                  >
-                    <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
-                      strokeWidth={2}
-                      d='M15 19l-7-7 7-7'
+    <ProtectedRoute>
+      <div className='min-h-screen bg-gray-50 p-4 sm:p-6'>
+        <div className='max-w-4xl mx-auto'>
+          {/* Header */}
+          <div className='mb-6'>
+            <Link href='/worker-dashboard'>
+              <Button variant='outline' size='sm'>
+                ← Volver al Dashboard
+              </Button>
+            </Link>
+          </div>
+
+          <div className='mb-8'>
+            <h1 className='text-2xl sm:text-3xl font-bold text-gray-900 mb-2'>
+              📝 Notas de Asignaciones
+            </h1>
+            <p className='text-gray-600 text-sm sm:text-base'>
+              Gestiona las notas de tus asignaciones activas
+            </p>
+          </div>
+
+          {assignments.length === 0 ? (
+            <div className='text-center py-12'>
+              <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
+                <span className='text-2xl'>📝</span>
+              </div>
+              <p className='text-gray-600 mb-2 text-sm sm:text-base'>
+                No tienes asignaciones activas
+              </p>
+              <p className='text-xs sm:text-sm text-gray-500'>
+                Las notas aparecerán aquí cuando tengas asignaciones
+              </p>
+            </div>
+          ) : (
+            <div className='space-y-6'>
+              {editingAssignment !== null ? (
+                <NoteEditor
+                  assignment={editingAssignment}
+                  onSave={handleSaveNote}
+                  onCancel={() => setEditingAssignment(null)}
+                />
+              ) : (
+                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6'>
+                  {assignments.map((assignment) => (
+                    <NoteCard
+                      key={assignment.id}
+                      assignment={assignment}
+                      onEdit={setEditingAssignment}
                     />
-                  </svg>
-                </Link>
-                <div>
-                  <h1 className='text-xl font-bold text-gray-900'>
-                    📝 Notas Rápidas
-                  </h1>
-                  <p className='text-gray-600'>
-                    Gestiona tus notas por servicio
-                  </p>
+                  ))}
                 </div>
-              </div>
+              )}
             </div>
-          </div>
-        </header>
-
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'>
-          <div className='grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6'>
-            {/* Panel izquierdo - Crear nota */}
-            <div className='lg:col-span-1'>
-              <div className='bg-white rounded-2xl shadow-sm'>
-                <div className='p-4 sm:p-6 border-b border-gray-200'>
-                  <h2 className='text-lg sm:text-xl font-bold text-gray-900'>
-                    ✏️ Crear Nueva Nota
-                  </h2>
-                  <p className='text-sm sm:text-base text-gray-600'>
-                    Selecciona un servicio para crear una nota
-                  </p>
-                </div>
-
-                <div className='p-4 sm:p-6'>
-                  {loading ? (
-                    <div className='text-center py-4'>
-                      <div className='animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto mb-2'></div>
-                      <p className='text-gray-600 text-sm sm:text-base'>
-                        Cargando asignaciones...
-                      </p>
-                    </div>
-                  ) : assignments.length === 0 ? (
-                    <div className='text-center py-4'>
-                      <p className='text-gray-600 text-sm sm:text-base'>
-                        No tienes asignaciones activas.
-                      </p>
-                    </div>
-                  ) : (
-                    <div className='space-y-2 sm:space-y-3'>
-                      {assignments.map((assignment) => {
-                        const label =
-                          `${assignment.users?.name ?? ''} ${assignment.users?.surname ?? ''}`.trim() ??
-                          'Servicio';
-                        const isSelected = selectedAssignment === assignment.id;
-
-                        return (
-                          <button
-                            key={assignment.id}
-                            onClick={() =>
-                              setSelectedAssignment(
-                                isSelected ? null : assignment.id
-                              )
-                            }
-                            className={`w-full text-left p-2 sm:p-3 rounded-lg border transition-colors ${
-                              isSelected
-                                ? 'bg-blue-50 border-blue-300 text-blue-900'
-                                : 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                            }`}
-                          >
-                            <p className='font-medium text-sm sm:text-base'>
-                              {label}
-                            </p>
-                            <p className='text-xs sm:text-sm text-gray-600'>
-                              {assignment.assignment_type}
-                            </p>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                  {selectedAssignment !== null && (
-                    <div className='mt-6'>
-                      <NoteEditor
-                        assignmentId={selectedAssignment}
-                        assignmentLabel={getAssignmentLabel(selectedAssignment)}
-                        existingNote={editingNote}
-                        onSave={handleSaveWrapper}
-                        onCancel={handleCancelEdit}
-                        isEditing={editingNote !== null}
-                      />
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Panel derecho - Lista de notas */}
-            <div className='lg:col-span-2'>
-              <div className='bg-white rounded-2xl shadow-sm'>
-                <div className='p-4 sm:p-6 border-b border-gray-200'>
-                  <h2 className='text-lg sm:text-xl font-bold text-gray-900'>
-                    📋 Mis Notas
-                  </h2>
-                  <p className='text-sm sm:text-base text-gray-600'>
-                    {notes.length} notas creadas
-                  </p>
-                </div>
-
-                <div className='p-4 sm:p-6'>
-                  {loading ? (
-                    <div className='text-center py-8'>
-                      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
-                      <p className='text-gray-600 text-sm sm:text-base'>
-                        Cargando notas...
-                      </p>
-                    </div>
-                  ) : notes.length === 0 ? (
-                    <div className='text-center py-8'>
-                      <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
-                        <span className='text-2xl'>📝</span>
-                      </div>
-                      <p className='text-gray-600 mb-2 text-sm sm:text-base'>
-                        No tienes notas creadas
-                      </p>
-                      <p className='text-xs sm:text-sm text-gray-500'>
-                        Selecciona un servicio para crear tu primera nota
-                      </p>
-                    </div>
-                  ) : (
-                    <div className='space-y-3 sm:space-y-4'>
-                      {notes.map((note) => (
-                        <NoteCard
-                          key={note.id}
-                          note={note}
-                          onEdit={handleEditNote}
-                          onDelete={handleDeleteWrapper}
-                        />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
     </ProtectedRoute>

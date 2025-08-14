@@ -231,7 +231,7 @@ const MonthServicesList = (props: {
               </h4>
               {dayRows.map((r, idx) => (
                 <div
-                  key={`${r.assignmentId}-${r.start}-${r.end}`}
+                  key={`${r.assignmentId}-${r.start}-${r.end}-${idx}`}
                   className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 md:p-5 rounded-xl border text-gray-900 ${containerClassByState[r.state]} ml-4`}
                 >
                   <div className='flex items-start md:items-center gap-3'>
