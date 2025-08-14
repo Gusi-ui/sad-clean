@@ -465,7 +465,15 @@ export default function SchedulePage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [user?.email]);
+  }, [
+    user?.email,
+    weekRange.start,
+    weekRange.end,
+    nextWeekRange.start,
+    nextWeekRange.end,
+    monthRange.start,
+    monthRange.end,
+  ]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
