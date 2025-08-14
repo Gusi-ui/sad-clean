@@ -8,7 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
-import { getMondayOfWeek, getRemainingMonthRange } from '@/lib/date-utils';
+import { getMondayOfWeek, getMonthRange } from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -34,8 +34,9 @@ const MonthServicesList = (props: {
     assignmentType: string,
     date: Date
   ) => Array<{ start: string; end: string }>;
+  holidaySet: ReadonlySet<string>;
 }): React.JSX.Element => {
-  const { assignments, getMonthSlots } = props;
+  const { assignments, getMonthSlots, holidaySet } = props;
 
   type Row = {
     assignmentId: string;
@@ -62,26 +63,24 @@ const MonthServicesList = (props: {
     });
   };
 
+  const isKnownHoliday = (date: Date): boolean => {
+    const d = date.getDate();
+    const m = date.getMonth() + 1;
+    if (m === 8 && d === 15) return true;
+    return false;
+  };
+
   // Función para verificar si una trabajadora debe trabajar en una fecha específica
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
-    const day = date.getDate();
-    const month = date.getMonth() + 1;
-    const year = date.getFullYear();
     const type = assignmentType.toLowerCase();
 
-    // Domingo (día 0)
+    // Domingo (0) y Sábado (6)
     const isSunday = dayOfWeek === 0;
+    const isSaturday = dayOfWeek === 6;
 
-    // Festivos específicos (se pueden expandir)
-    const isHoliday = (() => {
-      if (year === 2025) {
-        // 15 de agosto (viernes)
-        if (month === 8 && day === 15) return true;
-        // Otros festivos se pueden agregar aquí
-      }
-      return false;
-    })();
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isHoliday = holidaySet.has(dateKey) || isKnownHoliday(date);
 
     // Lógica según tipo de trabajadora
     switch (type) {
@@ -90,8 +89,8 @@ const MonthServicesList = (props: {
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
 
       case 'festivos':
-        // Solo trabaja festivos y fines de semana
-        return isSunday || isHoliday;
+        // Solo trabaja festivos y fines de semana (sábado y domingo)
+        return isSaturday || isSunday || isHoliday;
 
       case 'flexible':
         // Trabaja todos los días
@@ -107,10 +106,10 @@ const MonthServicesList = (props: {
     }
   };
 
-  // Calcular el rango del mes usando las utilidades de fecha española
-  const monthRange = getRemainingMonthRange();
-  const monthStart = new Date(monthRange.start);
-  const monthEnd = new Date(monthRange.end);
+  // Calcular el rango del mes usando fechas locales para evitar desfases por UTC
+  const now = new Date();
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1, 12, 0, 0);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0, 12, 0, 0);
 
   const rows: Row[] = assignments.flatMap((a) => {
     const label =
@@ -191,9 +190,22 @@ const MonthServicesList = (props: {
   }, {});
 
   const formatWeekLabel = (weekStart: string): string => {
-    const start = new Date(weekStart);
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
+    const parts = weekStart.split('-');
+    const rawStart =
+      parts.length === 3
+        ? new Date(
+            Number(parts[0]),
+            Number(parts[1]) - 1,
+            Number(parts[2]),
+            12,
+            0,
+            0
+          )
+        : new Date(weekStart);
+    const start = new Date(Math.max(rawStart.getTime(), monthStart.getTime()));
+    const rawEnd = new Date(rawStart);
+    rawEnd.setDate(rawStart.getDate() + 6);
+    const end = new Date(Math.min(rawEnd.getTime(), monthEnd.getTime()));
 
     return `${start.toLocaleDateString('es-ES', {
       day: 'numeric',
@@ -283,6 +295,8 @@ export default function ThisMonthPage(): React.JSX.Element {
   const { user } = useAuth();
   const [monthAssignments, setMonthAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
+  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
 
   type TimeSlotRange = { start: string; end: string };
 
@@ -353,8 +367,11 @@ export default function ThisMonthPage(): React.JSX.Element {
         );
 
         const type = (assignmentType ?? '').toLowerCase();
-        const isHoliday = dayOfWeek === 0; // Domingo
-        const mustUseHoliday = isHoliday || type === 'festivos';
+        const dateKey = date.toISOString().split('T')[0] ?? '';
+        const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+        const isOfficialHoliday = holidaySet.has(dateKey);
+        const mustUseHoliday =
+          isWeekend || isOfficialHoliday || type === 'festivos';
         if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
         if (daySlots.length > 0) return daySlots;
         return holidaySlots;
@@ -362,10 +379,10 @@ export default function ThisMonthPage(): React.JSX.Element {
         return [];
       }
     },
-    []
+    [holidaySet]
   );
 
-  const monthRange = useMemo(() => getRemainingMonthRange(), []);
+  const monthRange = useMemo(() => getMonthRange(), []);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -376,7 +393,7 @@ export default function ThisMonthPage(): React.JSX.Element {
       }
 
       try {
-        setLoading(true);
+        if (!hasLoadedOnce) setLoading(true);
 
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
@@ -392,6 +409,22 @@ export default function ThisMonthPage(): React.JSX.Element {
         }
 
         const workerId = workerData.id;
+
+        // Cargar festivos para el rango del mes
+        const ms = new Date(monthRange.start ?? '');
+        const me = new Date(monthRange.end ?? '');
+        const { data: holidayRows } = await supabase
+          .from('holidays')
+          .select('day, month, year')
+          .gte('year', ms.getFullYear())
+          .lte('year', me.getFullYear());
+        const hset = new Set<string>();
+        (holidayRows ?? []).forEach((row) => {
+          const r = row as { day: number; month: number; year: number };
+          const key = `${r.year}-${String(r.month).padStart(2, '0')}-${String(r.day).padStart(2, '0')}`;
+          hset.add(key);
+        });
+        setHolidaySet(hset);
 
         // Obtener todas las asignaciones activas de la trabajadora
         const { data: rows, error: err } = await supabase
@@ -454,12 +487,19 @@ export default function ThisMonthPage(): React.JSX.Element {
           setMonthAssignments([]);
         }
       } finally {
-        setLoading(false);
+        if (!hasLoadedOnce) setLoading(false);
+        setHasLoadedOnce(true);
       }
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [getMonthSlots, monthRange.start, monthRange.end, user?.email]);
+  }, [
+    getMonthSlots,
+    monthRange.start,
+    monthRange.end,
+    user?.email,
+    hasLoadedOnce,
+  ]);
 
   const currentMonth = useMemo(
     () =>
@@ -535,6 +575,7 @@ export default function ThisMonthPage(): React.JSX.Element {
                 <MonthServicesList
                   assignments={monthAssignments}
                   getMonthSlots={getMonthSlots}
+                  holidaySet={holidaySet}
                 />
               )}
             </div>

@@ -311,22 +311,86 @@ export default function PlanningPage() {
             if (!allowedOnThisDay) {
               continue;
             }
-            // Determinar los tramos a usar según el contexto
+            // Determinar los tramos a usar según el contexto y tipo de asignación
             let slots: DayTimeSlot[] = [];
-            if (
-              onHolidayContext &&
-              holidayConfig?.has_holiday_service === true
-            ) {
-              const rawSlots = holidayConfig.holiday_timeSlots ?? [];
-              slots = rawSlots.map((s, idx) => {
-                const safeId =
-                  typeof s.id === 'string' ? s.id : `holiday-${idx + 1}`;
-                const safeStart =
-                  typeof s.start === 'string' ? s.start : '08:00';
-                const safeEnd = typeof s.end === 'string' ? s.end : '16:00';
-                return { id: safeId, start: safeStart, end: safeEnd };
-              });
+            const typeLower = (a.assignment_type ?? '').toLowerCase();
+
+            if (onHolidayContext) {
+              // Preferir tramos de festivo si existen para festivos/flexible/completa
+              const holidaySlotsRawCfg = holidayConfig?.holiday_timeSlots ?? [];
+              const scheduleHoliday = scheduleAny['holiday'] as
+                | {
+                    enabled?: boolean;
+                    timeSlots?: Array<{
+                      id?: string;
+                      start?: string;
+                      end?: string;
+                    }>;
+                  }
+                | undefined;
+              const holidaySlotsRaw =
+                holidaySlotsRawCfg.length > 0
+                  ? holidaySlotsRawCfg
+                  : Array.isArray(scheduleHoliday?.timeSlots)
+                    ? (scheduleHoliday?.timeSlots as Array<{
+                        id?: string;
+                        start?: string;
+                        end?: string;
+                      }>)
+                    : [];
+
+              if (
+                (typeLower === 'festivos' ||
+                  typeLower === 'flexible' ||
+                  typeLower === 'completa') &&
+                holidaySlotsRaw.length > 0
+              ) {
+                slots = holidaySlotsRaw.map((s, idx) => {
+                  const safeId =
+                    typeof s.id === 'string' ? s.id : `holiday-${idx + 1}`;
+                  const safeStart =
+                    typeof s.start === 'string' ? s.start : '08:00';
+                  const safeEnd = typeof s.end === 'string' ? s.end : '16:00';
+                  return { id: safeId, start: safeStart, end: safeEnd };
+                });
+              } else {
+                // Fallback a tramos del día si están habilitados
+                const dayScheduleRaw = schedule?.[dayKey];
+                let daySchedule: DaySchedule | undefined = undefined;
+                if (
+                  dayScheduleRaw !== null &&
+                  dayScheduleRaw !== undefined &&
+                  typeof dayScheduleRaw === 'object'
+                ) {
+                  daySchedule = dayScheduleRaw as unknown as DaySchedule;
+                }
+                if (daySchedule === undefined || daySchedule.enabled !== true) {
+                  continue;
+                }
+                slots = Array.isArray(daySchedule.timeSlots)
+                  ? (daySchedule.timeSlots as unknown[]).map(
+                      (s: unknown, idx: number) => {
+                        const slot = s as Partial<DayTimeSlot>;
+                        const safeId =
+                          typeof slot.id === 'string'
+                            ? slot.id
+                            : `${dayKey}-${idx + 1}`;
+                        const safeStart =
+                          typeof slot.start === 'string' ? slot.start : '08:00';
+                        const safeEnd =
+                          typeof slot.end === 'string' ? slot.end : '16:00';
+                        const result: DayTimeSlot = {
+                          id: safeId,
+                          start: safeStart,
+                          end: safeEnd,
+                        };
+                        return result;
+                      }
+                    )
+                  : [];
+              }
             } else {
+              // Día no festivo: usar configuración del día si está habilitada
               const dayScheduleRaw = schedule?.[dayKey];
               let daySchedule: DaySchedule | undefined = undefined;
               if (
@@ -340,21 +404,25 @@ export default function PlanningPage() {
                 continue;
               }
               slots = Array.isArray(daySchedule.timeSlots)
-                ? (daySchedule.timeSlots as unknown[]).map((s: unknown) => {
-                    const slot = s as Partial<DayTimeSlot>;
-                    const safeId =
-                      typeof slot.id === 'string' ? slot.id : `${dayKey}-1`;
-                    const safeStart =
-                      typeof slot.start === 'string' ? slot.start : '08:00';
-                    const safeEnd =
-                      typeof slot.end === 'string' ? slot.end : '16:00';
-                    const result: DayTimeSlot = {
-                      id: safeId,
-                      start: safeStart,
-                      end: safeEnd,
-                    };
-                    return result;
-                  })
+                ? (daySchedule.timeSlots as unknown[]).map(
+                    (s: unknown, idx: number) => {
+                      const slot = s as Partial<DayTimeSlot>;
+                      const safeId =
+                        typeof slot.id === 'string'
+                          ? slot.id
+                          : `${dayKey}-${idx + 1}`;
+                      const safeStart =
+                        typeof slot.start === 'string' ? slot.start : '08:00';
+                      const safeEnd =
+                        typeof slot.end === 'string' ? slot.end : '16:00';
+                      const result: DayTimeSlot = {
+                        id: safeId,
+                        start: safeStart,
+                        end: safeEnd,
+                      };
+                      return result;
+                    }
+                  )
                 : [];
             }
             for (const slot of slots) {

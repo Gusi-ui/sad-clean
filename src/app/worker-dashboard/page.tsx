@@ -14,7 +14,11 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
-import { getNextWeekRange, getRemainingMonthRange } from '@/lib/date-utils';
+import {
+  getMonthRange,
+  getNextWeekRange,
+  getWeekRange,
+} from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -362,9 +366,10 @@ export default function WorkerDashboard(): React.JSX.Element {
     return tomorrow.toISOString().split('T')[0];
   }, []);
 
+  const currentWeekRange = useMemo(() => getWeekRange(), []);
   const nextWeekRange = useMemo(() => getNextWeekRange(), []);
 
-  const thisMonthRange = useMemo(() => getRemainingMonthRange(), []);
+  const thisMonthRange = useMemo(() => getMonthRange(), []);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -401,7 +406,8 @@ export default function WorkerDashboard(): React.JSX.Element {
           .eq('year', new Date().getFullYear())
           .maybeSingle();
 
-        const useHoliday = holidayData !== null || new Date().getDay() === 0;
+        const dow = new Date().getDay();
+        const useHoliday = holidayData !== null || dow === 0 || dow === 6;
         setIsHolidayToday(useHoliday);
 
         // Obtener asignaciones de hoy
@@ -538,11 +544,45 @@ export default function WorkerDashboard(): React.JSX.Element {
               user_id: string;
             };
 
+            // Construir set de festivos para un rango [startDate, endDate]
+            const buildHolidaySet = async (
+              startDate: string,
+              endDate: string
+            ): Promise<Set<string>> => {
+              const start = new Date(startDate);
+              const end = new Date(endDate);
+              const startYear = start.getFullYear();
+              const endYear = end.getFullYear();
+
+              const { data: holidayRows } = await supabase
+                .from('holidays')
+                .select('day, month, year')
+                .gte('year', startYear)
+                .lte('year', endYear);
+
+              const set = new Set<string>();
+              (holidayRows ?? []).forEach((row) => {
+                const r = row as { day: number; month: number; year: number };
+                const key = `${r.year}-${String(r.month).padStart(2, '0')}-${String(r.day).padStart(2, '0')}`;
+                set.add(key);
+              });
+              return set;
+            };
+
+            const isKnownHolidayDate = (d: Date): boolean => {
+              const day = d.getDate();
+              const month = d.getMonth() + 1;
+              // Fallback explícito para 15 de agosto (Asunción)
+              if (month === 8 && day === 15) return true;
+              return false;
+            };
+
             // Función para generar servicios de una asignación en un rango de fechas
             const generateServicesForRange = (
               assignment: Assignment,
               startDate: string,
-              endDate: string
+              endDate: string,
+              holidays: ReadonlySet<string>
             ): number => {
               const start = new Date(startDate);
               const end = new Date(endDate);
@@ -560,7 +600,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                 return 0;
               }
 
-              // Para asignaciones de días laborables, contar días laborables en el rango
+              // Para asignaciones de días laborables, contar L-V no festivos
               if (
                 assignment.assignment_type === 'working_days' ||
                 assignment.assignment_type === 'laborables'
@@ -575,8 +615,13 @@ export default function WorkerDashboard(): React.JSX.Element {
 
                 while (current.getTime() <= rangeEnd.getTime()) {
                   const dayOfWeek = current.getDay();
-                  // Lunes a Viernes (1-5)
-                  if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+                  const key = current.toISOString().split('T')[0] ?? '';
+                  // L-V y no festivo oficial
+                  if (
+                    dayOfWeek >= 1 &&
+                    dayOfWeek <= 5 &&
+                    holidays.has(key) === false
+                  ) {
                     count++;
                   }
                   current.setDate(current.getDate() + 1);
@@ -601,6 +646,54 @@ export default function WorkerDashboard(): React.JSX.Element {
                 return count;
               }
 
+              // Para asignaciones flexibles, contar todos los días (laborables, fines de semana y festivos)
+              if (assignment.assignment_type === 'flexible') {
+                const current = new Date(
+                  Math.max(start.getTime(), assignmentStart.getTime())
+                );
+                const rangeEnd = new Date(
+                  Math.min(end.getTime(), assignmentEnd.getTime())
+                );
+                let count = 0;
+
+                while (current.getTime() <= rangeEnd.getTime()) {
+                  count++;
+                  current.setDate(current.getDate() + 1);
+                }
+                return count;
+              }
+
+              // Para asignaciones de festivos, contar fines de semana o festivos oficiales
+              if (assignment.assignment_type === 'festivos') {
+                const current = new Date(
+                  Math.max(start.getTime(), assignmentStart.getTime())
+                );
+                const rangeEnd = new Date(
+                  Math.min(end.getTime(), assignmentEnd.getTime())
+                );
+                let count = 0;
+
+                while (current.getTime() <= rangeEnd.getTime()) {
+                  const dayOfWeek = current.getDay();
+                  const key = `${current.getFullYear()}-${String(
+                    current.getMonth() + 1
+                  ).padStart(2, '0')}-${String(current.getDate()).padStart(
+                    2,
+                    '0'
+                  )}`;
+                  const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
+                  if (
+                    isWeekend ||
+                    holidays.has(key) ||
+                    isKnownHolidayDate(current)
+                  ) {
+                    count++;
+                  }
+                  current.setDate(current.getDate() + 1);
+                }
+                return count;
+              }
+
               // Para asignaciones específicas, verificar si la fecha está en el rango
               if (assignment.assignment_type === 'specific') {
                 const assignmentDate = new Date(assignment.start_date);
@@ -616,7 +709,31 @@ export default function WorkerDashboard(): React.JSX.Element {
               return 0;
             };
 
-            // Calcular servicios para cada período
+            // Calcular servicios para cada período con festivos cargados por rango
+            const [tomorrowHolidays, weekHolidays, monthHolidays] =
+              await Promise.all([
+                buildHolidaySet(tomorrowKey ?? '', tomorrowKey ?? ''),
+                buildHolidaySet(
+                  currentWeekRange.start ?? '',
+                  currentWeekRange.end ?? ''
+                ),
+                buildHolidaySet(
+                  // Asegurar mes completo local
+                  `${new Date().getFullYear()}-${String(
+                    new Date().getMonth() + 1
+                  ).padStart(2, '0')}-01`,
+                  `${new Date().getFullYear()}-${String(
+                    new Date().getMonth() + 1
+                  ).padStart(2, '0')}-${String(
+                    new Date(
+                      new Date().getFullYear(),
+                      new Date().getMonth() + 1,
+                      0
+                    ).getDate()
+                  ).padStart(2, '0')}`
+                ),
+              ]);
+
             const tomorrowServices =
               allAssignments?.reduce(
                 (total, assignment) =>
@@ -624,34 +741,46 @@ export default function WorkerDashboard(): React.JSX.Element {
                   generateServicesForRange(
                     assignment,
                     tomorrowKey ?? '',
-                    tomorrowKey ?? ''
+                    tomorrowKey ?? '',
+                    tomorrowHolidays
                   ),
                 0
               ) ?? 0;
 
-            const weekServices =
-              allAssignments?.reduce(
-                (total, assignment) =>
-                  total +
-                  generateServicesForRange(
-                    assignment,
-                    nextWeekRange.start ?? '',
-                    nextWeekRange.end ?? ''
-                  ),
-                0
-              ) ?? 0;
+            const weekServices = (allAssignments ?? []).reduce(
+              (total, assignment) =>
+                total +
+                generateServicesForRange(
+                  assignment,
+                  currentWeekRange.start ?? '',
+                  currentWeekRange.end ?? '',
+                  weekHolidays
+                ),
+              0
+            );
 
-            const monthServices =
-              allAssignments?.reduce(
-                (total, assignment) =>
-                  total +
-                  generateServicesForRange(
-                    assignment,
-                    thisMonthRange.start ?? '',
-                    thisMonthRange.end ?? ''
-                  ),
-                0
-              ) ?? 0;
+            // Sumar servicios por asignación, evitando doble conteo de fechas repetidas
+            const monthServices = (allAssignments ?? []).reduce(
+              (total, assignment) =>
+                total +
+                generateServicesForRange(
+                  assignment,
+                  `${new Date().getFullYear()}-${String(
+                    new Date().getMonth() + 1
+                  ).padStart(2, '0')}-01`,
+                  `${new Date().getFullYear()}-${String(
+                    new Date().getMonth() + 1
+                  ).padStart(2, '0')}-${String(
+                    new Date(
+                      new Date().getFullYear(),
+                      new Date().getMonth() + 1,
+                      0
+                    ).getDate()
+                  ).padStart(2, '0')}`,
+                  monthHolidays
+                ),
+              0
+            );
 
             setUpcomingServices({
               tomorrow: tomorrowServices,
@@ -673,6 +802,8 @@ export default function WorkerDashboard(): React.JSX.Element {
     todayKey,
     weekRange.end,
     weekRange.start,
+    currentWeekRange.end,
+    currentWeekRange.start,
     tomorrowKey,
     nextWeekRange.start,
     nextWeekRange.end,
