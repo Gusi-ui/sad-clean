@@ -63,11 +63,10 @@ const WeekServicesList = (props: {
     });
   };
 
+  // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const d = date.getDate();
-    const m = date.getMonth() + 1;
-    if (m === 8 && d === 15) return true;
-    return false;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet.has(dateKey);
   };
 
   // Función para verificar si una trabajadora debe trabajar en una fecha específica
