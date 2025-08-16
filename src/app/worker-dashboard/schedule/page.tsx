@@ -22,7 +22,6 @@ interface AssignmentRow {
   end_date: string | null;
   users?: { name: string | null; surname: string | null } | null;
 }
-
 // Componente para mostrar el horario semanal
 const WeeklySchedule = (props: {
   assignments: Array<{
@@ -44,7 +43,6 @@ const WeeklySchedule = (props: {
 }): React.JSX.Element => {
   const { assignments, getScheduleSlots, weekStart, weekEnd, holidaySet } =
     props;
-
   type TimeSlot = {
     assignmentId: string;
     userLabel: string;
@@ -54,12 +52,10 @@ const WeeklySchedule = (props: {
     date: string;
     dayName: string;
   };
-
   const toMinutes = (hhmm: string): number => {
     const [h, m] = hhmm.split(':');
     return Number(h) * 60 + Number(m);
   };
-
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-ES', {
@@ -68,73 +64,59 @@ const WeeklySchedule = (props: {
       month: 'short',
     });
   };
-
+  // Función para verificar si una fecha es festivo (solo desde BD)
+  // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const d = date.getDate();
-    const m = date.getMonth() + 1;
-    // Asunción de la Virgen: 15 de agosto
-    if (m === 8 && d === 15) return true;
-    return false;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet?.has(dateKey) ?? false;
   };
-
   // Función para verificar si una trabajadora debe trabajar en una fecha específica
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
     const type = assignmentType.toLowerCase();
-
     // Domingo (0) y Sábado (6)
     const isSunday = dayOfWeek === 0;
     const isSaturday = dayOfWeek === 6;
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
     const isHoliday = holidaySet?.has(dateKey) === true || isKnownHoliday(date);
-
     // Lógica según tipo de trabajadora
     switch (type) {
       case 'laborables':
         // Solo trabaja lunes a viernes, NO festivos
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
-
       case 'festivos':
         // Solo trabaja festivos y fines de semana (sábado y domingo)
         return isSaturday || isSunday || isHoliday;
-
       case 'flexible':
         // Trabaja todos los días
         return true;
-
       case 'daily':
         // Trabaja todos los días
         return true;
-
       default:
         // Por defecto, solo días laborables
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
     }
   };
-
   // Generar slots para toda la semana
   const allSlots: TimeSlot[] = assignments.flatMap((a) => {
     const label =
       `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
     const slots: TimeSlot[] = [];
-
     const current = new Date(weekStart);
     while (current.getTime() <= weekEnd.getTime()) {
       const currentDate = new Date(current);
-
       // Verificar si la trabajadora debe trabajar en esta fecha
       const assignmentType = a.assignment_type ?? '';
       if (!shouldWorkOnDate(currentDate, assignmentType)) {
         current.setDate(current.getDate() + 1);
         continue;
       }
-
       const daySlots = getScheduleSlots(
         a.schedule,
         a.assignment_type,
         currentDate
       );
-
       // Solo agregar servicios si hay slots para este día
       if (daySlots.length > 0) {
         daySlots.forEach((s) => {
@@ -151,20 +133,16 @@ const WeeklySchedule = (props: {
           });
         });
       }
-
       current.setDate(current.getDate() + 1);
     }
-
     return slots;
   });
-
   // Ordenar por fecha y luego por hora
   allSlots.sort((a, b) => {
     const dateCompare = a.date.localeCompare(b.date);
     if (dateCompare !== 0) return dateCompare;
     return a.startMinutes - b.startMinutes;
   });
-
   // Agrupar por día
   const groupedByDay = allSlots.reduce<Record<string, TimeSlot[]>>(
     (acc, slot) => {
@@ -179,7 +157,6 @@ const WeeklySchedule = (props: {
     },
     {}
   );
-
   const dayNames = [
     'Lunes',
     'Martes',
@@ -189,7 +166,6 @@ const WeeklySchedule = (props: {
     'Sábado',
     'Domingo',
   ];
-
   return (
     <div className='space-y-4 sm:space-y-6'>
       {dayNames.map((dayName, index) => {
@@ -197,7 +173,6 @@ const WeeklySchedule = (props: {
         currentDate.setDate(weekStart.getDate() + index);
         const dateKey = currentDate.toISOString().split('T')[0];
         const daySlots = groupedByDay[dateKey ?? ''] ?? [];
-
         return (
           <div key={dayName} className='bg-gray-50 rounded-xl p-3 sm:p-4'>
             <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3'>
@@ -209,7 +184,6 @@ const WeeklySchedule = (props: {
                 })}
               </span>
             </h3>
-
             {daySlots.length === 0 ? (
               <div className='text-center py-4'>
                 <p className='text-gray-500 italic text-sm sm:text-base'>
@@ -248,7 +222,6 @@ const WeeklySchedule = (props: {
     </div>
   );
 };
-
 // Calendario mensual estilo Planning para la trabajadora logueada (declaración superior para evitar no-use-before-define)
 const WorkerMonthCalendar = (props: {
   assignments: Array<{
@@ -270,14 +243,11 @@ const WorkerMonthCalendar = (props: {
 }): React.JSX.Element => {
   const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
     props;
-
+  // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const d = date.getDate();
-    const m = date.getMonth() + 1;
-    if (m === 8 && d === 15) return true;
-    return false;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet?.has(dateKey) ?? false;
   };
-
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
     const type = (assignmentType ?? '').toLowerCase();
@@ -293,21 +263,17 @@ const WorkerMonthCalendar = (props: {
     if (type === 'flexible' || type === 'daily') return true;
     return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
   };
-
   type ExpandedEntry = {
     assignmentId: string;
     userLabel: string;
     start: string;
     end: string;
   };
-
   const getDateKeyLocal = (d: Date): string =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
       d.getDate()
     ).padStart(2, '0')}`;
-
   const todayKey = getDateKeyLocal(new Date());
-
   const firstDayOfMonth = new Date(
     monthStart.getFullYear(),
     monthStart.getMonth(),
@@ -324,7 +290,6 @@ const WorkerMonthCalendar = (props: {
     0,
     0
   );
-
   // Construir solo los días del mes actual (no arrastrar semanas completas)
   const daysInMonth = lastDayOfMonth.getDate();
   const monthGrid = Array.from({ length: daysInMonth }, (_, idx) => {
@@ -335,7 +300,6 @@ const WorkerMonthCalendar = (props: {
     const isToday = key === todayKey;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
-
     const entries: ExpandedEntry[] = [];
     for (const a of assignments) {
       const aStart = new Date(a.start_date);
@@ -358,7 +322,6 @@ const WorkerMonthCalendar = (props: {
         });
       }
     }
-
     return {
       date,
       key,
@@ -369,7 +332,6 @@ const WorkerMonthCalendar = (props: {
       entries,
     };
   });
-
   return (
     <div>
       <div className='mb-4 sm:mb-6'>
@@ -381,7 +343,6 @@ const WorkerMonthCalendar = (props: {
           {lastDayOfMonth.toLocaleDateString('es-ES')}
         </p>
       </div>
-
       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
         {monthGrid.map((cell, idx) => {
           const headerClasses = cell.isCurrentMonth
@@ -396,7 +357,6 @@ const WorkerMonthCalendar = (props: {
             .toLocaleDateString('es-ES', { weekday: 'short' })
             .replace('.', '')
             .slice(0, 3);
-
           return (
             <div
               key={idx}
@@ -419,7 +379,6 @@ const WorkerMonthCalendar = (props: {
                   </span>
                 )}
               </div>
-
               <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
                 {cell.entries.slice(0, 4).map((e, i) => (
                   <div
@@ -451,7 +410,6 @@ const WorkerMonthCalendar = (props: {
     </div>
   );
 };
-
 // Eliminado: Componente mensual previo ya no se usa
 /* const MonthlySchedule = (props: {
   assignments: Array<{
@@ -473,7 +431,6 @@ const WorkerMonthCalendar = (props: {
 }): React.JSX.Element => {
   const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
     props;
-
   type Row = {
     assignmentId: string;
     userLabel: string;
@@ -483,12 +440,10 @@ const WorkerMonthCalendar = (props: {
     date: string;
     dayName: string;
   };
-
   const toMinutes = (hhmm: string): number => {
     const [h, m] = hhmm.split(':');
     return Number(h) * 60 + Number(m);
   };
-
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
     return date.toLocaleDateString('es-ES', {
@@ -497,14 +452,11 @@ const WorkerMonthCalendar = (props: {
       month: 'short',
     });
   };
-
+  // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const d = date.getDate();
-    const m = date.getMonth() + 1;
-    if (m === 8 && d === 15) return true;
-    return false;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet?.has(dateKey) ?? false;
   };
-
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
     const type = assignmentType.toLowerCase();
@@ -514,7 +466,6 @@ const WorkerMonthCalendar = (props: {
       date.getDate()
     ).padStart(2, '0')}`;
     const isHoliday = holidaySet?.has(dateKey) === true || isKnownHoliday(date);
-
     switch (type) {
       case 'laborables':
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
@@ -527,7 +478,6 @@ const WorkerMonthCalendar = (props: {
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
     }
   };
-
   const rows: Row[] = assignments.flatMap((a) => {
     const label =
       `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
@@ -569,13 +519,11 @@ const WorkerMonthCalendar = (props: {
     }
     return services;
   });
-
   rows.sort((a, b) => {
     const dateCompare = a.date.localeCompare(b.date);
     if (dateCompare !== 0) return dateCompare;
     return a.startMinutes - b.startMinutes;
   });
-
   const groupedByWeek = rows.reduce<Record<string, Row[]>>((acc, row) => {
     const date = new Date(row.date);
     const day = date.getDay();
@@ -588,7 +536,6 @@ const WorkerMonthCalendar = (props: {
     (acc[weekKey] ??= []).push(row);
     return acc;
   }, {});
-
   const formatWeekLabel = (weekStartStr: string): string => {
     const parts = weekStartStr.split('-');
     const rawStart = new Date(
@@ -603,7 +550,6 @@ const WorkerMonthCalendar = (props: {
     const rawEnd = new Date(rawStart);
     rawEnd.setDate(rawStart.getDate() + 6);
     const end = new Date(Math.min(rawEnd.getTime(), monthEnd.getTime()));
-
     return `${start.toLocaleDateString('es-ES', {
       day: 'numeric',
       month: 'short',
@@ -612,7 +558,6 @@ const WorkerMonthCalendar = (props: {
       month: 'short',
     })}`;
   };
-
   return (
     <div>
       <div className='mb-4 sm:mb-6'>
@@ -624,7 +569,6 @@ const WorkerMonthCalendar = (props: {
           {monthEnd.toLocaleDateString('es-ES')}
         </p>
       </div>
-
       {Object.entries(groupedByWeek).map(([weekStartStr, weekRows]) => (
         <div key={weekStartStr} className='space-y-3 mb-6'>
           <h4 className='text-lg font-semibold text-gray-900 border-b border-gray-200 pb-2'>
@@ -663,7 +607,6 @@ const WorkerMonthCalendar = (props: {
     </div>
   );
 }; */
-
 export default function SchedulePage(): React.JSX.Element {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
@@ -672,9 +615,7 @@ export default function SchedulePage(): React.JSX.Element {
     'week'
   );
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
-
   type TimeSlotRange = { start: string; end: string };
-
   const getScheduleSlots = useCallback(
     (
       schedule: unknown,
@@ -686,7 +627,6 @@ export default function SchedulePage(): React.JSX.Element {
           typeof schedule === 'string'
             ? (JSON.parse(schedule) as Record<string, unknown>)
             : (schedule as Record<string, unknown>);
-
         const dayOfWeek = date.getDay();
         const dayNames = [
           'sunday',
@@ -698,7 +638,6 @@ export default function SchedulePage(): React.JSX.Element {
           'saturday',
         ];
         const dayName = dayNames[dayOfWeek] ?? 'monday';
-
         const parseSlots = (raw: unknown[]): TimeSlotRange[] =>
           raw
             .map((s: unknown) => {
@@ -717,7 +656,6 @@ export default function SchedulePage(): React.JSX.Element {
               return null;
             })
             .filter((v): v is TimeSlotRange => v !== null);
-
         // Tramos del día normal
         const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
         const enabled = (dayConfig?.['enabled'] as boolean) ?? true;
@@ -725,27 +663,23 @@ export default function SchedulePage(): React.JSX.Element {
           ? (dayConfig['timeSlots'] as unknown[])
           : [];
         const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
-
         // Festivos: soportar schedule.holiday.timeSlots y holiday_config.holiday_timeSlots
         const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
         const holidayEnabled = (holidayDay?.['enabled'] as boolean) ?? false;
         const holidaySlotsRaw = Array.isArray(holidayDay?.['timeSlots'])
           ? (holidayDay['timeSlots'] as unknown[])
           : [];
-
         const holidayCfg =
           (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
           undefined;
         const holidayCfgRaw = Array.isArray(holidayCfg?.['holiday_timeSlots'])
           ? (holidayCfg?.['holiday_timeSlots'] as unknown[])
           : [];
-
         const combinedHolidayRaw =
           holidayCfgRaw.length > 0 ? holidayCfgRaw : holidaySlotsRaw;
         const parsedHolidaySlots = holidayEnabled
           ? parseSlots(combinedHolidayRaw)
           : parseSlots(combinedHolidayRaw);
-
         // Determinar qué slots usar: festivos = fines de semana o festivo oficial o tipo 'festivos'
         const dow = date.getDay();
         const isWeekend = dow === 0 || dow === 6;
@@ -756,7 +690,6 @@ export default function SchedulePage(): React.JSX.Element {
         const isOfficialHoliday = holidaySet.has(dateKey);
         const mustUseHoliday =
           isWeekend || isOfficialHoliday || type === 'festivos';
-
         if (mustUseHoliday && parsedHolidaySlots.length > 0)
           return parsedHolidaySlots;
         if (daySlots.length > 0) return daySlots;
@@ -768,7 +701,6 @@ export default function SchedulePage(): React.JSX.Element {
     },
     [holidaySet]
   );
-
   // Calcular rangos de fechas
   const weekRange = useMemo(() => getWeekRange(), []);
   const nextWeekRange = useMemo(() => getNextWeekRange(), []);
@@ -781,7 +713,6 @@ export default function SchedulePage(): React.JSX.Element {
     const now = new Date();
     return new Date(now.getFullYear(), now.getMonth() + 1, 0, 12, 0, 0);
   }, []);
-
   const currentWeekStart = useMemo(
     () => new Date(weekRange.start),
     [weekRange.start]
@@ -798,7 +729,6 @@ export default function SchedulePage(): React.JSX.Element {
     () => new Date(nextWeekRange.end),
     [nextWeekRange.end]
   );
-
   useEffect(() => {
     const load = async (): Promise<void> => {
       if (user?.email === undefined) {
@@ -806,25 +736,20 @@ export default function SchedulePage(): React.JSX.Element {
         setLoading(false);
         return;
       }
-
       try {
         setLoading(true);
-
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
           .ilike('email', user.email)
           .maybeSingle();
-
         if (workerError !== null || workerData === null) {
           setAssignments([]);
           setLoading(false);
           return;
         }
-
         const workerId = workerData.id;
-
         // Cargar festivos para el rango que abarca semana actual, próxima semana y mes restante
         const holidayStart = new Date(
           Math.min(
@@ -856,7 +781,6 @@ export default function SchedulePage(): React.JSX.Element {
           hset.add(key);
         });
         setHolidaySet(hset);
-
         // Obtener todas las asignaciones activas de la trabajadora
         const { data: rows, error: err } = await supabase
           .from('assignments')
@@ -872,7 +796,6 @@ export default function SchedulePage(): React.JSX.Element {
           )
           .eq('worker_id', workerId)
           .eq('status', 'active');
-
         if (err === null && rows !== null) {
           const filtered = rows.filter((a) => {
             const t = (a.assignment_type ?? '').toLowerCase();
@@ -897,14 +820,12 @@ export default function SchedulePage(): React.JSX.Element {
     monthRange.start,
     monthRange.end,
   ]);
-
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
     });
-
   return (
     <ProtectedRoute requiredRole='worker'>
       <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
@@ -943,7 +864,6 @@ export default function SchedulePage(): React.JSX.Element {
             </div>
           </div>
         </header>
-
         <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'>
           <div className='bg-white rounded-2xl shadow-sm'>
             <div className='p-4 sm:p-6 border-b border-gray-200'>
@@ -956,7 +876,6 @@ export default function SchedulePage(): React.JSX.Element {
                     {assignments.length} asignaciones activas
                   </p>
                 </div>
-
                 {/* Selector de período */}
                 <div className='flex space-x-2'>
                   <Button
@@ -980,7 +899,6 @@ export default function SchedulePage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-
             <div className='p-4 sm:p-6'>
               {loading ? (
                 <div className='text-center py-8'>
@@ -1020,7 +938,6 @@ export default function SchedulePage(): React.JSX.Element {
                           {formatLongDate(currentWeekEnd)}
                         </p>
                       </div>
-
                       <WeeklySchedule
                         assignments={assignments}
                         getScheduleSlots={getScheduleSlots}
@@ -1028,7 +945,6 @@ export default function SchedulePage(): React.JSX.Element {
                         weekEnd={currentWeekEnd}
                         holidaySet={holidaySet}
                       />
-
                       <div className='mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200'>
                         <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
                           Próxima Semana
@@ -1037,7 +953,6 @@ export default function SchedulePage(): React.JSX.Element {
                           {formatLongDate(nextWeekStart)} -{' '}
                           {formatLongDate(nextWeekEnd)}
                         </p>
-
                         <WeeklySchedule
                           assignments={assignments}
                           getScheduleSlots={getScheduleSlots}
@@ -1065,7 +980,6 @@ export default function SchedulePage(): React.JSX.Element {
     </ProtectedRoute>
   );
 }
-
 // Calendario mensual estilo Planning para la trabajadora logueada
 /* function WorkerMonthCalendar(props: {
   assignments: Array<{
@@ -1087,14 +1001,11 @@ export default function SchedulePage(): React.JSX.Element {
 }): React.JSX.Element {
   const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
     props;
-
+  // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const d = date.getDate();
-    const m = date.getMonth() + 1;
-    if (m === 8 && d === 15) return true;
-    return false;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet?.has(dateKey) ?? false;
   };
-
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
     const type = (assignmentType ?? '').toLowerCase();
@@ -1110,21 +1021,17 @@ export default function SchedulePage(): React.JSX.Element {
     if (type === 'flexible' || type === 'daily') return true;
     return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
   };
-
   type ExpandedEntry = {
     assignmentId: string;
     userLabel: string;
     start: string;
     end: string;
   };
-
   const getDateKeyLocal = (d: Date): string =>
     `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
       d.getDate()
     ).padStart(2, '0')}`;
-
   const todayKey = getDateKeyLocal(new Date());
-
   const firstDayOfMonth = new Date(
     monthStart.getFullYear(),
     monthStart.getMonth(),
@@ -1141,7 +1048,6 @@ export default function SchedulePage(): React.JSX.Element {
     0,
     0
   );
-
   // Construir solo los días del mes actual (no arrastrar semanas completas)
   const daysInMonth = lastDayOfMonth.getDate();
   const monthGrid = Array.from({ length: daysInMonth }, (_, idx) => {
@@ -1152,7 +1058,6 @@ export default function SchedulePage(): React.JSX.Element {
     const isToday = key === todayKey;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
-
     const entries: ExpandedEntry[] = [];
     for (const a of assignments) {
       const aStart = new Date(a.start_date);
@@ -1175,7 +1080,6 @@ export default function SchedulePage(): React.JSX.Element {
         });
       }
     }
-
     return {
       date,
       key,
@@ -1186,7 +1090,6 @@ export default function SchedulePage(): React.JSX.Element {
       entries,
     };
   });
-
   return (
     <div>
       <div className='mb-4 sm:mb-6'>
@@ -1198,7 +1101,6 @@ export default function SchedulePage(): React.JSX.Element {
           {lastDayOfMonth.toLocaleDateString('es-ES')}
         </p>
       </div>
-
       <div className='hidden md:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
         {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
           <div
@@ -1209,7 +1111,6 @@ export default function SchedulePage(): React.JSX.Element {
           </div>
         ))}
       </div>
-
       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
         {monthGrid.map((cell, idx) => {
           const headerClasses = cell.isCurrentMonth
@@ -1224,7 +1125,6 @@ export default function SchedulePage(): React.JSX.Element {
             .toLocaleDateString('es-ES', { weekday: 'short' })
             .replace('.', '')
             .slice(0, 3);
-
           return (
             <div
               key={idx}
@@ -1247,7 +1147,6 @@ export default function SchedulePage(): React.JSX.Element {
                   </span>
                 )}
               </div>
-
               <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
                 {cell.entries.slice(0, 4).map((e, i) => (
                   <div

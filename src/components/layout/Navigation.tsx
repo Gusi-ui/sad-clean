@@ -35,6 +35,12 @@ export default function Navigation({ variant = 'mobile' }: NavigationProps) {
       label: 'Planning',
       mobileIcon: '📅',
     },
+    {
+      href: '/holidays',
+      icon: '🎯',
+      label: 'Festivos',
+      mobileIcon: '🎯',
+    },
   ];
 
   const isActive = (href: string): boolean => pathname === href;

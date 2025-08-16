@@ -569,14 +569,6 @@ export default function WorkerDashboard(): React.JSX.Element {
               return set;
             };
 
-            const isKnownHolidayDate = (d: Date): boolean => {
-              const day = d.getDate();
-              const month = d.getMonth() + 1;
-              // Fallback explícito para 15 de agosto (Asunción)
-              if (month === 8 && day === 15) return true;
-              return false;
-            };
-
             // Función para generar servicios de una asignación en un rango de fechas
             const generateServicesForRange = (
               assignment: Assignment,
@@ -682,11 +674,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                     '0'
                   )}`;
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-                  if (
-                    isWeekend ||
-                    holidays.has(key) ||
-                    isKnownHolidayDate(current)
-                  ) {
+                  if (isWeekend || holidays.has(key)) {
                     count++;
                   }
                   current.setDate(current.getDate() + 1);
