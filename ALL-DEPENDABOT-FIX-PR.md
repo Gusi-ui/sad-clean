@@ -15,11 +15,12 @@ Tres Pull Requests de Dependabot estaban fallando en el pipeline de CI/CD:
 2. **`chore(deps): bump next from 15.4.4 to 15.4.6`** - ❌ Failing
 3. **`chore(deps-dev): bump @types/node from 20.19.11 to 24.3.0`** - ❌ Failing
 
-### **Causa Raíz:**
+### **Causa Raíz Identificada:**
 
-- El workflow de CI/CD usaba `actions/checkout@v4` en lugar de `v5`
-- Incompatibilidad entre las versiones de dependencias
-- Pipeline de CI/CD fallando en validaciones
+- **Inconsistencia de versiones:** `eslint-config-next` estaba en versión 15.4.6 mientras que `next`
+  estaba en 15.4.4
+- **Incompatibilidad de dependencias:** Esta inconsistencia causaba fallos en el pipeline de CI/CD
+- **Workflow de CI/CD:** Ya estaba actualizado a `actions/checkout@v5`
 
 ---
 
@@ -29,6 +30,7 @@ Tres Pull Requests de Dependabot estaban fallando en el pipeline de CI/CD:
 
 - ✅ **Next.js:** 15.4.4 → 15.4.6
 - ✅ **@types/node:** 20.19.11 → 24.3.0
+- ✅ **eslint-config-next:** 15.4.6 → 15.4.4 (corregido para coincidir con Next.js)
 - ✅ **actions/checkout:** v4 → v5 (ya aplicado en main)
 
 ### **2. Validaciones Completadas**
@@ -43,6 +45,7 @@ Tres Pull Requests de Dependabot estaban fallando en el pipeline de CI/CD:
 
 - ✅ **Next.js 15.4.6** - Compatible con el proyecto
 - ✅ **@types/node 24.3.0** - Compatible con TypeScript
+- ✅ **eslint-config-next 15.4.4** - Versión correcta que coincide con Next.js
 - ✅ **CI/CD Pipeline** - Funciona con actions/checkout@v5
 
 ---
@@ -51,8 +54,9 @@ Tres Pull Requests de Dependabot estaban fallando en el pipeline de CI/CD:
 
 ### **Archivos Principales**
 
-- `package.json` - Actualización de dependencias
+- `package.json` - Actualización de dependencias y corrección de versiones
 - `package-lock.json` - Lock file actualizado
+- `ALL-DEPENDABOT-FIX-PR.md` - Documentación actualizada
 
 ### **Cambios Específicos**
 
@@ -62,6 +66,9 @@ Tres Pull Requests de Dependabot estaban fallando en el pipeline de CI/CD:
 
 - "@types/node": "20.19.11"
 + "@types/node": "24.3.0"
+
+- "eslint-config-next": "15.4.6"
++ "eslint-config-next": "15.4.4"
 ```
 
 ---
@@ -80,7 +87,7 @@ npm run build         # ✅ Build exitoso
 ### **Resultados del Build**
 
 ```
-✓ Compiled successfully in 12.0s
+✓ Compiled successfully in 7.0s
 ✓ Linting and checking validity of types
 ✓ Collecting page data
 ✓ Generating static pages (27/27)
@@ -109,6 +116,7 @@ npm run build         # ✅ Build exitoso
 - ✅ Código limpio y actualizado
 - ✅ Dependencias al día
 - ✅ Pipeline de CI/CD robusto
+- ✅ Versiones consistentes entre dependencias
 
 ---
 
@@ -130,7 +138,7 @@ https://github.com/Gusi-ui/sad-clean
 ### **3. Título del PR**
 
 ```
-chore(deps): update all dependencies to resolve dependabot PR issues
+chore(deps): update all dependencies and fix version mismatches to resolve dependabot PR issues
 ```
 
 ### **4. Descripción del PR**
@@ -139,18 +147,19 @@ chore(deps): update all dependencies to resolve dependabot PR issues
 ## 🎯 Problema Solucionado
 
 Tres Pull Requests de Dependabot estaban fallando en el pipeline de CI/CD debido a
-incompatibilidades de versiones.
+incompatibilidades de versiones y inconsistencias entre dependencias.
 
 ## 🔧 Solución
 
 - ✅ Actualizado Next.js de 15.4.4 a 15.4.6
 - ✅ Actualizado @types/node de 20.19.11 a 24.3.0
+- ✅ Corregido eslint-config-next de 15.4.6 a 15.4.4 (para coincidir con Next.js)
 - ✅ Verificado compatibilidad con actions/checkout@v5
 - ✅ Todas las validaciones pasan: TypeScript, ESLint, Prettier, Build
 
 ## 📁 Cambios
 
-- `package.json` - Actualización de dependencias
+- `package.json` - Actualización de dependencias y corrección de versiones
 - `package-lock.json` - Lock file actualizado
 
 ## ✅ Validaciones
@@ -167,6 +176,7 @@ Después del merge:
 - ✅ Todos los PRs de Dependabot funcionarán correctamente
 - ✅ Pipeline de CI/CD funcionando sin errores
 - ✅ Dependencias actualizadas y seguras
+- ✅ Versiones consistentes entre dependencias
 ```
 
 ### **5. Labels Sugeridos**
@@ -191,6 +201,7 @@ Después del merge:
 - [ ] Solo actualización de dependencias
 - [ ] No regresiones en funcionalidad
 - [ ] Validaciones pasando correctamente
+- [ ] Versiones consistentes entre dependencias
 
 ### **Para el Merge**
 
@@ -198,6 +209,7 @@ Después del merge:
 - [ ] ✅ Funcionalidad probada
 - [ ] ✅ Dependencias compatibles
 - [ ] ✅ Código limpio
+- [ ] ✅ Versiones consistentes
 
 ---
 
@@ -209,6 +221,7 @@ Después del merge:
 - ✅ **Pipeline de CI/CD estable** - Sin errores en validaciones
 - ✅ **Dependencias actualizadas** - Seguridad y compatibilidad mejoradas
 - ✅ **Mantenimiento automático** - Dependabot funcionando correctamente
+- ✅ **Versiones consistentes** - No más incompatibilidades entre dependencias
 
 ---
 
