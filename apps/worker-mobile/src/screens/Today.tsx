@@ -65,7 +65,9 @@ export default function TodayScreen(): React.JSX.Element {
   }, []);
 
   useEffect(() => {
+    console.log('🔄 useEffect ejecutándose - Today screen');
     const load = async (): Promise<void> => {
+      console.log('🔄 Iniciando carga de servicios...');
       setLoading(true);
       try {
         const email = user?.email ?? '';
@@ -162,7 +164,7 @@ export default function TodayScreen(): React.JSX.Element {
       }
     };
     load().catch(() => setLoading(false));
-  }, [todayKey, user?.email, completedIds]);
+  }, [todayKey, user?.email]); // Removido completedIds para evitar bucle infinito
 
   const dayKey = useMemo(() => {
     const d = new Date();
