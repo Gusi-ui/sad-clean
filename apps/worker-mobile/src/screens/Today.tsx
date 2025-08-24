@@ -10,6 +10,7 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
 
 type Row = {
@@ -39,6 +40,8 @@ type InfoCard = {
 
 export default function TodayScreen(): React.JSX.Element {
   const { user, session } = useAuth();
+  const { scheduleServiceReminders, notifyAssignmentUpdate } =
+    useNotifications();
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
@@ -128,6 +131,38 @@ export default function TodayScreen(): React.JSX.Element {
             pendingServices,
             totalHours: Math.round(totalHours * 10) / 10,
           });
+
+          // Programar recordatorios para los servicios de hoy
+          const todayServices = processedData
+            .filter((item) => item.start_date === todayKey)
+            .map((item) => {
+              const slots = getTodaySlots(item.schedule, item.assignment_type);
+              const firstSlot = slots[0];
+
+              if (firstSlot) {
+                const [hours, minutes] = firstSlot.start.split(':').map(Number);
+                const serviceDate = new Date();
+                serviceDate.setHours(hours, minutes, 0, 0);
+
+                return {
+                  id: item.id,
+                  title: `Servicio - ${item.user_name || 'Usuario'}`,
+                  startTime: serviceDate,
+                  userAddress: item.user_address,
+                };
+              }
+              return null;
+            })
+            .filter(
+              (service): service is NonNullable<typeof service> =>
+                service !== null
+            );
+
+          if (todayServices.length > 0) {
+            scheduleServiceReminders(todayServices).catch((error: any) => {
+              console.error('Error scheduling service reminders:', error);
+            });
+          }
         }
       } finally {
         setLoading(false);
@@ -278,13 +313,29 @@ export default function TodayScreen(): React.JSX.Element {
       id: '1',
       title: 'Marcar Inicio',
       icon: '▶️',
-      onPress: () => Alert.alert('Acción', 'Marcar inicio de jornada'),
+      onPress: () => {
+        Alert.alert('Acción', 'Marcar inicio de jornada');
+        notifyAssignmentUpdate(
+          'Jornada Iniciada',
+          'Has iniciado tu jornada laboral'
+        ).catch(() => {
+          // Error handled silently
+        });
+      },
     },
     {
       id: '2',
       title: 'Marcar Fin',
       icon: '⏹️',
-      onPress: () => Alert.alert('Acción', 'Marcar fin de jornada'),
+      onPress: () => {
+        Alert.alert('Acción', 'Marcar fin de jornada');
+        notifyAssignmentUpdate(
+          'Jornada Finalizada',
+          'Has terminado tu jornada laboral'
+        ).catch(() => {
+          // Error handled silently
+        });
+      },
     },
     {
       id: '3',
@@ -296,7 +347,15 @@ export default function TodayScreen(): React.JSX.Element {
       id: '4',
       title: 'Emergencia',
       icon: '🚨',
-      onPress: () => Alert.alert('Acción', 'Reportar emergencia'),
+      onPress: () => {
+        Alert.alert('Acción', 'Reportar emergencia');
+        notifyAssignmentUpdate(
+          '🚨 Emergencia',
+          'Se ha reportado una situación de emergencia'
+        ).catch(() => {
+          // Error handled silently
+        });
+      },
     },
   ];
 

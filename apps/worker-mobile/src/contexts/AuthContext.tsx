@@ -16,6 +16,7 @@ interface AppUser {
   id: string;
   email: string;
   role: Role;
+  name?: string; // Añadir campo opcional para el nombre
 }
 
 interface AuthContextType {
