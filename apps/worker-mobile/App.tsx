@@ -3,55 +3,81 @@ import { NavigationContainer } from '@react-navigation/native';
 import { Text, View } from 'react-native';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
+import { useNotifications } from './src/hooks/useNotifications';
+// Screens - Usando la misma estructura que el dashboard web
+import BalancesScreen from './src/screens/Balances';
+import HomeScreen from './src/screens/Home';
 import LoginScreen from './src/screens/Login';
-import Today from './src/screens/Today';
+import RouteScreen from './src/screens/Route';
+import ScheduleScreen from './src/screens/Schedule';
+import UpcomingScreen from './src/screens/Upcoming';
 
 const Tab = createBottomTabNavigator();
 
-function TodayScreen(): React.JSX.Element {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Hoy</Text>
-    </View>
-  );
-}
-function BalancesScreen(): React.JSX.Element {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Balances</Text>
-    </View>
-  );
-}
-function PlanningScreen(): React.JSX.Element {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Planning</Text>
-    </View>
-  );
-}
-function ProfileScreen(): React.JSX.Element {
-  return (
-    <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text>Perfil</Text>
-    </View>
-  );
-}
+// Navegación igual al dashboard web de trabajadoras
+const NAV_ITEMS = [
+  { name: 'Inicio', component: HomeScreen, icon: '🏠' },
+  { name: 'Ruta', component: RouteScreen, icon: '🗺️' },
+  { name: 'Planilla', component: ScheduleScreen, icon: '📋' },
+  { name: 'Próximos', component: UpcomingScreen, icon: '📅' },
+  { name: 'Balance', component: BalancesScreen, icon: '⏱️' },
+];
 
 function RootTabs(): React.JSX.Element {
   const { user, loading } = useAuth();
-  if (loading)
+  const { isInitialized } = useNotifications(); // Inicializa automáticamente las notificaciones
+
+  if (loading) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
         <Text>Cargando…</Text>
       </View>
     );
-  if (user === null) return <LoginScreen />;
+  }
+
+  if (user === null) {
+    return <LoginScreen />;
+  }
+
   return (
-    <Tab.Navigator screenOptions={{ headerShown: false }}>
-      <Tab.Screen name='Hoy' component={Today} />
-      <Tab.Screen name='Balances' component={BalancesScreen} />
-      <Tab.Screen name='Planning' component={PlanningScreen} />
-      <Tab.Screen name='Perfil' component={ProfileScreen} />
+    <Tab.Navigator
+      screenOptions={{
+        headerShown: false,
+        tabBarActiveTintColor: '#3b82f6',
+        tabBarInactiveTintColor: '#64748b',
+        tabBarStyle: {
+          backgroundColor: 'white',
+          borderTopWidth: 2,
+          borderTopColor: '#3b82f6',
+          paddingBottom: 10,
+          paddingTop: 10,
+          height: 80,
+        },
+        tabBarLabelStyle: {
+          fontSize: 10,
+          fontWeight: '600',
+        },
+      }}
+    >
+      {NAV_ITEMS.map((item) => (
+        <Tab.Screen
+          key={item.name}
+          name={item.name}
+          component={item.component}
+          options={{
+            tabBarIcon: ({ focused }) => (
+              <Text
+                style={{
+                  fontSize: 24,
+                  opacity: focused ? 1 : 0.6,
+                }}
+              >
+                {item.icon}
+              </Text>
+            ),
+          }}
+        />
+      ))}
     </Tab.Navigator>
   );
 }

@@ -9,6 +9,8 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "noEmit": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
     "types": ["react", "react-native"]
   },
   "extends": "expo/tsconfig.base"
