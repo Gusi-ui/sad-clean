@@ -40,6 +40,7 @@ export async function getFilteredAssignments(
   targetDate: Date,
   includeInactive: boolean = false
 ): Promise<FilteredAssignment[]> {
+  console.log('🚀 Iniciando getFilteredAssignments para workerId:', workerId);
   try {
     const targetKey = targetDate.toISOString().split('T')[0];
 
@@ -62,6 +63,7 @@ export async function getFilteredAssignments(
       usarHorarioFestivo: isHoliday,
     });
 
+    console.log('📡 Consultando asignaciones en Supabase...');
     // Cargar asignaciones activas
     const { data: assignments, error } = await supabase
       .from('assignments')
@@ -88,6 +90,8 @@ export async function getFilteredAssignments(
       return [];
     }
 
+    console.log('✅ Asignaciones cargadas exitosamente:', assignments.length);
+
     console.log(`📋 Asignaciones encontradas:`, {
       total: assignments.length,
       tipos: assignments.map((a) => a.assignment_type),
@@ -103,10 +107,12 @@ export async function getFilteredAssignments(
       }),
     });
 
+    console.log('🔍 Iniciando filtrado de asignaciones...');
     // Filtrar asignaciones que deben trabajar en la fecha objetivo
     const filteredAssignments: FilteredAssignment[] = [];
 
     for (const assignment of assignments) {
+      console.log('🔍 Procesando asignación:', assignment.id);
       const slots = getTimeSlotsForDate(
         assignment.schedule,
         assignment.assignment_type,
@@ -191,10 +197,19 @@ export function getTimeSlotsForDate(
   isHoliday?: boolean
 ): TimeSlotRange[] {
   try {
-    const sc =
-      typeof schedule === 'string'
-        ? (JSON.parse(schedule) as Record<string, unknown>)
-        : (schedule as Record<string, unknown>);
+    let sc: Record<string, unknown>;
+
+    if (typeof schedule === 'string') {
+      try {
+        sc = JSON.parse(schedule) as Record<string, unknown>;
+      } catch (parseError) {
+        console.error('❌ Error parsing schedule JSON:', parseError);
+        console.error('❌ Schedule string:', schedule);
+        return [];
+      }
+    } else {
+      sc = schedule as Record<string, unknown>;
+    }
 
     const dayNames = [
       'sunday',
