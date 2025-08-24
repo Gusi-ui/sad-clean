@@ -150,9 +150,6 @@ export async function getFilteredAssignments(
       );
 
       if (shouldShow) {
-        const userData = Array.isArray(assignment.users)
-          ? assignment.users[0]
-          : assignment.users;
         filteredAssignments.push({
           id: assignment.id,
           assignment_type: assignment.assignment_type,
