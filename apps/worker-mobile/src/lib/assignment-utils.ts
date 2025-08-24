@@ -9,7 +9,7 @@ export interface AssignmentRow {
   status: string;
   worker_id: string;
   user_id: string;
-  users?: {
+  users: {
     name: string;
     surname: string;
     address?: string;
@@ -91,13 +91,16 @@ export async function getFilteredAssignments(
     console.log(`📋 Asignaciones encontradas:`, {
       total: assignments.length,
       tipos: assignments.map((a) => a.assignment_type),
-      asignaciones: assignments.map((a) => ({
-        id: a.id,
-        tipo: a.assignment_type,
-        usuario: a.users?.name,
-        fechaInicio: a.start_date,
-        fechaFin: a.end_date,
-      })),
+      asignaciones: assignments.map((a) => {
+        const userData = Array.isArray(a.users) ? a.users[0] : a.users;
+        return {
+          id: a.id,
+          tipo: a.assignment_type,
+          usuario: userData?.name,
+          fechaInicio: a.start_date,
+          fechaFin: a.end_date,
+        };
+      }),
     });
 
     // Filtrar asignaciones que deben trabajar en la fecha objetivo
@@ -111,9 +114,13 @@ export async function getFilteredAssignments(
         isHoliday
       );
 
+      const userData = Array.isArray(assignment.users)
+        ? assignment.users[0]
+        : assignment.users;
+      const userName = userData?.name;
       console.log(`🔍 Evaluando asignación ${assignment.id}:`, {
         tipo: assignment.assignment_type,
-        usuario: assignment.users?.name,
+        usuario: userName,
         slotsEncontrados: slots.length,
         slots: slots,
         usarHorarioFestivo: isHoliday,
@@ -143,6 +150,9 @@ export async function getFilteredAssignments(
       );
 
       if (shouldShow) {
+        const userData = Array.isArray(assignment.users)
+          ? assignment.users[0]
+          : assignment.users;
         filteredAssignments.push({
           id: assignment.id,
           assignment_type: assignment.assignment_type,
@@ -150,8 +160,8 @@ export async function getFilteredAssignments(
           start_date: assignment.start_date,
           end_date: assignment.end_date,
           user_name:
-            `${assignment.users?.name ?? ''} ${assignment.users?.surname ?? ''}`.trim(),
-          user_address: assignment.users?.address,
+            `${userData?.name ?? ''} ${userData?.surname ?? ''}`.trim(),
+          user_address: userData?.address,
           slots: slots,
         });
       }
