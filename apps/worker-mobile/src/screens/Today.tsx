@@ -10,6 +10,11 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
+import {
+  FilteredAssignment,
+  calculateTotalHours,
+  getFilteredAssignments,
+} from '../lib/assignment-utils';
 import { supabase } from '../lib/supabase';
 
 type Row = {
@@ -80,88 +85,77 @@ export default function TodayScreen(): React.JSX.Element {
           return;
         }
 
-        // Cargar asignaciones con información del usuario
-        const { data, error } = await supabase
-          .from('assignments')
-          .select(
-            `
-            id,
-            assignment_type,
-            schedule,
-            start_date,
-            end_date,
-            users!inner(name, address)
-          `
+        // Usar la nueva función de utilidad para obtener asignaciones filtradas
+        const today = new Date();
+        const filteredAssignments = await getFilteredAssignments(
+          workerId,
+          today
+        );
+
+        // Convertir a formato Row para compatibilidad
+        const rowsData: Row[] = filteredAssignments.map(
+          (assignment: FilteredAssignment) => ({
+            id: assignment.id,
+            assignment_type: assignment.assignment_type,
+            schedule: assignment.schedule,
+            start_date: assignment.start_date,
+            end_date: assignment.end_date,
+            user_name: assignment.user_name,
+            user_address: assignment.user_address,
+          })
+        );
+
+        setRows(rowsData);
+
+        // Calcular estadísticas
+        const totalServices = filteredAssignments.length;
+        const completedServices = completedIds.size;
+        const pendingServices = totalServices - completedServices;
+        const totalHours = filteredAssignments.reduce(
+          (acc: number, assignment: FilteredAssignment) => {
+            return acc + calculateTotalHours(assignment.slots);
+          },
+          0
+        );
+
+        setStats({
+          totalServices,
+          completedServices,
+          pendingServices,
+          totalHours: Math.round(totalHours * 10) / 10,
+        });
+
+        // Programar recordatorios para los servicios de hoy
+        const todayServices = filteredAssignments
+          .filter(
+            (assignment: FilteredAssignment) =>
+              assignment.start_date === todayKey
           )
-          .lte('start_date', todayKey)
-          .or(`end_date.is.null,end_date.gte.${todayKey}`)
-          .eq('worker_id', workerId);
+          .map((assignment: FilteredAssignment) => {
+            const firstSlot = assignment.slots[0];
+            if (firstSlot) {
+              const [hours, minutes] = firstSlot.start.split(':').map(Number);
+              const serviceDate = new Date();
+              serviceDate.setHours(hours, minutes, 0, 0);
 
-        if (error === null) {
-          const processedData =
-            (data as any[])?.map((item) => ({
-              ...item,
-              user_name: item.users?.name,
-              user_address: item.users?.address,
-            })) ?? [];
-          setRows(processedData);
+              return {
+                id: assignment.id,
+                title: `Servicio - ${assignment.user_name || 'Usuario'}`,
+                startTime: serviceDate,
+                userAddress: assignment.user_address,
+              };
+            }
+            return null;
+          })
+          .filter(
+            (service: any): service is NonNullable<typeof service> =>
+              service !== null
+          );
 
-          // Calcular estadísticas
-          const totalServices = processedData.length;
-          const completedServices = completedIds.size;
-          const pendingServices = totalServices - completedServices;
-          const totalHours = processedData.reduce((acc, item) => {
-            const slots = getTodaySlots(item.schedule, item.assignment_type);
-            return (
-              acc +
-              slots.reduce((slotAcc, slot) => {
-                const [startH, startM] = slot.start.split(':').map(Number);
-                const [endH, endM] = slot.end.split(':').map(Number);
-                return (
-                  slotAcc + (endH * 60 + endM - (startH * 60 + startM)) / 60
-                );
-              }, 0)
-            );
-          }, 0);
-
-          setStats({
-            totalServices,
-            completedServices,
-            pendingServices,
-            totalHours: Math.round(totalHours * 10) / 10,
-          });
-
-          // Programar recordatorios para los servicios de hoy
-          const todayServices = processedData
-            .filter((item) => item.start_date === todayKey)
-            .map((item) => {
-              const slots = getTodaySlots(item.schedule, item.assignment_type);
-              const firstSlot = slots[0];
-
-              if (firstSlot) {
-                const [hours, minutes] = firstSlot.start.split(':').map(Number);
-                const serviceDate = new Date();
-                serviceDate.setHours(hours, minutes, 0, 0);
-
-                return {
-                  id: item.id,
-                  title: `Servicio - ${item.user_name || 'Usuario'}`,
-                  startTime: serviceDate,
-                  userAddress: item.user_address,
-                };
-              }
-              return null;
-            })
-            .filter(
-              (service): service is NonNullable<typeof service> =>
-                service !== null
-            );
-
-          if (todayServices.length > 0) {
-            // scheduleServiceReminders(todayServices).catch((error: any) => {
-            //   console.error('Error scheduling service reminders:', error);
-            // }); // Deshabilitado en Expo Go
-          }
+        if (todayServices.length > 0) {
+          // scheduleServiceReminders(todayServices).catch((error: any) => {
+          //   console.error('Error scheduling service reminders:', error);
+          // }); // Deshabilitado en Expo Go
         }
       } finally {
         setLoading(false);
@@ -190,7 +184,8 @@ export default function TodayScreen(): React.JSX.Element {
 
   const getTodaySlots = (
     schedule: unknown,
-    assignmentType: string
+    assignmentType: string,
+    isHoliday?: boolean
   ): TimeSlotRange[] => {
     try {
       const sc =
@@ -200,7 +195,8 @@ export default function TodayScreen(): React.JSX.Element {
 
       const isSunday: boolean = new Date().getDay() === 0;
       const type = (assignmentType ?? '').toLowerCase();
-      const shouldUseHoliday: boolean = isSunday || type === 'festivos';
+      const shouldUseHoliday: boolean =
+        isHoliday ?? (isSunday || type === 'festivos');
 
       const dayConfig = (sc?.[dayKey] as Record<string, unknown>) ?? undefined;
       const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
@@ -259,9 +255,10 @@ export default function TodayScreen(): React.JSX.Element {
 
   const getStartMinutes = (
     schedule: unknown,
-    assignmentType: string
+    assignmentType: string,
+    isHoliday?: boolean
   ): number => {
-    const slots = getTodaySlots(schedule, assignmentType);
+    const slots = getTodaySlots(schedule, assignmentType, isHoliday);
     if (slots.length > 0) {
       const [hh, mm] = slots[0].start.split(':');
       return Number(hh) * 60 + Number(mm);
@@ -270,12 +267,17 @@ export default function TodayScreen(): React.JSX.Element {
   };
 
   const sortedRows = useMemo(() => {
+    // Determinar si hoy es festivo para el ordenamiento
+    const today = new Date();
+    const dow = today.getDay();
+    const isHoliday = dow === 0 || dow === 6; // Domingo o sábado
+
     return [...rows].sort((a, b) => {
       const aCompleted = completedIds.has(a.id) ? 1 : 0;
       const bCompleted = completedIds.has(b.id) ? 1 : 0;
       if (aCompleted !== bCompleted) return aCompleted - bCompleted;
-      const ta = getStartMinutes(a.schedule, a.assignment_type);
-      const tb = getStartMinutes(b.schedule, b.assignment_type);
+      const ta = getStartMinutes(a.schedule, a.assignment_type, isHoliday);
+      const tb = getStartMinutes(b.schedule, b.assignment_type, isHoliday);
       return ta - tb;
     });
   }, [rows, completedIds]);
