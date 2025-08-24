@@ -10,7 +10,6 @@ import {
 import React, { useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../hooks/useNotifications';
 import { supabase } from '../lib/supabase';
 
 type Row = {
@@ -40,8 +39,8 @@ type InfoCard = {
 
 export default function TodayScreen(): React.JSX.Element {
   const { user, session } = useAuth();
-  const { scheduleServiceReminders, notifyAssignmentUpdate } =
-    useNotifications();
+  // const { scheduleServiceReminders, notifyAssignmentUpdate } =
+  //   useNotifications(); // Deshabilitado para evitar errores en Expo Go
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [completedIds, setCompletedIds] = useState<Set<string>>(new Set());
@@ -159,9 +158,9 @@ export default function TodayScreen(): React.JSX.Element {
             );
 
           if (todayServices.length > 0) {
-            scheduleServiceReminders(todayServices).catch((error: any) => {
-              console.error('Error scheduling service reminders:', error);
-            });
+            // scheduleServiceReminders(todayServices).catch((error: any) => {
+            //   console.error('Error scheduling service reminders:', error);
+            // }); // Deshabilitado en Expo Go
           }
         }
       } finally {
@@ -315,12 +314,12 @@ export default function TodayScreen(): React.JSX.Element {
       icon: '▶️',
       onPress: () => {
         Alert.alert('Acción', 'Marcar inicio de jornada');
-        notifyAssignmentUpdate(
-          'Jornada Iniciada',
-          'Has iniciado tu jornada laboral'
-        ).catch(() => {
-          // Error handled silently
-        });
+        // notifyAssignmentUpdate(
+        //   'Jornada Iniciada',
+        //   'Has iniciado tu jornada laboral'
+        // ).catch(() => {
+        //   // Error handled silently
+        // }); // Deshabilitado en Expo Go
       },
     },
     {
@@ -329,12 +328,12 @@ export default function TodayScreen(): React.JSX.Element {
       icon: '⏹️',
       onPress: () => {
         Alert.alert('Acción', 'Marcar fin de jornada');
-        notifyAssignmentUpdate(
-          'Jornada Finalizada',
-          'Has terminado tu jornada laboral'
-        ).catch(() => {
-          // Error handled silently
-        });
+        // notifyAssignmentUpdate(
+        //   'Jornada Finalizada',
+        //   'Has terminado tu jornada laboral'
+        // ).catch(() => {
+        //   // Error handled silently
+        // }); // Deshabilitado en Expo Go
       },
     },
     {
@@ -349,12 +348,12 @@ export default function TodayScreen(): React.JSX.Element {
       icon: '🚨',
       onPress: () => {
         Alert.alert('Acción', 'Reportar emergencia');
-        notifyAssignmentUpdate(
-          '🚨 Emergencia',
-          'Se ha reportado una situación de emergencia'
-        ).catch(() => {
-          // Error handled silently
-        });
+        // notifyAssignmentUpdate(
+        //   '🚨 Emergencia',
+        //   'Se ha reportado una situación de emergencia'
+        // ).catch(() => {
+        //   // Error handled silently
+        // }); // Deshabilitado en Expo Go
       },
     },
   ];

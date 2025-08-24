@@ -1,4 +1,6 @@
 import {
+  ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -10,6 +12,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { computeWorkerUsersMonthlyBalances } from '../lib/user-calculations';
 
 interface MonthlyBalance {
   id: string;
@@ -30,17 +33,42 @@ interface Assignment {
   user_name: string;
 }
 
+interface DetailedUserBalance {
+  userId: string;
+  userName: string;
+  userSurname: string;
+  assignedMonthlyHours: number;
+  theoreticalMonthlyHours: number;
+  laborablesMonthlyHours: number;
+  holidaysMonthlyHours: number;
+  difference: number;
+}
+
+interface DetailedBalance {
+  assignedHours: number;
+  laborablesHours: number;
+  holidaysHours: number;
+  totalTheoreticalHours: number;
+  difference: number;
+}
+
 export default function BalancesScreen(): React.JSX.Element {
   const { user } = useAuth();
   const [balances, setBalances] = useState<MonthlyBalance[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [userBalances, setUserBalances] = useState<DetailedUserBalance[]>([]);
+  const [detailedBalance, setDetailedBalance] =
+    useState<DetailedBalance | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [loadingDetailed, setLoadingDetailed] = useState<boolean>(false);
   const [selectedYear, setSelectedYear] = useState<number>(
     new Date().getFullYear()
   );
   const [selectedMonth, setSelectedMonth] = useState<number>(
     new Date().getMonth() + 1
   );
+  const [showUserDetails, setShowUserDetails] = useState<boolean>(false);
+  const [debugMode, setDebugMode] = useState<boolean>(false);
 
   const monthNames = [
     'Enero',
@@ -64,6 +92,8 @@ export default function BalancesScreen(): React.JSX.Element {
       if (email.trim() === '') {
         setBalances([]);
         setAssignments([]);
+        setUserBalances([]);
+        setDetailedBalance(null);
         return;
       }
 
@@ -77,6 +107,8 @@ export default function BalancesScreen(): React.JSX.Element {
       if (workerError !== null || workerData === null) {
         setBalances([]);
         setAssignments([]);
+        setUserBalances([]);
+        setDetailedBalance(null);
         return;
       }
 
@@ -125,12 +157,92 @@ export default function BalancesScreen(): React.JSX.Element {
         }));
         setAssignments(processedAssignments);
       }
+
+      // Cargar balances detallados por usuario usando cálculos avanzados
+      console.log('🔍 Cargando balance detallado para trabajadora:', workerId);
+      await loadDetailedBalances(workerId);
     } catch (error) {
       console.error('Error loading balances:', error);
+      console.error('No se pudieron cargar los datos de balance');
     } finally {
       setLoading(false);
     }
   }, [user?.email, selectedYear, selectedMonth]);
+
+  const loadDetailedBalances = async (workerId: string): Promise<void> => {
+    setLoadingDetailed(true);
+    try {
+      console.log(
+        '🔍 Usando computeWorkerUsersMonthlyBalances para trabajadora:',
+        workerId
+      );
+
+      // Usar la función optimizada que tiene la lógica correcta
+      const workerBalances = await computeWorkerUsersMonthlyBalances(
+        workerId,
+        selectedYear,
+        selectedMonth
+      );
+
+      console.log(
+        '✅ Balance por usuario calculado:',
+        workerBalances.length,
+        'usuarios'
+      );
+      console.log('🔍 Datos detallados:', workerBalances);
+
+      // Convertir a formato DetailedUserBalance
+      const detailedUserBalances: DetailedUserBalance[] = workerBalances.map(
+        (balance) => ({
+          userId: balance.userId,
+          userName: balance.userName,
+          userSurname: balance.userSurname,
+          assignedMonthlyHours: balance.assignedMonthlyHours,
+          theoreticalMonthlyHours: balance.totalHours, // laborables + holidays
+          laborablesMonthlyHours: balance.laborablesHours,
+          holidaysMonthlyHours: balance.holidaysHours,
+          difference: balance.difference,
+        })
+      );
+
+      setUserBalances(detailedUserBalances);
+
+      // Calcular balance general sumando todos los balances individuales
+      const finalBalance: DetailedBalance = detailedUserBalances.reduce(
+        (sum: DetailedBalance, row: DetailedUserBalance) => ({
+          assignedHours: sum.assignedHours + row.assignedMonthlyHours,
+          laborablesHours: sum.laborablesHours + row.laborablesMonthlyHours,
+          holidaysHours: sum.holidaysHours + row.holidaysMonthlyHours,
+          totalTheoreticalHours:
+            sum.totalTheoreticalHours + row.theoreticalMonthlyHours,
+          difference: sum.difference + row.difference,
+        }),
+        {
+          assignedHours: 0,
+          laborablesHours: 0,
+          holidaysHours: 0,
+          totalTheoreticalHours: 0,
+          difference: 0,
+        }
+      );
+
+      console.log('📊 Balance general calculado:', finalBalance);
+      setDetailedBalance(finalBalance);
+
+      // Si está en modo debug, mostrar alert con datos
+      if (debugMode) {
+        Alert.alert(
+          'Debug - Balance Calculado',
+          `Usuarios: ${detailedUserBalances.length}\nAsignadas: ${finalBalance.assignedHours.toFixed(1)}h\nTeóricas: ${finalBalance.totalTheoreticalHours.toFixed(1)}h\nDiferencia: ${finalBalance.difference.toFixed(1)}h`,
+          [{ text: 'OK' }]
+        );
+      }
+    } catch (error) {
+      console.error('Error loading detailed balances:', error);
+    } finally {
+      setLoadingDetailed(false);
+    }
+  };
 
   useEffect(() => {
     loadData().catch(() => setLoading(false));
@@ -193,7 +305,15 @@ export default function BalancesScreen(): React.JSX.Element {
   );
 
   const renderBalanceCard = () => {
-    if (!currentMonthBalance) {
+    // Mostrar balance detallado si está disponible, sino el básico
+    const useDetailedBalance = detailedBalance !== null;
+    const balance = useDetailedBalance
+      ? detailedBalance.difference
+      : (currentMonthBalance?.balance ?? 0);
+    const balanceColor = getBalanceColor(balance);
+    const balanceIcon = getBalanceIcon(balance);
+
+    if (!useDetailedBalance && !currentMonthBalance) {
       return (
         <View style={styles.balanceCard}>
           <Text style={styles.balanceCardTitle}>
@@ -202,13 +322,16 @@ export default function BalancesScreen(): React.JSX.Element {
           <Text style={styles.noDataText}>
             No hay datos de balance para este mes
           </Text>
+          {loadingDetailed && (
+            <ActivityIndicator
+              size='small'
+              color='#3b82f6'
+              style={{ marginTop: 12 }}
+            />
+          )}
         </View>
       );
     }
-
-    const balance = currentMonthBalance.balance;
-    const balanceColor = getBalanceColor(balance);
-    const balanceIcon = getBalanceIcon(balance);
 
     return (
       <View style={styles.balanceCard}>
@@ -216,47 +339,83 @@ export default function BalancesScreen(): React.JSX.Element {
           {balanceIcon} Balance de {monthNames[selectedMonth - 1]}
         </Text>
 
-        <View style={styles.balanceStatsContainer}>
-          <View style={styles.balanceStat}>
-            <Text style={styles.balanceStatValue}>
-              {currentMonthBalance.total_hours.toFixed(1)}h
+        {loadingDetailed ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size='large' color='#3b82f6' />
+            <Text style={styles.loadingText}>
+              Calculando balance detallado...
             </Text>
-            <Text style={styles.balanceStatLabel}>Horas Asignadas</Text>
           </View>
+        ) : (
+          <>
+            <View style={styles.balanceStatsContainer}>
+              <View style={styles.balanceStat}>
+                <Text style={styles.balanceStatValue}>
+                  {useDetailedBalance
+                    ? detailedBalance.assignedHours.toFixed(1)
+                    : currentMonthBalance!.total_hours.toFixed(1)}
+                  h
+                </Text>
+                <Text style={styles.balanceStatLabel}>Horas Asignadas</Text>
+              </View>
 
-          <View style={styles.balanceStat}>
-            <Text style={styles.balanceStatValue}>
-              {currentMonthBalance.worked_hours.toFixed(1)}h
-            </Text>
-            <Text style={styles.balanceStatLabel}>Horas Trabajadas</Text>
-          </View>
+              <View style={styles.balanceStat}>
+                <Text style={styles.balanceStatValue}>
+                  {useDetailedBalance
+                    ? detailedBalance.laborablesHours.toFixed(1)
+                    : currentMonthBalance!.worked_hours.toFixed(1)}
+                  h
+                </Text>
+                <Text style={styles.balanceStatLabel}>
+                  {useDetailedBalance ? 'Horas Laborables' : 'Horas Trabajadas'}
+                </Text>
+              </View>
 
-          <View style={styles.balanceStat}>
-            <Text style={styles.balanceStatValue}>
-              {currentMonthBalance.holiday_hours.toFixed(1)}h
-            </Text>
-            <Text style={styles.balanceStatLabel}>Horas Festivos</Text>
-          </View>
-        </View>
+              <View style={styles.balanceStat}>
+                <Text style={styles.balanceStatValue}>
+                  {useDetailedBalance
+                    ? detailedBalance.holidaysHours.toFixed(1)
+                    : currentMonthBalance!.holiday_hours.toFixed(1)}
+                  h
+                </Text>
+                <Text style={styles.balanceStatLabel}>Horas Festivos</Text>
+              </View>
+            </View>
 
-        <View
-          style={[styles.finalBalanceContainer, { borderColor: balanceColor }]}
-        >
-          <Text style={[styles.finalBalanceLabel, { color: balanceColor }]}>
-            Balance Final
-          </Text>
-          <Text style={[styles.finalBalanceValue, { color: balanceColor }]}>
-            {balance > 0 ? '+' : ''}
-            {balance.toFixed(1)}h
-          </Text>
-          <Text style={styles.finalBalanceDescription}>
-            {balance > 0
-              ? 'Horas extras trabajadas'
-              : balance < 0
-                ? 'Horas pendientes de completar'
-                : 'Balance equilibrado'}
-          </Text>
-        </View>
+            {useDetailedBalance && (
+              <View style={styles.theoreticalHoursContainer}>
+                <Text style={styles.theoreticalHoursLabel}>
+                  Horas Teóricas Totales
+                </Text>
+                <Text style={styles.theoreticalHoursValue}>
+                  {detailedBalance.totalTheoreticalHours.toFixed(1)}h
+                </Text>
+              </View>
+            )}
+
+            <View
+              style={[
+                styles.finalBalanceContainer,
+                { borderColor: balanceColor },
+              ]}
+            >
+              <Text style={[styles.finalBalanceLabel, { color: balanceColor }]}>
+                Balance Final
+              </Text>
+              <Text style={[styles.finalBalanceValue, { color: balanceColor }]}>
+                {balance > 0 ? '+' : ''}
+                {balance.toFixed(1)}h
+              </Text>
+              <Text style={styles.finalBalanceDescription}>
+                {balance > 0
+                  ? 'Horas extras asignadas'
+                  : balance < 0
+                    ? 'Horas por debajo de asignación'
+                    : 'Balance equilibrado'}
+              </Text>
+            </View>
+          </>
+        )}
       </View>
     );
   };
@@ -295,6 +454,103 @@ export default function BalancesScreen(): React.JSX.Element {
       )}
     </View>
   );
+
+  const renderUserBalancesList = () => {
+    if (!showUserDetails || userBalances.length === 0) {
+      return null;
+    }
+
+    return (
+      <View style={styles.userBalancesContainer}>
+        <Text style={styles.userBalancesTitle}>
+          👥 Balance por Usuario - {monthNames[selectedMonth - 1]}
+        </Text>
+
+        {userBalances.map((userBalance) => {
+          const userBalanceColor = getBalanceColor(userBalance.difference);
+          return (
+            <View key={userBalance.userId} style={styles.userBalanceCard}>
+              <View style={styles.userBalanceHeader}>
+                <Text style={styles.userBalanceName}>
+                  {userBalance.userName} {userBalance.userSurname}
+                </Text>
+                <Text
+                  style={[
+                    styles.userBalanceDifference,
+                    { color: userBalanceColor },
+                  ]}
+                >
+                  {userBalance.difference > 0 ? '+' : ''}
+                  {userBalance.difference.toFixed(1)}h
+                </Text>
+              </View>
+
+              <View style={styles.userBalanceStats}>
+                <View style={styles.userBalanceStat}>
+                  <Text style={styles.userBalanceStatLabel}>Asignadas</Text>
+                  <Text style={styles.userBalanceStatValue}>
+                    {userBalance.assignedMonthlyHours.toFixed(1)}h
+                  </Text>
+                </View>
+                <View style={styles.userBalanceStat}>
+                  <Text style={styles.userBalanceStatLabel}>Laborables</Text>
+                  <Text style={styles.userBalanceStatValue}>
+                    {userBalance.laborablesMonthlyHours.toFixed(1)}h
+                  </Text>
+                </View>
+                <View style={styles.userBalanceStat}>
+                  <Text style={styles.userBalanceStatLabel}>Festivos</Text>
+                  <Text style={styles.userBalanceStatValue}>
+                    {userBalance.holidaysMonthlyHours.toFixed(1)}h
+                  </Text>
+                </View>
+                <View style={styles.userBalanceStat}>
+                  <Text style={styles.userBalanceStatLabel}>Teóricas</Text>
+                  <Text style={styles.userBalanceStatValue}>
+                    {userBalance.theoreticalMonthlyHours.toFixed(1)}h
+                  </Text>
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+    );
+  };
+
+  const renderToggleButton = () => {
+    if (userBalances.length === 0) return null;
+
+    return (
+      <View>
+        <TouchableOpacity
+          style={styles.toggleButton}
+          onPress={() => setShowUserDetails(!showUserDetails)}
+        >
+          <Text style={styles.toggleButtonText}>
+            {showUserDetails
+              ? '📊 Ocultar detalle por usuario'
+              : '👥 Ver detalle por usuario'}
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            {
+              backgroundColor: debugMode ? '#ef4444' : '#6b7280',
+              marginTop: 8,
+            },
+          ]}
+          onPress={() => setDebugMode(!debugMode)}
+        >
+          <Text style={styles.toggleButtonText}>
+            {debugMode ? '🐛 Debug OFF' : '🐛 Debug ON'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  };
 
   const renderHistoryList = () => (
     <View style={styles.historyContainer}>
@@ -363,6 +619,8 @@ export default function BalancesScreen(): React.JSX.Element {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
       {renderMonthSelector()}
       {renderBalanceCard()}
+      {renderToggleButton()}
+      {renderUserBalancesList()}
       {renderAssignmentsList()}
       {renderHistoryList()}
     </ScrollView>
@@ -578,5 +836,96 @@ const styles = StyleSheet.create({
     color: '#64748b',
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  theoreticalHoursContainer: {
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  theoreticalHoursLabel: {
+    fontSize: 12,
+    color: '#64748b',
+    marginBottom: 4,
+  },
+  theoreticalHoursValue: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#1e293b',
+  },
+  toggleButton: {
+    margin: 16,
+    marginTop: 0,
+    backgroundColor: '#3b82f6',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: 'white',
+  },
+  userBalancesContainer: {
+    margin: 16,
+    marginTop: 0,
+  },
+  userBalancesTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 12,
+  },
+  userBalanceCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  userBalanceHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  userBalanceName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1e293b',
+    flex: 1,
+  },
+  userBalanceDifference: {
+    fontSize: 16,
+    fontWeight: '700',
+  },
+  userBalanceStats: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  userBalanceStat: {
+    alignItems: 'center',
+    flex: 1,
+    paddingHorizontal: 2,
+  },
+  userBalanceStatLabel: {
+    fontSize: 9,
+    color: '#64748b',
+    marginBottom: 2,
+    textAlign: 'center',
+  },
+  userBalanceStatValue: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#374151',
   },
 });

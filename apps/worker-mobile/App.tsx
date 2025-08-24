@@ -3,7 +3,7 @@ import { NavigationContainer } from '@react-navigation/native';
 import { Text, View } from 'react-native';
 
 import { AuthProvider, useAuth } from './src/contexts/AuthContext';
-import { useNotifications } from './src/hooks/useNotifications';
+// import { useNotifications } from './src/hooks/useNotifications'; // Deshabilitado
 // Screens - Usando la misma estructura que el dashboard web
 import BalancesScreen from './src/screens/Balances';
 import HomeScreen from './src/screens/Home';
@@ -25,7 +25,7 @@ const NAV_ITEMS = [
 
 function RootTabs(): React.JSX.Element {
   const { user, loading } = useAuth();
-  const { isInitialized } = useNotifications(); // Inicializa automáticamente las notificaciones
+  // const { isInitialized } = useNotifications(); // Deshabilitado para evitar errores en Expo Go
 
   if (loading) {
     return (

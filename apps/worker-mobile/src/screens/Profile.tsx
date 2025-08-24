@@ -11,7 +11,6 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { useAuth } from '../contexts/AuthContext';
-import { useNotifications } from '../hooks/useNotifications';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { supabase } from '../lib/supabase';
 
@@ -37,12 +36,12 @@ interface UserSettings {
 
 export default function ProfileScreen(): React.JSX.Element {
   const { user, signOut } = useAuth();
-  const {
-    permissionStatus,
-    requestPermissions,
-    openSettings,
-    showNotification,
-  } = useNotifications();
+  // const {
+  //   permissionStatus,
+  //   requestPermissions,
+  //   openSettings,
+  //   showNotification,
+  // } = useNotifications(); // Deshabilitado para evitar errores en Expo Go
   const { isOnline, pendingActionsCount, syncInProgress, syncNow } =
     useOfflineSync();
   const [workerInfo, setWorkerInfo] = useState<WorkerInfo | null>(null);
@@ -124,6 +123,13 @@ export default function ProfileScreen(): React.JSX.Element {
   };
 
   const handleNotificationPermission = async (): Promise<void> => {
+    // Deshabilitado para evitar errores en Expo Go
+    Alert.alert(
+      'Notificaciones',
+      'Funcionalidad de notificaciones temporalmente deshabilitada en Expo Go. Se activará en la versión compilada.'
+    );
+
+    /*
     if (permissionStatus !== 'granted') {
       const granted = await requestPermissions();
       if (!granted) {
@@ -145,6 +151,7 @@ export default function ProfileScreen(): React.JSX.Element {
         });
       }
     }
+    */
   };
 
   const getWorkerTypeLabel = (type: string): string => {
@@ -244,21 +251,18 @@ export default function ProfileScreen(): React.JSX.Element {
           <View style={styles.settingInfo}>
             <Text style={styles.settingLabel}>Notificaciones</Text>
             <Text style={styles.settingDescription}>
-              Recibir notificaciones de servicios y cambios
-              {permissionStatus === 'denied' && ' (Permiso denegado)'}
-              {permissionStatus === 'loading' && ' (Verificando...)'}
+              Recibir notificaciones de servicios y cambios (Deshabilitado en
+              Expo Go)
             </Text>
           </View>
           <Switch
-            value={
-              settings.notifications_enabled && permissionStatus === 'granted'
-            }
+            value={settings.notifications_enabled}
             onValueChange={(value) =>
               updateSetting('notifications_enabled', value)
             }
             trackColor={{ false: '#f1f5f9', true: '#3b82f6' }}
             thumbColor={settings.notifications_enabled ? '#ffffff' : '#f4f4f5'}
-            disabled={permissionStatus === 'loading'}
+            disabled={true} // Deshabilitado en Expo Go
           />
         </View>
 
@@ -373,10 +377,10 @@ export default function ProfileScreen(): React.JSX.Element {
       const success = await syncNow();
       if (success) {
         Alert.alert('Éxito', 'Datos sincronizados correctamente');
-        await showNotification({
-          title: '✅ Sincronización Completa',
-          body: 'Todos los datos han sido sincronizados',
-        });
+        // await showNotification({
+        //   title: '✅ Sincronización Completa',
+        //   body: 'Todos los datos han sido sincronizados',
+        // }); // Deshabilitado en Expo Go
       } else {
         Alert.alert('Advertencia', 'Algunos datos no pudieron sincronizarse');
       }
