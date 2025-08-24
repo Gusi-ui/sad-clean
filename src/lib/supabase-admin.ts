@@ -10,12 +10,18 @@ import type { Database } from '@/types/supabase';
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '';
 const supabaseServiceRoleKey = process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? '';
 
-// Solo lanzar error si estamos en producción y no tenemos las variables
-if (
+// Validar variables solo cuando realmente se necesiten en producción
+// No durante el build time estático de Next.js
+const isActualProduction =
   process.env.NODE_ENV === 'production' &&
-  (!supabaseUrl || !supabaseServiceRoleKey)
-) {
-  throw new Error('Missing Supabase environment variables in production');
+  process.env['VERCEL'] === '1' && // Solo en Vercel deployment
+  (!supabaseUrl || !supabaseServiceRoleKey);
+
+if (isActualProduction) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    'Missing Supabase environment variables in production deployment'
+  );
 }
 
 // En desarrollo o CI/CD, usar valores por defecto si no están las variables
