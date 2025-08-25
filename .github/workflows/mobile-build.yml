@@ -48,7 +48,7 @@ jobs:
           cd mobile-app
           if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
             echo "Configuring EAS with token..."
-            npx eas-cli login --non-interactive --token ${{ secrets.EXPO_TOKEN || '' }}
+            echo ${{ secrets.EXPO_TOKEN || '' }} | npx eas-cli login
             npx eas-cli configure --non-interactive
           else
             echo "Skipping EAS setup - no token provided"
