@@ -2,10 +2,23 @@ import { createClient } from '@supabase/supabase-js';
 
 import { type NextRequest, NextResponse } from 'next/server';
 
-const supabase = createClient(
-  process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '',
-  process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? ''
-);
+const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
+const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
+
+if (
+  supabaseUrl === undefined ||
+  supabaseUrl === null ||
+  supabaseUrl === '' ||
+  supabaseKey === undefined ||
+  supabaseKey === null ||
+  supabaseKey === ''
+) {
+  throw new Error(
+    'Supabase configuration is missing. Please check your environment variables.'
+  );
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 interface Holiday {
   id: string;
@@ -179,6 +192,14 @@ const validateHolidaysIntegrity = (
 
 export const POST = async (request: NextRequest) => {
   try {
+    // Verificar configuración de Supabase
+    if (!supabaseUrl || !supabaseKey) {
+      return NextResponse.json(
+        { error: 'Configuración de Supabase no disponible' },
+        { status: 500 }
+      );
+    }
+
     const body = (await request.json()) as { year: number };
     const { year } = body;
 
