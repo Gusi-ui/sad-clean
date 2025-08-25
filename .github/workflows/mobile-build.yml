@@ -42,6 +42,11 @@ jobs:
           cd mobile-app
           npm install --legacy-peer-deps
 
+      - name: Generate icon
+        run: |
+          cd mobile-app
+          npm run generate-icon
+
       - name: Run linting
         run: |
           cd mobile-app
