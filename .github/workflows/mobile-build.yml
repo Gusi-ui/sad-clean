@@ -27,7 +27,7 @@ jobs:
         uses: expo/expo-github-action@v8
         with:
           expo-version: latest
-          token: ${{ secrets.EXPO_TOKEN }}
+          token: ${{ secrets.EXPO_TOKEN || '' }}
 
       - name: Install dependencies
         run: |
@@ -47,9 +47,16 @@ jobs:
       - name: Build APK
         run: |
           cd mobile-app
-          eas build --platform android --profile preview --non-interactive
+          # Intentar build con EAS si hay token, sino usar build local
+          if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
+            echo "Building with EAS..."
+            eas build --platform android --profile preview --non-interactive
+          else
+            echo "Building locally..."
+            npm run build:android
+          fi
         env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
