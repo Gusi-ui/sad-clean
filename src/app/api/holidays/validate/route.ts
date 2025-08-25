@@ -5,20 +5,20 @@ import { type NextRequest, NextResponse } from 'next/server';
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'];
 const supabaseKey = process.env['SUPABASE_SERVICE_ROLE_KEY'];
 
-if (
-  supabaseUrl === undefined ||
-  supabaseUrl === null ||
-  supabaseUrl === '' ||
-  supabaseKey === undefined ||
-  supabaseKey === null ||
-  supabaseKey === ''
-) {
-  throw new Error(
-    'Supabase configuration is missing. Please check your environment variables.'
-  );
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+// Solo crear el cliente si las variables están disponibles
+const createSupabaseClient = () => {
+  if (
+    supabaseUrl === undefined ||
+    supabaseUrl === null ||
+    supabaseUrl === '' ||
+    supabaseKey === undefined ||
+    supabaseKey === null ||
+    supabaseKey === ''
+  ) {
+    throw new Error('Supabase configuration is missing');
+  }
+  return createClient(supabaseUrl, supabaseKey);
+};
 
 interface Holiday {
   id: string;
@@ -192,20 +192,15 @@ const validateHolidaysIntegrity = (
 
 export const POST = async (request: NextRequest) => {
   try {
-    // Verificar configuración de Supabase
-    if (!supabaseUrl || !supabaseKey) {
-      return NextResponse.json(
-        { error: 'Configuración de Supabase no disponible' },
-        { status: 500 }
-      );
-    }
-
     const body = (await request.json()) as { year: number };
     const { year } = body;
 
     if (!year) {
       return NextResponse.json({ error: 'Año requerido' }, { status: 400 });
     }
+
+    // Crear cliente Supabase
+    const supabase = createSupabaseClient();
 
     // Obtener festivos del año
     const { data: holidays, error } = await supabase
