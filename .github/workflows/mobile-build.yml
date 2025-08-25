@@ -50,7 +50,14 @@ jobs:
       - name: Setup EAS Project
         run: |
           cd mobile-app
-          npm run setup-eas
+          if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
+            echo "Creating Expo project..."
+            npx eas-cli project:init --non-interactive
+            echo "Project created successfully"
+          else
+            echo "Skipping project creation - no token provided"
+            npm run setup-eas
+          fi
 
       - name: Run linting
         run: |
