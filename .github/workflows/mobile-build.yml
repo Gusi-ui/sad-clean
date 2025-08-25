@@ -50,10 +50,10 @@ jobs:
           # Intentar build con EAS si hay token, sino usar build local
           if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
             echo "Building with EAS..."
-            eas build --platform android --profile preview --non-interactive
+            npm run build:android
           else
             echo "Building locally..."
-            npm run build:android
+            npm run build:android-apk
           fi
         env:
           EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
