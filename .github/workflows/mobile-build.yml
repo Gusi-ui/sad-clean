@@ -43,6 +43,19 @@ jobs:
           cd mobile-app
           npm run type-check
 
+      - name: Setup EAS
+        run: |
+          cd mobile-app
+          if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
+            echo "Configuring EAS with token..."
+            npx eas-cli login --non-interactive --token ${{ secrets.EXPO_TOKEN || '' }}
+            npx eas-cli configure --non-interactive
+          else
+            echo "Skipping EAS setup - no token provided"
+          fi
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
+
       - name: Build APK
         run: |
           cd mobile-app
