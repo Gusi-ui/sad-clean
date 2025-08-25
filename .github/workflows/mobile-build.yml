@@ -1,0 +1,86 @@
+name: Build Mobile APK
+
+on:
+  push:
+    branches: [mobile-app]
+  pull_request:
+    branches: [mobile-app]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build Android APK
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+          cache: "npm"
+          cache-dependency-path: mobile-app/package-lock.json
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: |
+          cd mobile-app
+          npm ci
+
+      - name: Run linting
+        run: |
+          cd mobile-app
+          npm run lint
+
+      - name: Run type checking
+        run: |
+          cd mobile-app
+          npm run type-check
+
+      - name: Build APK
+        run: |
+          cd mobile-app
+          eas build --platform android --profile preview --non-interactive
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: |
+            mobile-app/android/app/build/outputs/apk/release/
+            mobile-app/android/app/build/outputs/bundle/release/
+          retention-days: 30
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/mobile-app' && github.event_name == 'push'
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            mobile-app/android/app/build/outputs/apk/release/*.apk
+            mobile-app/android/app/build/outputs/bundle/release/*.aab
+          tag_name: v${{ github.run_number }}-mobile
+          name: Mobile App v${{ github.run_number }}
+          body: |
+            📱 Build automático de la aplicación móvil SAD LAS Worker
+
+            **Cambios incluidos:**
+            - ${{ github.event.head_commit.message }}
+
+            **Descarga:**
+            - APK: Para instalación directa
+            - AAB: Para Google Play Store
+
+            **Notas:**
+            - Este es un build automático de la rama mobile-app
+            - Probar en dispositivos antes de distribución
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
