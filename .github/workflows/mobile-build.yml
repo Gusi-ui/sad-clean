@@ -23,11 +23,10 @@ jobs:
           cache: "npm"
           cache-dependency-path: mobile-app/package-lock.json
 
-      - name: Setup Expo
-        uses: expo/expo-github-action@v8
-        with:
-          expo-version: latest
-          token: ${{ secrets.EXPO_TOKEN || '' }}
+      - name: Setup Expo CLI
+        run: |
+          npm install -g @expo/cli
+          npm install -g eas-cli
 
       - name: Install dependencies
         run: |
