@@ -23,6 +23,15 @@ jobs:
           cache: "npm"
           cache-dependency-path: mobile-app/package-lock.json
 
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: "zulu"
+          java-version: "17"
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
       - name: Setup Expo CLI
         run: |
           npm install -g @expo/cli
@@ -46,16 +55,8 @@ jobs:
       - name: Build APK
         run: |
           cd mobile-app
-          # Intentar build con EAS si hay token, sino usar build local
-          if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
-            echo "Building with EAS..."
-            npm run build:android
-          else
-            echo "Building locally..."
-            npm run build:android-apk
-          fi
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
+          echo "Building locally with Expo..."
+          npm run build:android-apk
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
