@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           cd mobile-app
-          npm ci
+          npm install --legacy-peer-deps
 
       - name: Run linting
         run: |
