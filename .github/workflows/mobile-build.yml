@@ -51,6 +51,8 @@ jobs:
         run: |
           cd mobile-app
           if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
+            echo "Logging in to Expo..."
+            echo ${{ secrets.EXPO_TOKEN || '' }} | npx eas-cli login
             echo "Creating Expo project..."
             npx eas-cli project:init --non-interactive
             echo "Project created successfully"
@@ -58,6 +60,8 @@ jobs:
             echo "Skipping project creation - no token provided"
             npm run setup-eas
           fi
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
 
       - name: Run linting
         run: |
