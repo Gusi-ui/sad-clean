@@ -36,7 +36,7 @@ jobs:
       - name: Run linting
         run: |
           cd mobile-app
-          npm run lint
+          npx eslint . --ext .ts,.tsx
 
       - name: Run type checking
         run: |
