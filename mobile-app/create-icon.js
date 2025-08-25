@@ -1,5 +1,13 @@
 const fs = require('fs');
+const path = require('path');
 const { createCanvas } = require('canvas');
+
+// Crear directorio assets si no existe
+const assetsDir = './assets';
+if (!fs.existsSync(assetsDir)) {
+  fs.mkdirSync(assetsDir, { recursive: true });
+  console.log('Directorio assets creado');
+}
 
 // Crear un canvas de 1024x1024 (tamaño estándar para iconos)
 const canvas = createCanvas(1024, 1024);
@@ -24,6 +32,7 @@ ctx.fillText('SAD', 512, 512);
 
 // Guardar como PNG
 const buffer = canvas.toBuffer('image/png');
-fs.writeFileSync('./assets/icon.png', buffer);
+const iconPath = path.join(assetsDir, 'icon.png');
+fs.writeFileSync(iconPath, buffer);
 
 console.log('Icono PNG creado exitosamente en ./assets/icon.png');
