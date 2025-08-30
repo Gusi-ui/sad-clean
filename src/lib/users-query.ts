@@ -37,13 +37,13 @@ export const getActiveUsers = async (): Promise<User[]> => {
       .order('name');
 
     if (error !== null) {
-            securityLogger.error('Error fetching active users:', error);
+      securityLogger.error('Error fetching active users:', error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-        securityLogger.error('Error in getActiveUsers:', error);
+    securityLogger.error('Error in getActiveUsers:', error);
     throw error;
   }
 };
@@ -63,13 +63,13 @@ export const searchUsers = async (searchTerm: string): Promise<User[]> => {
       .order('name');
 
     if (error !== null) {
-            securityLogger.error('Error searching users:', error);
+      securityLogger.error('Error searching users:', error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-        securityLogger.error('Error in searchUsers:', error);
+    securityLogger.error('Error in searchUsers:', error);
     throw error;
   }
 };
@@ -86,13 +86,13 @@ export const getUserById = async (id: string): Promise<User | null> => {
       .single();
 
     if (error !== null) {
-            securityLogger.error('Error fetching user by ID:', error);
+      securityLogger.error('Error fetching user by ID:', error);
       throw error;
     }
 
     return data as User;
   } catch (error) {
-        securityLogger.error('Error in getUserById:', error);
+    securityLogger.error('Error in getUserById:', error);
     throw error;
   }
 };
@@ -113,13 +113,13 @@ export const updateUser = async (
       .single();
 
     if (error) {
-            securityLogger.error('Error updating user:', error);
+      securityLogger.error('Error updating user:', error);
       throw error;
     }
 
     return data as User;
   } catch (error) {
-        securityLogger.error('Error in updateUser:', error);
+    securityLogger.error('Error in updateUser:', error);
     throw error;
   }
 };
@@ -187,11 +187,11 @@ export const deleteUser = async (id: string): Promise<void> => {
     const { error } = await supabase.from('users').delete().eq('id', id);
 
     if (error) {
-            securityLogger.error('Error deleting user:', error);
+      securityLogger.error('Error deleting user:', error);
       throw error;
     }
   } catch (error) {
-        securityLogger.error('Error in deleteUser:', error);
+    securityLogger.error('Error in deleteUser:', error);
     throw error;
   }
 };
@@ -211,7 +211,7 @@ export const getUsersStats = async (): Promise<{
       .select('id, is_active');
 
     if (error !== null) {
-            securityLogger.error('Error fetching users stats:', error);
+      securityLogger.error('Error fetching users stats:', error);
       throw error;
     }
 
@@ -230,7 +230,7 @@ export const getUsersStats = async (): Promise<{
 
     return stats;
   } catch (error) {
-        securityLogger.error('Error in getUsersStats:', error);
+    securityLogger.error('Error in getUsersStats:', error);
     throw error;
   }
 };
