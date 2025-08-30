@@ -89,7 +89,7 @@ const scrapeHolidaysFromMataroWebsite = async (
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
-    if (!row) continue;
+    if (row === null || row === undefined) continue;
 
     const cells = row.querySelectorAll('td');
 
@@ -97,7 +97,12 @@ const scrapeHolidaysFromMataroWebsite = async (
       const dateCell = cells[0]?.textContent?.trim();
       const nameCell = cells[1]?.textContent?.trim();
 
-      if (dateCell?.trim() !== undefined && nameCell?.trim() !== undefined) {
+      if (
+        dateCell?.trim() !== undefined &&
+        dateCell.trim() !== '' &&
+        nameCell?.trim() !== undefined &&
+        nameCell.trim() !== ''
+      ) {
         const dateMatch = dateCell.match(/(\d+)\s+(?:de|d[''])\s*(\w+)/);
         if (dateMatch) {
           const day = parseInt(dateMatch[1] ?? '0');

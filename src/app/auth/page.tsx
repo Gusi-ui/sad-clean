@@ -8,7 +8,7 @@ export default function AuthPage() {
   const { isPasswordRecovery, loading } = useAuth();
 
   // Muestra un loader mientras el contexto determina el estado inicial
-  if (loading) {
+  if (loading === true) {
     return (
       <div className='min-h-screen flex items-center justify-center'>
         {/* Aquí podrías poner un spinner o cualquier indicador de carga */}
@@ -18,7 +18,7 @@ export default function AuthPage() {
   }
 
   // Si el contexto dice que estamos en modo recuperación, muestra el formulario de reseteo.
-  if (isPasswordRecovery) {
+  if (isPasswordRecovery === true) {
     return <ResetPasswordForm />;
   }
 

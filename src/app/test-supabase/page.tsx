@@ -38,7 +38,6 @@ export default function TestSupabase() {
       }
     };
 
-    // eslint-disable-next-line no-void
     void testConnection();
   }, []);
 

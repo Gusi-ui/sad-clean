@@ -128,6 +128,7 @@ const TomorrowServicesList = (props: {
 
 export default function TomorrowPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [tomorrowAssignments, setTomorrowAssignments] = useState<
     AssignmentRow[]
   >([]);
@@ -223,7 +224,7 @@ export default function TomorrowPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setTomorrowAssignments([]);
         setLoading(false);
         return;
@@ -236,7 +237,7 @@ export default function TomorrowPage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -316,7 +317,7 @@ export default function TomorrowPage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [getTomorrowSlots, tomorrowKey, user?.email]);
+  }, [getTomorrowSlots, tomorrowKey, currentUser?.email]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {

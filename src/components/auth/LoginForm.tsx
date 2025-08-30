@@ -72,10 +72,13 @@ export default function LoginForm() {
       // Guardar email en localStorage
       localStorage.setItem('sad_last_email', email);
 
-      const { error: signInError, redirectTo } = await signIn(email, password);
+      const { error: signInError, redirectTo } = await signIn({
+        email,
+        password,
+      });
 
       if (signInError !== null) {
-        setError(signInError.message);
+        setError(signInError ?? 'Error de autenticación');
       } else if (redirectTo !== undefined) {
         router.push(redirectTo);
       }
@@ -87,7 +90,6 @@ export default function LoginForm() {
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
-    // eslint-disable-next-line no-void
     void handleSubmit(e);
   };
 

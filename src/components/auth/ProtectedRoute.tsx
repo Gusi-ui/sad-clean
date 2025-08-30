@@ -24,13 +24,13 @@ export default function ProtectedRoute({
   useEffect(() => {
     if (!loading) {
       // Si no hay usuario, redirigir al login
-      if (!user) {
+      if (user === null || user === undefined) {
         router.push('/auth');
         return;
       }
 
       // Si se requiere un rol específico, verificarlo
-      if (requiredRole) {
+      if (requiredRole !== null && requiredRole !== undefined) {
         const userRole = user.role;
 
         // Permitir que super_admin acceda a páginas de admin
@@ -72,12 +72,12 @@ export default function ProtectedRoute({
   }
 
   // Si no hay usuario, no mostrar nada (ya se está redirigiendo)
-  if (!user) {
+  if (user === null || user === undefined) {
     return null;
   }
 
   // Si se requiere un rol específico, verificar acceso
-  if (requiredRole) {
+  if (requiredRole !== null && requiredRole !== undefined) {
     const userRole = user.role;
     const hasAccess =
       userRole === requiredRole ||

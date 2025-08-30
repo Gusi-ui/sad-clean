@@ -70,11 +70,11 @@ export const createAdmin = async (
     client_code: '',
     monthly_assigned_hours: 0,
     medical_conditions: [],
-    emergency_contact: {
-      name: '',
-      phone: '',
-      relationship: '',
-    },
+    // emergency_contact: {
+    //   name: '',
+    //   phone: '',
+    //   relationship: '',
+    // }, // Comentado porque no está en el tipo User
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),

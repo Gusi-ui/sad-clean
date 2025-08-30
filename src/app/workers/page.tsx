@@ -30,18 +30,19 @@ const isValidField = (field: unknown): field is string =>
 /* eslint-disable react/jsx-closing-tag-location */
 export default function WorkersPage() {
   const { user } = useAuth();
+  const currentUser = user;
   const [dashboardUrl, setDashboardUrl] = useState('/dashboard');
 
   // Determinar la URL del dashboard según el rol del usuario
   useEffect(() => {
-    if (user?.role === 'super_admin') {
+    if (currentUser?.role === 'super_admin') {
       setDashboardUrl('/super-dashboard');
-    } else if (user?.role === 'admin') {
+    } else if (currentUser?.role === 'admin') {
       setDashboardUrl('/dashboard');
-    } else if (user?.role === 'worker') {
+    } else if (currentUser?.role === 'worker') {
       setDashboardUrl('/worker-dashboard');
     }
-  }, [user?.role]);
+  }, [currentUser?.role]);
 
   const [workers, setWorkers] = useState<WorkerType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -336,11 +337,11 @@ export default function WorkersPage() {
         }
 
         const workerData = {
-          name: editingWorker.name?.trim() ?? '',
-          surname: editingWorker.surname?.trim() ?? '',
-          email: editingWorker.email?.trim() ?? '',
-          phone: editingWorker.phone?.trim() ?? '',
-          dni: editingWorker.dni?.trim() ?? '',
+          name: (editingWorker.name ?? '').trim(),
+          surname: (editingWorker.surname ?? '').trim(),
+          email: (editingWorker.email ?? '').trim(),
+          phone: (editingWorker.phone ?? '').trim(),
+          dni: (editingWorker.dni ?? '').trim(),
           worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
         } as WorkerInsert;

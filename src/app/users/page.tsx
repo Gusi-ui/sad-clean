@@ -12,9 +12,8 @@ import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  logUserCreated,
-  logUserDeleted,
-  logUserUpdated,
+  logUserManagementActivity,
+  logUserUpdateActivity,
 } from '@/lib/activities-query';
 import {
   createUser,
@@ -286,12 +285,12 @@ export default function UsersPage() {
       city: '',
       client_code: generateUserCode(), // Auto-generar código
       monthly_assigned_hours: 0,
-      medical_conditions: [],
-      emergency_contact: {
-        name: '',
-        phone: '',
-        relationship: '',
-      },
+      // medical_conditions: [], // Comentado porque no está en el tipo User
+      // emergency_contact: {
+      //   name: '',
+      //   phone: '',
+      //   relationship: '',
+      // }, // Comentado porque no está en el tipo User
       is_active: true,
     });
     setUserValidationErrors({
@@ -348,11 +347,12 @@ export default function UsersPage() {
 
         // Log de creación de usuario
         if (user) {
-          await logUserCreated(
-            `${newUser.name} ${newUser.surname}`,
-            newUser.id,
+          await logUserManagementActivity(
             (user.user_metadata?.['name'] as string) || 'Administrador',
-            user.email || ''
+            user.email || '',
+            'creó',
+            `${newUser.name} ${newUser.surname}`,
+            newUser.id
           );
         }
       } else {
@@ -369,11 +369,12 @@ export default function UsersPage() {
 
           // Log de actualización de usuario
           if (user) {
-            await logUserUpdated(
-              `${updatedUser.name} ${updatedUser.surname}`,
-              updatedUser.id,
+            await logUserUpdateActivity(
               (user.user_metadata?.['name'] as string) || 'Administrador',
-              user.email || ''
+              user.email || '',
+              'actualizó',
+              `${updatedUser.name} ${updatedUser.surname}`,
+              updatedUser.id
             );
           }
         }
@@ -412,11 +413,12 @@ export default function UsersPage() {
 
       // Log de eliminación de usuario
       if (user) {
-        await logUserDeleted(
-          `${userToDelete.name} ${userToDelete.surname}`,
-          userToDelete.id,
+        await logUserManagementActivity(
           (user.user_metadata?.['name'] as string) || 'Administrador',
-          user.email || ''
+          user.email || '',
+          'eliminó',
+          `${userToDelete.name} ${userToDelete.surname}`,
+          userToDelete.id
         );
       }
 
@@ -929,12 +931,12 @@ export default function UsersPage() {
                     <div className='flex items-center space-x-4'>
                       <span
                         className={`inline-flex px-3 py-1 text-sm font-semibold rounded-full ${
-                          currentUser.is_active
+                          currentUser.is_active === true
                             ? 'bg-green-100 text-green-800 border border-green-300'
                             : 'bg-red-100 text-red-800 border border-red-300'
                         }`}
                       >
-                        {currentUser.is_active ? 'Activo' : 'Inactivo'}
+                        {currentUser.is_active === true ? 'Activo' : 'Inactivo'}
                       </span>
                       <div className='flex space-x-3'>
                         <Button
@@ -1298,12 +1300,12 @@ export default function UsersPage() {
                   <p className='text-gray-600'>{selectedUser.email}</p>
                   <span
                     className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                      selectedUser.is_active
+                      selectedUser.is_active === true
                         ? 'bg-green-100 text-green-800'
                         : 'bg-red-100 text-red-800'
                     }`}
                   >
-                    {selectedUser.is_active ? 'Activo' : 'Inactivo'}
+                    {selectedUser.is_active === true ? 'Activo' : 'Inactivo'}
                   </span>
                 </div>
               </div>

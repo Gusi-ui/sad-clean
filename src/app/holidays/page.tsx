@@ -260,7 +260,7 @@ export default function HolidaysPage(): React.JSX.Element {
   };
 
   useEffect(() => {
-    if (user) {
+    if (user !== null && user !== undefined) {
       loadHolidays(selectedYear).catch((err) =>
         setToastMessage({
           message: `Error al cargar festivos en useEffect: ${err instanceof Error ? err.message : String(err)}`,

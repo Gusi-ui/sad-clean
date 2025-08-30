@@ -26,6 +26,7 @@ type WorkerUserBalanceRow = {
 
 export default function WorkerBalancesPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const today = useMemo(() => new Date(), []);
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(
@@ -65,7 +66,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) return;
+      if (currentUser?.email === undefined) return;
       setLoading(true);
       setError(null);
       try {
@@ -73,7 +74,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
         const { data: wdata, error: werr } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
         if (werr !== null || wdata === null) {
           setRows([]);
@@ -183,7 +184,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [user?.email, currentYear, currentMonth]);
+  }, [currentUser?.email, currentYear, currentMonth]);
 
   const totals = useMemo(() => {
     const assigned = rows.reduce((a, r) => a + r.assignedMonthlyHours, 0);

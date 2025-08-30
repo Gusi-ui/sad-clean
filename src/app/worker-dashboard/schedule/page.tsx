@@ -150,7 +150,7 @@ const WeeklySchedule = (props: {
         acc[slot.date] = [];
       }
       const array = acc[slot.date];
-      if (array) {
+      if (array !== undefined) {
         array.push(slot);
       }
       return acc;
@@ -609,6 +609,7 @@ const WorkerMonthCalendar = (props: {
 }; */
 export default function SchedulePage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>(
@@ -731,7 +732,7 @@ export default function SchedulePage(): React.JSX.Element {
   );
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setAssignments([]);
         setLoading(false);
         return;
@@ -742,7 +743,7 @@ export default function SchedulePage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
         if (workerError !== null || workerData === null) {
           setAssignments([]);
@@ -812,7 +813,7 @@ export default function SchedulePage(): React.JSX.Element {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
   }, [
-    user?.email,
+    currentUser?.email,
     weekRange.start,
     weekRange.end,
     nextWeekRange.start,

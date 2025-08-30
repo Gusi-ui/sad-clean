@@ -146,7 +146,7 @@ const RouteMap = ({ routeStops }: RouteMapProps): React.JSX.Element => {
 
     // Agregar marcadores para cada parada (numeración global según orden de la lista)
     for (let idx = 0; idx < routeStops.length; idx++) {
-      const stop = routeStops[idx] as RouteStop;
+      const stop = routeStops[idx];
       if (
         stop.address !== null &&
         stop.address !== undefined &&

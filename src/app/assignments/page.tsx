@@ -15,9 +15,9 @@ import Input from '@/components/ui/Input';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardUrl } from '@/hooks/useDashboardUrl';
 import {
-  logAssignmentCreated,
-  logAssignmentDeleted,
-  logAssignmentUpdated,
+  logAssignmentCreationActivity,
+  logAssignmentDeleteActivity,
+  logAssignmentUpdateActivityDetailed,
 } from '@/lib/activities-query';
 import { supabase } from '@/lib/database';
 import type { Json } from '@/types/supabase';
@@ -61,9 +61,8 @@ export default function AssignmentsPage() {
     if (typeof schedule === 'string') {
       try {
         return JSON.parse(schedule) as Record<string, unknown>;
-      } catch (parseErr) {
-        // eslint-disable-next-line no-console
-        console.error('Error parsing schedule JSON:', parseErr);
+      } catch {
+        // console.error('Error parsing schedule JSON:', parseErr); // Comentado para producción
         // Retornar un schedule por defecto si el parsing falla
         return {
           monday: {
@@ -245,7 +244,7 @@ export default function AssignmentsPage() {
             typeof nameMeta === 'string' && nameMeta.trim().length > 0
               ? nameMeta
               : 'Administrador';
-          const adminEmail = typeof user?.email === 'string' ? user.email : '';
+          // const adminEmail = typeof user?.email === 'string' ? user.email : ''; // Comentado porque no se usa
           const workerFullName =
             assignment.worker?.name !== undefined &&
             assignment.worker?.surname !== undefined
@@ -278,7 +277,13 @@ export default function AssignmentsPage() {
             deleteDetails.user_name = userFullName;
           }
 
-          await logAssignmentDeleted(adminName, adminEmail, deleteDetails);
+          await logAssignmentDeleteActivity(
+            adminName,
+            'eliminó',
+            assignment.assignment_type,
+            `${assignment.worker?.name} ${assignment.worker?.surname}`,
+            `${assignment.user?.name} ${assignment.user?.surname}`
+          );
         }
       } catch (deleteErr) {
         logger.error('Error eliminando asignación:', deleteErr);
@@ -917,10 +922,18 @@ export default function AssignmentsPage() {
                   createDetails.end_date =
                     data.end_date.trim() === '' ? null : data.end_date;
 
-                  await logAssignmentCreated(
+                  await logAssignmentCreationActivity(
                     adminName,
                     adminEmail,
-                    createDetails
+                    'creó',
+                    data.assignment_type,
+                    'Trabajador', // Usar valor por defecto
+                    data.worker_id,
+                    'Usuario', // Usar valor por defecto
+                    data.user_id,
+                    data.start_date,
+                    data.end_date,
+                    calculateWeeklyHours(scheduleWithHoliday)
                   );
                 }
               } catch (createErr) {
@@ -935,7 +948,6 @@ export default function AssignmentsPage() {
                 setError(`Error creando asignación: ${message}`);
               }
             };
-            // eslint-disable-next-line no-void
             void handleSubmit();
           }}
           mode='create'
@@ -1098,10 +1110,19 @@ export default function AssignmentsPage() {
                     updateDetails.user_name = userFullName;
                   }
 
-                  await logAssignmentUpdated(
+                  await logAssignmentUpdateActivityDetailed(
                     adminName,
                     adminEmail,
-                    updateDetails
+                    'actualizó',
+                    editingAssignment.id,
+                    data.assignment_type,
+                    'Trabajador', // Usar valor por defecto
+                    data.worker_id,
+                    'Usuario', // Usar valor por defecto
+                    data.user_id,
+                    data.start_date,
+                    data.end_date,
+                    updatedWeeklyHours
                   );
                 }
               } catch (updateErr) {
@@ -1116,7 +1137,6 @@ export default function AssignmentsPage() {
                 setError(`Error actualizando asignación: ${message}`);
               }
             };
-            // eslint-disable-next-line no-void
             void handleSubmit();
           }}
           initialData={
