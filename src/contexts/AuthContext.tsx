@@ -2,6 +2,8 @@
 
 import React, { createContext, useContext, useEffect, useReducer } from 'react';
 
+import { secureStorage } from '@/utils/secure-storage';
+
 import { authenticateWorker } from '../lib/api';
 import type {
   AuthContextType,
@@ -83,10 +85,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         if (typeof window === 'undefined' || window === null) return;
 
-        const workerData = localStorage.getItem('worker');
-        if (workerData !== null && workerData !== '' && workerData.length > 0) {
-          const worker = JSON.parse(workerData) as Worker;
-          dispatch({ type: 'AUTH_SUCCESS', payload: worker });
+        const workerData = secureStorage.getItem<Worker>('worker');
+        if (workerData !== null) {
+          dispatch({ type: 'AUTH_SUCCESS', payload: workerData });
         } else {
           dispatch({ type: 'AUTH_FAILURE', payload: '' });
         }
@@ -122,16 +123,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const authResponse = response.data as AuthResponse;
       const worker = authResponse.worker;
 
-      // Guardar en localStorage
+      // Guardar en almacenamiento seguro
       if (typeof window !== 'undefined') {
-        localStorage.setItem('worker', JSON.stringify(worker));
+        secureStorage.setItem('worker', worker);
         if (
           authResponse.token !== undefined &&
           authResponse.token !== null &&
           authResponse.token !== '' &&
           typeof authResponse.token === 'string'
         ) {
-          localStorage.setItem('token', authResponse.token);
+          secureStorage.setItem('token', authResponse.token);
         }
       }
 
@@ -145,10 +146,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async (): Promise<void> => {
     try {
-      // Limpiar localStorage
+      // Limpiar almacenamiento seguro
       if (typeof window !== 'undefined') {
-        localStorage.removeItem('worker');
-        localStorage.removeItem('token');
+        secureStorage.removeItem('worker');
+        secureStorage.removeItem('token');
       }
       dispatch({ type: 'AUTH_LOGOUT' });
     } catch {

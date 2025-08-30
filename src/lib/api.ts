@@ -1,6 +1,7 @@
 /**
  * API Client para conectar con el proyecto web SAD LAS
  */
+import { securityConfig, securityLogger } from '@/utils/security-config';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
 
@@ -24,9 +25,10 @@ class ApiClient {
       const url = `${this.baseURL}${endpoint}`;
       const response = await fetch(url, {
         headers: {
-          'Content-Type': 'application/json',
+          ...securityConfig.secureHeaders,
           ...options.headers,
         },
+        ...securityConfig.corsConfig,
         ...options,
       });
 
@@ -37,7 +39,7 @@ class ApiClient {
       const data = (await response.json()) as T;
       return { data };
     } catch (error) {
-      // console.error('API request failed:', error); // Comentado para producción
+      securityLogger.error('API request failed', error);
       return {
         data: null as T,
         error: error instanceof Error ? error.message : 'Unknown error',
