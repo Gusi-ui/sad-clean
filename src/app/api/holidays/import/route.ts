@@ -103,7 +103,7 @@ const scrapeHolidaysFromMataroWebsite = async (
         nameCell?.trim() !== undefined &&
         nameCell.trim() !== ''
       ) {
-        const dateMatch = dateCell.match(/(\d+)\s+(?:de|d[''])\s*(\w+)/);
+        const dateMatch = dateCell.match(/(\d+)\s+(?:de|d['])\s*(\w+)/);
         if (dateMatch) {
           const day = parseInt(dateMatch[1] ?? '0');
           const monthName = (dateMatch[2] ?? '').toLowerCase();
