@@ -24,7 +24,7 @@ permitir acceso desde los dominios locales de desarrollo.
 ### 3. Configurar la API Key
 
 1. Ve a **"APIs & Services" > "Credentials"**
-2. Encuentra tu API key: `AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ`
+2. Encuentra tu API key: `TU_API_KEY_AQUI` (reemplaza con tu clave real)
 3. Haz clic en ella para editarla
 
 ### 4. Configurar Restricciones de Aplicación
