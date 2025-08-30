@@ -1,3 +1,5 @@
+import { securityLogger } from '@/utils/security-config';
+
 // Utilidades para Google Maps
 export interface GoogleMapsConfig {
   apiKey: string;
@@ -149,8 +151,7 @@ export const loadGoogleMapsAPI = (
           }
         })().catch((e: unknown) => {
           // Registrar en consola de desarrollo sin interrumpir UX
-          // eslint-disable-next-line no-console
-          console.error('Error inicializando Google Maps:', e);
+          securityLogger.error('Error inicializando Google Maps:', e);
         });
       }, 1000);
     };
