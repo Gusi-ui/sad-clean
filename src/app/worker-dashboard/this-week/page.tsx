@@ -177,7 +177,7 @@ const WeekServicesList = (props: {
       acc[row.date] = [];
     }
     const array = acc[row.date];
-    if (array) {
+    if (array !== undefined) {
       array.push(row);
     }
     return acc;
@@ -236,6 +236,7 @@ const WeekServicesList = (props: {
 
 export default function ThisWeekPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [weekAssignments, setWeekAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
@@ -329,7 +330,7 @@ export default function ThisWeekPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setWeekAssignments([]);
         setLoading(false);
         return;
@@ -342,7 +343,7 @@ export default function ThisWeekPage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -440,7 +441,7 @@ export default function ThisWeekPage(): React.JSX.Element {
     getWeekSlots,
     weekRange.start,
     weekRange.end,
-    user?.email,
+    currentUser?.email,
     hasLoadedOnce,
   ]);
 

@@ -36,8 +36,12 @@ export default function ResetPasswordForm() {
     try {
       const { error: updateError } = await updatePassword(password);
 
-      if (updateError) {
-        setError(updateError.message || 'Error al actualizar la contraseña.');
+      if (
+        updateError !== null &&
+        updateError !== undefined &&
+        updateError !== ''
+      ) {
+        setError(updateError || 'Error al actualizar la contraseña.');
       } else {
         setSuccess(
           '¡Contraseña actualizada con éxito! Redirigiendo al login...'

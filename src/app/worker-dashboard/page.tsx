@@ -157,6 +157,7 @@ const ServicesTodayList = (props: {
 
 export default function WorkerDashboard(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
   const [weeklyHours, setWeeklyHours] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -373,7 +374,7 @@ export default function WorkerDashboard(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setTodayAssignments([]);
         setLoading(false);
         return;
@@ -386,7 +387,7 @@ export default function WorkerDashboard(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -797,8 +798,8 @@ export default function WorkerDashboard(): React.JSX.Element {
     nextWeekRange.end,
     thisMonthRange.start,
     thisMonthRange.end,
-    user?.email,
-    user?.id,
+    currentUser?.email,
+    currentUser?.id,
     getSlotsForDate,
   ]);
 
@@ -838,12 +839,12 @@ export default function WorkerDashboard(): React.JSX.Element {
   }, [todayAssignments, getTodaySlots, isHolidayToday]);
 
   const displayName = useMemo(() => {
-    const meta = user?.name;
+    const meta = currentUser?.name;
     if (typeof meta === 'string' && meta.trim() !== '') return meta;
-    const email = user?.email ?? '';
+    const email = currentUser?.email ?? '';
     if (email.includes('@')) return email.split('@')[0] ?? 'Trabajadora';
     return 'Trabajadora';
-  }, [user?.email, user?.name]);
+  }, [currentUser?.email, currentUser?.name]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {

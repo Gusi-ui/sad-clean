@@ -182,7 +182,7 @@ const DailyRoute = (props: {
                             Viaje:{' '}
                             {(() => {
                               const nextStop = routeStops[index + 1];
-                              return nextStop
+                              return nextStop !== null && nextStop !== undefined
                                 ? calculateEstimatedTime(stop, nextStop)
                                 : '';
                             })()}
@@ -243,7 +243,8 @@ const DailyRoute = (props: {
                     if (routeStops.length === 0) return 'N/A';
                     const firstStop = routeStops[0];
                     const lastStop = routeStops[routeStops.length - 1];
-                    if (!firstStop || !lastStop) return 'N/A';
+                    if (firstStop === undefined || lastStop === undefined)
+                      return 'N/A';
                     return calculateDuration(firstStop.start, lastStop.end);
                   })()}
                 </p>
@@ -258,6 +259,7 @@ const DailyRoute = (props: {
 
 export default function RoutePage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   // const [currentLocation, setCurrentLocation] = useState<{
@@ -341,7 +343,7 @@ export default function RoutePage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setTodayAssignments([]);
         setLoading(false);
         return;
@@ -354,7 +356,7 @@ export default function RoutePage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -416,7 +418,7 @@ export default function RoutePage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [getRouteSlots, todayKey, user?.email]);
+  }, [getRouteSlots, todayKey, currentUser?.email]);
 
   const today = new Date();
   const todayFormatted = today.toLocaleDateString('es-ES', {

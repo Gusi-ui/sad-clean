@@ -182,7 +182,7 @@ const MonthServicesList = (props: {
       acc[weekKey] = [];
     }
     const array = acc[weekKey];
-    if (array) {
+    if (array !== undefined) {
       array.push(row);
     }
     return acc;
@@ -230,7 +230,7 @@ const MonthServicesList = (props: {
                 acc[row.date] = [];
               }
               const array = acc[row.date];
-              if (array) {
+              if (array !== undefined) {
                 array.push(row);
               }
               return acc;
@@ -292,6 +292,7 @@ const MonthServicesList = (props: {
 
 export default function ThisMonthPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [monthAssignments, setMonthAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
@@ -385,7 +386,7 @@ export default function ThisMonthPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setMonthAssignments([]);
         setLoading(false);
         return;
@@ -398,7 +399,7 @@ export default function ThisMonthPage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -496,7 +497,7 @@ export default function ThisMonthPage(): React.JSX.Element {
     getMonthSlots,
     monthRange.start,
     monthRange.end,
-    user?.email,
+    currentUser?.email,
     hasLoadedOnce,
   ]);
 

@@ -1,462 +1,176 @@
-// ============================================================================
-// TIPOS PRINCIPALES - SAD LAS
-// ============================================================================
+/**
+ * Tipos TypeScript para la aplicación SAD LAS
+ */
 
-// ============================================================================
-// TIPOS DE AUTENTICACIÓN
-// ============================================================================
-
-export interface AuthUser {
-  id: string;
-  email: string;
-  role: 'super_admin' | 'admin' | 'worker';
-  created_at: string;
-  updated_at: string;
-}
-
-// Alias para compatibilidad con AuthContext
-export interface AppUser {
-  id: string;
-  email: string;
-  name: string;
-  role: 'super_admin' | 'admin' | 'worker' | null;
-  user_metadata?: { [key: string]: string | number | boolean | null };
-}
-
-export interface LoginCredentials {
-  email: string;
-  password: string;
-}
-
-export interface RegisterData extends LoginCredentials {
-  name: string;
-  surname: string;
-  role: 'admin' | 'worker';
-}
-
-// ============================================================================
-// TIPOS DE TRABAJADOR
-// ============================================================================
-
+// Worker Types (basado en el esquema de Supabase)
 export interface Worker {
   id: string;
+  email: string;
   name: string;
   surname: string;
-  email: string;
   phone: string;
   dni: string;
-  worker_type: 'cuidadora' | 'auxiliar' | 'enfermera';
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  worker_type: string;
+  role: 'worker' | 'admin' | 'super_admin';
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  user_metadata?: Record<string, unknown>;
 }
 
-export interface CreateWorkerData {
+export interface WorkerInsert {
+  email: string;
   name: string;
   surname: string;
-  email: string;
   phone: string;
   dni: string;
-  worker_type: Worker['worker_type'];
+  worker_type: string;
+  role?: 'worker' | 'admin' | 'super_admin';
+  is_active?: boolean | null;
 }
 
-export interface UpdateWorkerData extends Partial<CreateWorkerData> {
-  is_active?: boolean;
+export interface WorkerUpdate {
+  email?: string;
+  name?: string;
+  surname?: string;
+  phone?: string;
+  dni?: string;
+  worker_type?: string;
+  role?: 'worker' | 'admin' | 'super_admin';
+  is_active?: boolean | null;
 }
 
-// Aliases para compatibilidad
-export type WorkerInsert = CreateWorkerData;
-export type WorkerUpdate = UpdateWorkerData;
-
-// ============================================================================
-// TIPOS DE USUARIO/CLIENTE
-// ============================================================================
-
+// User Types (basado en el esquema de Supabase)
 export interface User {
   id: string;
+  email: string;
   name: string;
   surname: string;
-  email?: string;
   phone: string;
   address: string;
   postal_code: string;
   city: string;
   client_code: string;
-  monthly_assigned_hours: number; // horas totales asignadas al mes
-  medical_conditions: string[];
-  emergency_contact: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
+  monthly_assigned_hours?: number;
+  is_active: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
+  medical_conditions?: string[];
 }
 
-export interface CreateUserData {
+export interface UserInsert {
+  email: string;
   name: string;
   surname: string;
-  email?: string;
   phone: string;
   address: string;
   postal_code: string;
   city: string;
   client_code: string;
-  monthly_assigned_hours: number;
-  medical_conditions: string[];
-  emergency_contact: {
-    name: string;
-    phone: string;
-    relationship: string;
-  };
+  monthly_assigned_hours?: number;
+  is_active?: boolean | null;
+  medical_conditions?: string[];
 }
 
-// Tipo específico para crear administradores que incluye contraseña
-export interface CreateAdminData extends Omit<CreateUserData, 'client_code'> {
-  password: string;
-}
-
-export interface UpdateUserData extends Partial<CreateUserData> {
-  is_active?: boolean;
-}
-
-// Alias para compatibilidad
-export type UserInsert = CreateUserData;
-export type UserUpdate = UpdateUserData;
-export type AdminInsert = CreateAdminData;
-
-// ============================================================================
-// TIPOS DE ASIGNACIÓN
-// ============================================================================
-
-export type AssignmentStatus = 'active' | 'paused' | 'completed' | 'cancelled';
-export type AssignmentType = 'laborables' | 'festivos' | 'flexible';
-export type AssignmentPriority = 1 | 2 | 3; // 1=Alta, 2=Media, 3=Baja
-
-export interface TimeSlot {
-  start: string; // HH:MM
-  end: string; // HH:MM
-}
-
-export interface DaySchedule {
-  enabled: boolean;
-  timeSlots: TimeSlot[];
-}
-
-export interface WeeklySchedule {
-  monday: DaySchedule;
-  tuesday: DaySchedule;
-  wednesday: DaySchedule;
-  thursday: DaySchedule;
-  friday: DaySchedule;
-  saturday: DaySchedule;
-  sunday: DaySchedule;
-  holiday: DaySchedule; // Para festivos entre semana
-}
-
-export interface Assignment {
-  id: string;
-  worker_id: string;
-  user_id: string;
-  assignment_type: AssignmentType;
-  start_date: string; // YYYY-MM-DD
-  end_date?: string; // YYYY-MM-DD (opcional para asignaciones indefinidas)
-  weekly_hours: number;
-  status: AssignmentStatus;
-  priority: AssignmentPriority;
-  schedule: WeeklySchedule;
-  notes?: string;
-  created_at: string;
-  updated_at: string;
-
-  // Relaciones (populadas por Supabase)
-  worker?: Worker;
-  user?: User;
-}
-
-export interface CreateAssignmentData {
-  worker_id: string;
-  user_id: string;
-  assignment_type: AssignmentType;
-  start_date: string;
-  end_date?: string;
-  weekly_hours: number;
-  priority: AssignmentPriority;
-  schedule: WeeklySchedule;
-  notes?: string;
-}
-
-export interface UpdateAssignmentData extends Partial<CreateAssignmentData> {
-  status?: AssignmentStatus;
-}
-
-// ============================================================================
-// TIPOS DE FESTIVOS
-// ============================================================================
-
-export interface Holiday {
-  id: string;
-  year: number;
-  month: number;
-  day: number;
-  name: string;
-  type: 'national' | 'regional' | 'local';
-  created_at: string;
-  updated_at: string;
-}
-
-export interface CreateHolidayData {
-  year: number;
-  month: number;
-  day: number;
-  name: string;
-  type: Holiday['type'];
-}
-
-// ============================================================================
-// TIPOS DE PLANIFICACIÓN
-// ============================================================================
-
-export interface PlanningDay {
-  date: string; // YYYY-MM-DD
-  assignments: Assignment[];
-  isHoliday: boolean;
-  isWeekend: boolean;
-}
-
-export interface PlanningWeek {
-  weekStart: string; // YYYY-MM-DD
-  days: PlanningDay[];
-}
-
-export interface PlanningMonth {
-  month: number;
-  year: number;
-  weeks: PlanningWeek[];
-}
-
-// ============================================================================
-// TIPOS DE BALANCE DE HORAS
-// ============================================================================
-
-export interface HoursBalance {
-  id: string;
-  worker_id: string;
-  year: number;
-  month: number;
-  total_hours: number;
-  worked_hours: number;
-  holiday_hours: number;
-  balance: number; // worked_hours - total_hours
-  created_at: string;
-  updated_at: string;
-
-  // Relaciones
-  worker?: Worker;
-}
-
-// ============================================================================
-// TIPOS DE API RESPONSE
-// ============================================================================
-
-export interface ApiResponse<T> {
-  data: T;
-  error: string | null;
-  message?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  error: string | null;
-}
-
-// ============================================================================
-// TIPOS DE FILTROS
-// ============================================================================
-
-export interface AssignmentFilters {
-  worker_id?: string;
-  user_id?: string;
-  status?: AssignmentStatus;
-  assignment_type?: AssignmentType;
-  date_from?: string;
-  date_to?: string;
-}
-
-export interface WorkerFilters {
-  worker_type?: Worker['worker_type'];
-  is_active?: boolean;
-  search?: string;
-}
-
-export interface UserFilters {
-  is_active?: boolean;
-  search?: string;
+export interface UserUpdate {
+  email?: string;
+  name?: string;
+  surname?: string;
+  phone?: string;
+  address?: string;
+  postal_code?: string;
   city?: string;
+  client_code?: string;
+  monthly_assigned_hours?: number;
+  is_active?: boolean | null;
+  medical_conditions?: string[];
 }
 
-// ============================================================================
-// TIPOS DE ESTADÍSTICAS
-// ============================================================================
-
-export interface DashboardStats {
-  total_workers: number;
-  active_workers: number;
-  total_users: number;
-  active_users: number;
-  total_assignments: number;
-  active_assignments: number;
-  paused_assignments: number;
-  completed_assignments: number;
-  total_hours_this_month: number;
-  total_hours_last_month: number;
-}
-
-export interface WorkerStats {
-  total_assignments: number;
-  active_assignments: number;
-  total_hours: number;
-  worked_hours: number;
-  balance: number;
-}
-
-// ============================================================================
-// TIPOS DE FORMULARIOS
-// ============================================================================
-
-export interface FormField {
+// Admin Types
+export interface AdminInsert {
+  email: string;
+  password: string;
   name: string;
-  label: string;
-  type:
-    | 'text'
-    | 'email'
-    | 'password'
-    | 'tel'
-    | 'number'
-    | 'date'
-    | 'select'
-    | 'textarea'
-    | 'checkbox';
-  required: boolean;
-  placeholder?: string;
-  options?: { value: string; label: string }[];
-  validation?: {
-    min?: number;
-    max?: number;
-    pattern?: string;
-    message?: string;
-  };
+  surname?: string;
 }
 
-export interface FormConfig {
-  fields: FormField[];
-  submitText: string;
-  cancelText?: string;
-}
-
-// ============================================================================
-// TIPOS DE NOTIFICACIONES
-// ============================================================================
-
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
-
-export interface Toast {
-  id: string;
-  message: string;
-  type: ToastType;
-  duration?: number;
-}
-
-// ============================================================================
-// TIPOS DE VALIDACIÓN
-// ============================================================================
-
-export interface ValidationError {
-  field: string;
-  message: string;
-}
-
-export interface ValidationResult {
-  isValid: boolean;
-  errors: ValidationError[];
-}
-
-// ============================================================================
-// TIPOS DE ACTIVIDADES DEL SISTEMA
-// ============================================================================
-
-export type ActivityType =
-  | 'worker_created'
-  | 'worker_updated'
-  | 'worker_deleted'
-  | 'user_created'
-  | 'user_updated'
-  | 'user_deleted'
-  | 'assignment_created'
-  | 'assignment_updated'
-  | 'assignment_completed'
-  | 'assignment_cancelled'
-  | 'service_completed'
-  | 'admin_created'
-  | 'admin_updated'
-  | 'admin_deleted'
-  | 'login'
-  | 'logout'
-  | 'password_reset'
-  | 'profile_updated';
-
-export type EntityType =
-  | 'worker'
-  | 'user'
-  | 'assignment'
-  | 'service'
-  | 'admin'
-  | 'system';
-
+// Activity Types
 export interface Activity {
   id: string;
-  user_id?: string;
-  user_email?: string;
-  user_name?: string;
-  activity_type: ActivityType;
-  entity_type: EntityType;
-  entity_id?: string;
-  entity_name?: string;
+  activity_type: string;
+  entity_type: string;
   description: string;
-  details?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  entity_id: string;
+  entity_name: string;
+  details: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
   created_at: string;
   time_ago?: string;
 }
 
 export interface ActivityInsert {
-  user_id?: string;
-  user_email?: string;
-  user_name?: string;
-  activity_type: ActivityType;
-  entity_type: EntityType;
-  entity_id?: string;
-  entity_name?: string;
+  activity_type: string;
+  entity_type: string;
   description: string;
-  details?: Record<string, unknown>;
-  ip_address?: string;
-  user_agent?: string;
+  user_id: string;
+  user_email: string;
+  user_name: string;
+  entity_id: string;
+  entity_name: string;
+  details?: Record<string, unknown> | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
 }
 
-// ============================================================================
-// TIPOS DE CONFIGURACIÓN
-// ============================================================================
-
-export interface AppConfig {
-  name: string;
-  version: string;
-  environment: 'development' | 'staging' | 'production';
-  apiUrl: string;
-  supabaseUrl: string;
-  supabaseAnonKey: string;
+// Authentication Types
+export interface AuthCredentials {
+  email: string;
+  password: string;
 }
+
+export interface AuthResponse {
+  worker: Worker;
+  token?: string;
+  message: string;
+}
+
+// AuthContext Types
+export interface AuthContextType {
+  state: {
+    isAuthenticated: boolean;
+    currentWorker: Worker | null;
+    isLoading: boolean;
+    error: string | null;
+  };
+  user: Worker | null;
+  loading: boolean;
+  isPasswordRecovery: boolean;
+  login: (credentials: AuthCredentials) => Promise<void>;
+  logout: () => Promise<void>;
+  signOut: () => Promise<void>;
+  signIn: (credentials: AuthCredentials) => Promise<{
+    error?: string;
+    redirectTo?: string;
+  }>;
+  updatePassword: (email: string) => Promise<{
+    error?: string;
+  }>;
+  clearError: () => void;
+}
+
+// Navigation Types
+export type RootStackParamList = {
+  Login: undefined;
+  Home: undefined;
+  Assignments: undefined;
+  AssignmentDetail: { assignmentId: string };
+  Balances: undefined;
+  Notes: undefined;
+  Route: undefined;
+  Profile: undefined;
+  Settings: undefined;
+};

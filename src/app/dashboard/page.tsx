@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
-import { getRecentActivities } from '@/lib/activities-query';
+import { getActivities } from '@/lib/activities-query';
 import {
   getAllUsers,
   getServicesStats,
@@ -110,7 +110,7 @@ export default function DashboardPage() {
         const todayServicesStats = await getTodayServicesStats();
 
         // Cargar actividades recientes
-        const activities = await getRecentActivities(6);
+        const activities = await getActivities();
 
         // Formatear incremento de horas
         const increment = servicesStats.weeklyHoursIncrement > 0 ? '+' : '';

@@ -44,6 +44,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
   const searchParams = useSearchParams();
   const router = useRouter();
   const { user } = useAuth();
+  const currentUser = user;
   const [row, setRow] = useState<AssignmentDetailRow | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [isCompleting, setIsCompleting] = useState<boolean>(false);
@@ -65,7 +66,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
       try {
         const id = params?.id;
         if (!id || typeof id !== 'string') return;
-        const email = user?.email ?? '';
+        const email = currentUser?.email ?? '';
         if (email.trim() === '') return;
 
         const { data: w, error: werr } = await supabase
@@ -111,7 +112,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [params?.id, user?.email]);
+  }, [params?.id, currentUser?.email]);
 
   // Verificar si el servicio ya está completado
   useEffect(() => {
@@ -119,8 +120,8 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
       if (
         row?.id === null ||
         row?.id === undefined ||
-        user?.id === null ||
-        user?.id === undefined
+        currentUser?.id === null ||
+        currentUser?.id === undefined
       )
         return;
 
@@ -136,7 +137,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
           .eq('activity_type', 'service_completed')
           .eq('entity_type', 'assignment')
           .eq('entity_id', row.id)
-          .eq('user_id', user.id)
+          .eq('user_id', currentUser.id)
           .gte('created_at', startOfDay.toISOString())
           .lte('created_at', endOfDay.toISOString())
           .limit(1);
@@ -150,7 +151,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     checkCompletionStatus();
-  }, [row?.id, user?.id]);
+  }, [row?.id, currentUser?.id]);
 
   const dayKey = useMemo(() => {
     const d = new Date();
@@ -292,8 +293,8 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
     if (
       row?.id === null ||
       row?.id === undefined ||
-      user?.id === null ||
-      user?.id === undefined ||
+      currentUser?.id === null ||
+      currentUser?.id === undefined ||
       isCompleting
     )
       return;
@@ -304,16 +305,16 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
       const { error: activityError } = await supabase
         .from('system_activities')
         .insert({
-          user_id: user.id,
-          user_email: user.email,
-          user_name: user.name,
+          user_id: currentUser.id,
+          user_email: currentUser.email,
+          user_name: currentUser.name,
           activity_type: 'service_completed',
           entity_type: 'assignment',
           entity_id: row.id,
           entity_name:
             `${row.users?.name ?? ''} ${row.users?.surname ?? ''}`.trim() ??
             'Servicio',
-          description: `Servicio completado por ${user.name ?? user.email}`,
+          description: `Servicio completado por ${currentUser.name ?? currentUser.email}`,
           details: {
             assignment_type: row.assignment_type,
             user_name:
