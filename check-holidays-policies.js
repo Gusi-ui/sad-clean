@@ -42,7 +42,7 @@ const supabase = createClient(supabaseUrl, supabaseServiceKey);
 async function checkHolidaysPolicies() {
   try {
     // 1. Verificar si la tabla holidays existe y tiene RLS habilitado
-    const { data: tableInfo, error: tableError } = await supabase
+    const { error: tableError } = await supabase
       .from('holidays')
       .select('*')
       .limit(1);
