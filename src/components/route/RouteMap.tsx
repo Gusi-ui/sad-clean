@@ -704,24 +704,22 @@ const RouteMap = ({ routeStops }: RouteMapProps): React.JSX.Element => {
               >
                 📍 Mostrar Mapa
               </Button>
-              {showMap && (
-                <div className='flex items-center gap-2'>
-                  <span className='text-xs text-gray-600'>Modo:</span>
-                  <select
-                    value={travelMode}
-                    onChange={(e) =>
-                      setTravelMode(
-                        e.target.value as 'DRIVING' | 'WALKING' | 'TRANSIT'
-                      )
-                    }
-                    className='border border-gray-300 rounded px-2 py-1 text-sm'
-                  >
-                    <option value='DRIVING'>Coche</option>
-                    <option value='WALKING'>A pie</option>
-                    <option value='TRANSIT'>Transporte público</option>
-                  </select>
-                </div>
-              )}
+              <div className='flex items-center gap-2'>
+                <span className='text-xs text-gray-600'>Modo:</span>
+                <select
+                  value={travelMode}
+                  onChange={(e) =>
+                    setTravelMode(
+                      e.target.value as 'DRIVING' | 'WALKING' | 'TRANSIT'
+                    )
+                  }
+                  className='border border-gray-300 rounded px-2 py-1 text-sm'
+                >
+                  <option value='DRIVING'>Coche</option>
+                  <option value='WALKING'>A pie</option>
+                  <option value='TRANSIT'>Transporte público</option>
+                </select>
+              </div>
             </div>
           </div>
         </div>
