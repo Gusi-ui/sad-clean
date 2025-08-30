@@ -27,71 +27,78 @@ function processFile(filePath) {
   }
 
   try {
-    // Leer el archivo
-    const content = fs.readFileSync(filePath, 'utf8');
-    let modified = false;
-    let newContent = content;
+    // Usar file descriptor para evitar race conditions
+    const fd = fs.openSync(filePath, 'r+');
 
-    // Verificar si ya tiene la importación del logger
-    const hasLoggerImport = content.includes('securityLogger');
+    try {
+      // Leer el archivo usando el file descriptor
+      const stats = fs.fstatSync(fd);
+      const buffer = Buffer.alloc(stats.size);
+      fs.readSync(fd, buffer, 0, stats.size, 0);
+      const content = buffer.toString('utf8');
 
-    // Agregar importación si no existe
-    if (!hasLoggerImport && content.includes('console.error')) {
-      const importMatch = content.match(
-        /import.*from.*['"]@\/types['"];?\s*\n/
-      );
-      if (importMatch) {
-        const loggerImport =
-          "import { securityLogger } from '@/utils/security-config';\n";
-        newContent = content.replace(
-          importMatch[0],
-          importMatch[0] + loggerImport
+      let modified = false;
+      let newContent = content;
+
+      // Verificar si ya tiene la importación del logger
+      const hasLoggerImport = content.includes('securityLogger');
+
+      // Agregar importación si no existe
+      if (!hasLoggerImport && content.includes('console.error')) {
+        const importMatch = content.match(
+          /import.*from.*['"]@\/types['"];?\s*\n/
+        );
+        if (importMatch) {
+          const loggerImport =
+            "import { securityLogger } from '@/utils/security-config';\n";
+          newContent = content.replace(
+            importMatch[0],
+            importMatch[0] + loggerImport
+          );
+          modified = true;
+        }
+      }
+
+      // Reemplazar console.error con securityLogger.error
+      if (newContent.includes('console.error')) {
+        newContent = newContent.replace(
+          /console\.error\(([^)]+)\)/g,
+          'securityLogger.error($1)'
         );
         modified = true;
       }
-    }
 
-    // Reemplazar console.error con securityLogger.error
-    if (newContent.includes('console.error')) {
-      newContent = newContent.replace(
-        /console\.error\(([^)]+)\)/g,
-        'securityLogger.error($1)'
-      );
-      modified = true;
-    }
+      // Reemplazar console.log con securityLogger.info
+      if (newContent.includes('console.log')) {
+        newContent = newContent.replace(
+          /console\.log\(([^)]+)\)/g,
+          'securityLogger.info($1)'
+        );
+        modified = true;
+      }
 
-    // Reemplazar console.log con securityLogger.info
-    if (newContent.includes('console.log')) {
-      newContent = newContent.replace(
-        /console\.log\(([^)]+)\)/g,
-        'securityLogger.info($1)'
-      );
-      modified = true;
-    }
+      // Reemplazar console.warn con securityLogger.warn
+      if (newContent.includes('console.warn')) {
+        newContent = newContent.replace(
+          /console\.warn\(([^)]+)\)/g,
+          'securityLogger.warn($1)'
+        );
+        modified = true;
+      }
 
-    // Reemplazar console.warn con securityLogger.warn
-    if (newContent.includes('console.warn')) {
-      newContent = newContent.replace(
-        /console\.warn\(([^)]+)\)/g,
-        'securityLogger.warn($1)'
-      );
-      modified = true;
-    }
-
-    // Solo escribir si hay cambios y el contenido es diferente
-    if (modified && newContent !== content) {
-      // Verificar que el archivo no haya cambiado desde que lo leímos
-      const currentContent = fs.readFileSync(filePath, 'utf8');
-      if (currentContent === content) {
-        fs.writeFileSync(filePath, newContent, 'utf8');
+      // Solo escribir si hay cambios y el contenido es diferente
+      if (modified && newContent !== content) {
+        // Truncar el archivo y escribir el nuevo contenido usando el file descriptor
+        fs.ftruncateSync(fd, 0);
+        const newBuffer = Buffer.from(newContent, 'utf8');
+        fs.writeSync(fd, newBuffer, 0, newBuffer.length, 0);
         console.log(`✅ Modificado: ${filePath}`);
       } else {
-        console.log(
-          `⚠️  Archivo cambiado durante el procesamiento: ${filePath}`
-        );
+        console.log(`⏭️  Sin cambios: ${filePath}`);
       }
-    } else {
-      console.log(`⏭️  Sin cambios: ${filePath}`);
+    } finally {
+      // Cerrar el file descriptor
+      fs.closeSync(fd);
     }
   } catch (error) {
     console.error(`❌ Error procesando ${filePath}:`, error.message);
