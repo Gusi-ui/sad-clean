@@ -273,8 +273,17 @@ const RouteMap = ({ routeStops }: RouteMapProps): React.JSX.Element => {
       const ds = new window.google.maps.DirectionsService();
       directionsServiceRef.current = ds;
 
-      // Limpiar panel anterior
-      if (directionsPanelRef.current) directionsPanelRef.current.innerHTML = '';
+      // Limpiar panel anterior de manera segura
+      if (directionsPanelRef.current) {
+        // Usar textContent en lugar de innerHTML para evitar XSS
+        directionsPanelRef.current.textContent = '';
+        // O alternativamente, usar removeChild para limpiar completamente
+        while (directionsPanelRef.current.firstChild) {
+          directionsPanelRef.current.removeChild(
+            directionsPanelRef.current.firstChild
+          );
+        }
+      }
 
       // DRIVING / WALKING: una sola ruta con waypoints
       if (travelMode !== 'TRANSIT') {
