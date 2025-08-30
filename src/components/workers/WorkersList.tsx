@@ -4,6 +4,7 @@ import React, { useEffect, useState } from 'react';
 
 import type { Worker } from '@/lib/database';
 import { getAllWorkers, getWorkersStats } from '@/lib/workers-query';
+import { securityLogger } from '@/utils/security-config';
 
 interface WorkersStats {
   total: number;
@@ -33,16 +34,14 @@ export const WorkersList: React.FC = () => {
         setStats(statsData);
       } catch (err) {
         setError('Error al cargar los workers');
-        // eslint-disable-next-line no-console
-        console.error('Error fetching workers:', err);
+        securityLogger.error('Error fetching workers:', err);
       } finally {
         setLoading(false);
       }
     };
 
     fetchData().catch((fetchError) => {
-      // eslint-disable-next-line no-console
-      console.error('Error in fetchData:', fetchError);
+      securityLogger.error('Error in fetchData:', fetchError);
     });
   }, []);
 

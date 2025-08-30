@@ -1,5 +1,6 @@
 import type { Worker, WorkerInsert } from '@/types';
 
+import { securityLogger } from '@/utils/security-config';
 import { supabase } from './database';
 
 /**
@@ -13,15 +14,13 @@ export const getAllWorkers = async (): Promise<Worker[]> => {
       .order('created_at', { ascending: false });
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching workers:', error);
+            securityLogger.error('Error fetching workers:', error);
       throw error;
     }
 
     return (data ?? []) as Worker[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getAllWorkers:', error);
+        securityLogger.error('Error in getAllWorkers:', error);
     throw error;
   }
 };
@@ -38,15 +37,13 @@ export const getActiveWorkers = async (): Promise<Worker[]> => {
       .order('name');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching active workers:', error);
+            securityLogger.error('Error fetching active workers:', error);
       throw error;
     }
 
     return (data ?? []) as Worker[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getActiveWorkers:', error);
+        securityLogger.error('Error in getActiveWorkers:', error);
     throw error;
   }
 };
@@ -66,15 +63,13 @@ export const getWorkersByType = async (
       .order('name');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching workers by type:', error);
+            securityLogger.error('Error fetching workers by type:', error);
       throw error;
     }
 
     return (data ?? []) as Worker[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getWorkersByType:', error);
+        securityLogger.error('Error in getWorkersByType:', error);
     throw error;
   }
 };
@@ -98,8 +93,7 @@ export const getWorkersStats = async (): Promise<WorkersStats> => {
       .select('worker_type, is_active');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching workers stats:', error);
+            securityLogger.error('Error fetching workers stats:', error);
       throw error;
     }
 
@@ -120,8 +114,7 @@ export const getWorkersStats = async (): Promise<WorkersStats> => {
 
     return stats;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getWorkersStats:', error);
+        securityLogger.error('Error in getWorkersStats:', error);
     throw error;
   }
 };
@@ -141,15 +134,13 @@ export const searchWorkers = async (searchTerm: string): Promise<Worker[]> => {
       .order('name');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error searching workers:', error);
+            securityLogger.error('Error searching workers:', error);
       throw error;
     }
 
     return (data ?? []) as Worker[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in searchWorkers:', error);
+        securityLogger.error('Error in searchWorkers:', error);
     throw error;
   }
 };
@@ -166,15 +157,13 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
       .single();
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching worker by ID:', error);
+            securityLogger.error('Error fetching worker by ID:', error);
       throw error;
     }
 
     return data as Worker;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getWorkerById:', error);
+        securityLogger.error('Error in getWorkerById:', error);
     throw error;
   }
 };
@@ -195,15 +184,13 @@ export const updateWorker = async (
       .single();
 
     if (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error updating worker:', error);
+            securityLogger.error('Error updating worker:', error);
       throw error;
     }
 
     return data as Worker;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in updateWorker:', error);
+        securityLogger.error('Error in updateWorker:', error);
     throw error;
   }
 };
@@ -271,13 +258,11 @@ export const deleteWorker = async (id: string): Promise<void> => {
     const { error } = await supabase.from('workers').delete().eq('id', id);
 
     if (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting worker:', error);
+            securityLogger.error('Error deleting worker:', error);
       throw error;
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in deleteWorker:', error);
+        securityLogger.error('Error in deleteWorker:', error);
     throw error;
   }
 };
