@@ -62,21 +62,11 @@ tags = ["key", "github", "token"]
 # Configuración de salida
 [output]
 format = "sarif"
-file = "gitleaks-report.sarif"
+file = "results.sarif"
 verbose = true
 
 # Configuración de escaneo
 [scan]
-# Escanear solo archivos específicos
-include = [
-    "*.ts",
-    "*.tsx",
-    "*.js",
-    "*.jsx",
-    "*.json",
-    "*.env*"
-]
-
 # Excluir archivos de documentación y ejemplos
 exclude = [
     "*.md",
