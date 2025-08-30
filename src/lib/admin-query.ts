@@ -3,6 +3,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { AdminInsert, User as AdminUser } from '@/types';
 
+import { securityLogger } from '@/utils/security-config';
 /**
  * Crea un nuevo usuario administrador en Supabase.
  * Esta función debe ser llamada desde un entorno seguro o por un usuario con permisos de super_admin.
@@ -265,8 +266,7 @@ export const getUsersStats = async (): Promise<{
       .select('id, role');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching users stats:', error);
+            securityLogger.error('Error fetching users stats:', error);
       throw error;
     }
 
@@ -282,8 +282,7 @@ export const getUsersStats = async (): Promise<{
 
     return stats;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getUsersStats:', error);
+        securityLogger.error('Error in getUsersStats:', error);
     throw error;
   }
 };
