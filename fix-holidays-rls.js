@@ -51,7 +51,7 @@ async function fixHolidaysRLS() {
     console.log('🔧 Corrigiendo permisos RLS para la tabla holidays...');
 
     // 1. Verificar si la tabla holidays existe
-    const { data: tableExists, error: tableError } = await supabase
+    const { error: tableError } = await supabase
       .from('holidays')
       .select('id')
       .limit(1);
