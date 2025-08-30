@@ -4,13 +4,8 @@ import React, { createContext, useContext, useEffect, useReducer } from 'react';
 
 import { secureStorage } from '@/utils/secure-storage';
 
-import { authenticateWorker } from '../lib/api';
-import type {
-  AuthContextType,
-  AuthCredentials,
-  AuthResponse,
-  Worker,
-} from '../types';
+import { supabase } from '../lib/database';
+import type { AuthContextType, AuthCredentials, Worker } from '../types';
 
 // Estado inicial
 const initialState = {
@@ -34,6 +29,7 @@ function authReducer(
   state: typeof initialState & { isPasswordRecovery: boolean },
   action: AuthAction
 ): typeof initialState & { isPasswordRecovery: boolean } {
+  // Debug completado - reducer funcionando correctamente
   switch (action.type) {
     case 'AUTH_START':
       return { ...state, isLoading: true, error: null };
@@ -79,68 +75,125 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isPasswordRecovery: false,
   });
 
-  // Verificar autenticación al iniciar
-  useEffect(() => {
-    const checkAuthStatus = async (): Promise<void> => {
-      try {
-        if (typeof window === 'undefined' || window === null) return;
+  // Debug completado - AuthProvider funcionando correctamente
 
+  // Verificar autenticación solo al iniciar - una sola vez
+  useEffect(() => {
+    let isInitialized = false;
+
+    const initializeAuth = (): void => {
+      if (isInitialized) return;
+      if (typeof window === 'undefined') return;
+
+      try {
         const workerData = secureStorage.getItem<Worker>('worker');
-        if (workerData !== null) {
+        const token = secureStorage.getItem<string>('token');
+
+        if (workerData != null && token != null && token !== '') {
+          // Restaurar sesión previa
           dispatch({ type: 'AUTH_SUCCESS', payload: workerData });
         } else {
+          // No hay sesión previa - mostrar login
           dispatch({ type: 'AUTH_FAILURE', payload: '' });
         }
       } catch {
-        // console.error('Error checking auth status:', error); // Comentado para producción
-        dispatch({
-          type: 'AUTH_FAILURE',
-          payload: 'Error al verificar autenticación',
-        });
+        // Error al restaurar sesión - limpiar y mostrar login
+        // Limpiar storage corrupto
+        secureStorage.clear();
+        dispatch({ type: 'AUTH_FAILURE', payload: '' });
       }
+
+      isInitialized = true;
     };
 
-    void checkAuthStatus();
-  }, []);
+    initializeAuth();
+  }, []); // Solo al montar
 
-  const login = async (credentials: AuthCredentials): Promise<void> => {
+  const login = async (
+    credentials: AuthCredentials
+  ): Promise<Worker | undefined> => {
     try {
       dispatch({ type: 'AUTH_START' });
 
-      const response = await authenticateWorker(
-        credentials.email,
-        credentials.password
-      );
+      // Normalizar email a minúsculas para evitar problemas de case
+      const normalizedEmail = credentials.email.toLowerCase().trim();
 
-      if (response.error !== null && response.error !== undefined) {
-        throw new Error(response.error);
+      // Login directo con Supabase
+
+      // Usar Supabase directamente como funcionaba antes
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password: credentials.password,
+        });
+
+      if (authError) {
+        throw new Error('Credenciales inválidas');
       }
 
-      if (response.data === null || response.data === undefined) {
-        throw new Error('No se recibieron datos de autenticación');
+      if (authData.user == null) {
+        throw new Error('Error de autenticación');
       }
 
-      const authResponse = response.data as AuthResponse;
-      const worker = authResponse.worker;
+      // Autenticación exitosa con Supabase
+
+      // Obtener información del usuario desde auth_users
+      const { data: userData, error: userError } = await supabase
+        .from('auth_users')
+        .select('id, email, role')
+        .eq('id', authData.user.id)
+        .single();
+
+      if (userError != null || userData == null) {
+        throw new Error('Usuario no encontrado en la base de datos');
+      }
+
+      // Datos de usuario obtenidos correctamente
+
+      // Crear objeto worker basado en los datos de Supabase
+      const metadata = authData.user.user_metadata as Record<
+        string,
+        unknown
+      > | null;
+      const worker: Worker = {
+        id: userData.id,
+        email: userData.email,
+        name:
+          (metadata?.name as string) ??
+          authData.user.email?.split('@')[0] ??
+          'Usuario',
+        surname: (metadata?.surname as string) ?? '',
+        phone: (metadata?.phone as string) ?? '',
+        dni: (metadata?.dni as string) ?? '',
+        worker_type: (metadata?.worker_type as string) ?? 'general',
+        role: userData.role as 'worker' | 'admin' | 'super_admin',
+        is_active: true,
+        created_at: authData.user.created_at,
+        updated_at: authData.user.updated_at ?? authData.user.created_at,
+      };
 
       // Guardar en almacenamiento seguro
       if (typeof window !== 'undefined') {
         secureStorage.setItem('worker', worker);
         if (
-          authResponse.token !== undefined &&
-          authResponse.token !== null &&
-          authResponse.token !== '' &&
-          typeof authResponse.token === 'string'
+          authData.session?.access_token != null &&
+          authData.session.access_token !== ''
         ) {
-          secureStorage.setItem('token', authResponse.token);
+          secureStorage.setItem('token', authData.session.access_token);
         }
       }
 
       dispatch({ type: 'AUTH_SUCCESS', payload: worker });
+
+      // Login completado exitosamente
+
+      // Retornar el worker para usar en signIn
+      return worker;
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : 'Error de autenticación';
       dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
+      throw error; // Re-throw para que signIn pueda capturarlo
     }
   };
 
@@ -188,9 +241,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     redirectTo?: string;
   }> => {
     try {
-      await login(credentials);
-      return { redirectTo: '/dashboard' };
+      const authenticatedUser = await login(credentials);
+
+      // Determinar redirección basada en el rol del usuario
+      let redirectTo = '/dashboard';
+      if (authenticatedUser?.role === 'super_admin') {
+        redirectTo = '/super-dashboard';
+      } else if (authenticatedUser?.role === 'admin') {
+        redirectTo = '/dashboard';
+      } else if (authenticatedUser?.role === 'worker') {
+        redirectTo = '/worker-dashboard';
+      }
+
+      // Redirección determinada según el rol del usuario
+
+      return { redirectTo };
     } catch {
+      // Error en el proceso de signIn
       return {
         error: 'Error de autenticación',
       };
