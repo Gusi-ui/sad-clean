@@ -75,6 +75,8 @@ exclude = [
     "*.example.*",
     "*.sample.*",
     "node_modules/**",
+    "mobile-app/node_modules/**",
+    "**/node_modules/**",
     ".git/**",
     ".next/**",
     "out/**"
