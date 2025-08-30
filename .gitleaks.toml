@@ -1,0 +1,66 @@
+# Configuración para gitleaks
+# Ignora falsos positivos en documentación y archivos de ejemplo
+
+[allowlist]
+# Ignorar archivos de documentación
+files = [
+    "*.md",
+    "docs/**",
+    "README.md",
+    "GOOGLE-MAPS-*.md",
+    "*.example.*",
+    "*.sample.*",
+    "examples/**"
+]
+
+# Ignorar patrones específicos en documentación
+regexes = [
+    # Google Maps API Key en documentación
+    "AIzaSy[A-Za-z0-9_-]{35}",
+    # Patrones de ejemplo
+    "your_.*_key",
+    "example_.*_key",
+    "placeholder_.*_key",
+    "test_key",
+    "demo_key",
+    "sample_key",
+    # Variables de entorno de ejemplo
+    "NEXT_PUBLIC_.*_EXAMPLE",
+    "SUPABASE_.*_EXAMPLE"
+]
+
+# Configuración de reglas
+[allowlist.rules]
+# Ignorar Google Maps API Key en archivos markdown
+google-maps-docs = { description = "Google Maps API Key in documentation", regex = "AIzaSy[A-Za-z0-9_-]{35}", file = "*.md" }
+
+# Ignorar patrones de ejemplo en documentación
+example-patterns = { description = "Example patterns in documentation", regex = "your_.*_key|example_.*_key|placeholder_.*_key", file = "*.md" }
+
+# Configuración de reglas personalizadas
+[[rules]]
+id = "google-maps-api-key"
+description = "Google Maps API Key"
+regex = "AIzaSy[A-Za-z0-9_-]{35}"
+severity = "HIGH"
+tags = ["key", "google", "maps"]
+
+[[rules]]
+id = "supabase-service-role-key"
+description = "Supabase Service Role Key"
+regex = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9\\.[A-Za-z0-9_-]+\\.[A-Za-z0-9_-]+"
+severity = "CRITICAL"
+tags = ["key", "supabase", "jwt"]
+
+[[rules]]
+id = "github-personal-access-token"
+description = "GitHub Personal Access Token"
+regex = "ghp_[A-Za-z0-9]{36}"
+severity = "HIGH"
+tags = ["key", "github", "token"]
+
+# Configuración de salida
+[output]
+format = "sarif"
+file = "gitleaks-report.sarif"
+verbose = true
