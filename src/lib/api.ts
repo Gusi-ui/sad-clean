@@ -1,9 +1,9 @@
 /**
  * API Client para conectar con el proyecto web SAD LAS
  */
-import { securityConfig, securityLogger } from '@/utils/security-config';
+import { securityLogger } from '@/utils/security-config';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3001';
 
 interface ApiResponse<T> {
   data: T;
@@ -25,10 +25,9 @@ class ApiClient {
       const url = `${this.baseURL}${endpoint}`;
       const response = await fetch(url, {
         headers: {
-          ...securityConfig.secureHeaders,
+          'Content-Type': 'application/json',
           ...options.headers,
         },
-        ...securityConfig.corsConfig,
         ...options,
       });
 
@@ -57,8 +56,25 @@ class ApiClient {
     email: string,
     password: string
   ): Promise<ApiResponse<unknown>> {
-    const result = await this.request<unknown>('/api/workers/auth', {
+    const result = await this.request<unknown>('/api/auth/login', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+    return result;
+  }
+
+  async authenticateAdmin(
+    email: string,
+    password: string
+  ): Promise<ApiResponse<unknown>> {
+    const result = await this.request<unknown>('/api/auth/admin-login', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ email, password }),
     });
     return result;
@@ -85,6 +101,11 @@ export const authenticateWorker = (
   password: string
 ): Promise<ApiResponse<unknown>> =>
   apiClient.authenticateWorker(email, password);
+export const authenticateAdmin = (
+  email: string,
+  password: string
+): Promise<ApiResponse<unknown>> =>
+  apiClient.authenticateAdmin(email, password);
 export const getAssignments = (
   workerId?: string
 ): Promise<ApiResponse<unknown>> => apiClient.getAssignments(workerId);

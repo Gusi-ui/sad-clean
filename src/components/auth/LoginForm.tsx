@@ -77,10 +77,16 @@ export default function LoginForm() {
         password,
       });
 
-      if (signInError !== null) {
+      // Resultado del signIn recibido
+
+      if (signInError != null) {
+        // Usa != para capturar tanto null como undefined
         setError(signInError ?? 'Error de autenticación');
       } else if (redirectTo !== undefined) {
+        // Redirigiendo al dashboard correspondiente
         router.push(redirectTo);
+      } else {
+        // No se recibió redirectTo válido
       }
     } catch {
       setError('Error inesperado. Inténtalo de nuevo.');

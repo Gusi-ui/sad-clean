@@ -133,9 +133,10 @@ export interface AuthCredentials {
 }
 
 export interface AuthResponse {
-  worker: Worker;
+  worker?: Worker;
+  user?: Worker;
   token?: string;
-  message: string;
+  message?: string;
 }
 
 // AuthContext Types
@@ -149,7 +150,7 @@ export interface AuthContextType {
   user: Worker | null;
   loading: boolean;
   isPasswordRecovery: boolean;
-  login: (credentials: AuthCredentials) => Promise<void>;
+  login: (credentials: AuthCredentials) => Promise<Worker | undefined>;
   logout: () => Promise<void>;
   signOut: () => Promise<void>;
   signIn: (credentials: AuthCredentials) => Promise<{
