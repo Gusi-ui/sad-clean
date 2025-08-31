@@ -819,7 +819,7 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Calendar Grid */}
-                <div className='grid grid-cols-7 divide-x divide-gray-200 divide-y divide-gray-200'>
+                <div className='grid grid-cols-7 divide-x divide-y divide-gray-200'>
                   {monthGrid.map((cell, idx) => {
                     const dateKey = getDateKeyLocal(cell.date);
                     const isCurrentMonth = cell.isCurrentMonth;
