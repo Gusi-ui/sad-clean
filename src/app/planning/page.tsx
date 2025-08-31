@@ -1,6 +1,6 @@
 'use client';
 
-import { type KeyboardEvent, useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
@@ -98,13 +98,6 @@ export default function PlanningPage() {
     const day = String(d.getDate()).padStart(2, '0');
     return `${y}-${m}-${day}`;
   };
-
-  // Helper para mostrar día de la semana corto en español (ej. "Lun")
-  const getWeekdayShort = (d: Date): string =>
-    d
-      .toLocaleDateString('es-ES', { weekday: 'short' })
-      .replace('.', '')
-      .slice(0, 3);
 
   // Nota: eliminamos opciones predefinidas (selects) y usamos inputs de texto (mobile-first)
 
@@ -526,34 +519,6 @@ export default function PlanningPage() {
     return `${monthName} ${yearNum}`;
   };
 
-  // Estilo visual para entradas según tipo de asignación
-  const getEntryStyle = (
-    type: string
-  ): { container: string; badge?: string } => {
-    switch (type) {
-      case 'laborables':
-        return {
-          container:
-            'border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50',
-        };
-      case 'festivos':
-        return {
-          container:
-            'border-l-4 border-orange-500 bg-orange-50/70 hover:bg-orange-50',
-        };
-      case 'flexible':
-        return {
-          container:
-            'border-l-4 border-purple-500 bg-purple-50/70 hover:bg-purple-50',
-        };
-      default:
-        return {
-          container:
-            'border-l-4 border-gray-400 bg-gray-50/70 hover:bg-gray-50',
-        };
-    }
-  };
-
   const handlePrevMonth = () => {
     const newMonth = month - 1;
     if (newMonth < 1) {
@@ -677,64 +642,150 @@ export default function PlanningPage() {
             </p>
           </div>
 
-          {/* Month Selector */}
+          {/* Enhanced Month Selector */}
           <div className='mb-6'>
             <Card className='p-4 lg:p-6'>
               <div className='flex flex-col lg:flex-row lg:flex-nowrap items-center justify-between gap-4'>
-                <div className='flex items-center space-x-2 lg:space-x-4 h-10 flex-none'>
+                {/* Month Navigation */}
+                <div className='flex items-center justify-center lg:justify-start space-x-3 h-12 flex-none'>
                   <Button
                     variant='outline'
                     size='sm'
                     onClick={handlePrevMonth}
-                    className='text-xs lg:text-sm h-10'
+                    className='flex items-center space-x-1 px-3 py-2 h-10 text-sm font-medium'
                   >
-                    ← Mes Anterior
+                    <svg
+                      className='w-4 h-4'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M15 19l-7-7 7-7'
+                      />
+                    </svg>
+                    <span className='hidden sm:inline'>Anterior</span>
                   </Button>
-                  <h2 className='text-base lg:text-lg font-semibold text-gray-900 text-center flex items-center h-10'>
-                    {formatMonthTitle(firstDayOfMonth)}
-                  </h2>
+
+                  <div className='flex items-center space-x-2'>
+                    <h2 className='text-lg lg:text-xl font-bold text-gray-900 text-center'>
+                      {formatMonthTitle(firstDayOfMonth)}
+                    </h2>
+                    <Button
+                      variant='outline'
+                      size='sm'
+                      onClick={() => {
+                        setYear(new Date().getFullYear());
+                        setMonth(new Date().getMonth() + 1);
+                      }}
+                      className='px-2 py-1 h-8 text-xs font-medium'
+                    >
+                      Hoy
+                    </Button>
+                  </div>
+
                   <Button
                     variant='outline'
                     size='sm'
                     onClick={handleNextMonth}
-                    className='text-xs lg:text-sm h-10'
+                    className='flex items-center space-x-1 px-3 py-2 h-10 text-sm font-medium'
                   >
-                    Mes Siguiente →
+                    <span className='hidden sm:inline'>Siguiente</span>
+                    <svg
+                      className='w-4 h-4'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M9 5l7 7-7 7'
+                      />
+                    </svg>
                   </Button>
                 </div>
-                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 lg:flex lg:space-x-2 lg:items-center'>
-                  {/* Input Trabajadora - sin label visible, con placeholder */}
-                  <input
-                    id='filter-worker'
-                    aria-label='Buscar trabajadora'
-                    type='text'
-                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-300 bg-white text-gray-900'
-                    placeholder='Buscar trabajadora'
-                    value={selectedWorker}
-                    onChange={(e) => setSelectedWorker(e.target.value)}
-                  />
-                  {/* Input Usuario - sin label visible, con placeholder */}
-                  <input
-                    id='filter-user'
-                    aria-label='Buscar usuario'
-                    type='text'
-                    className='w-full px-3 py-2 h-10 border border-gray-400 rounded-md placeholder-gray-300 bg-white text-gray-900'
-                    placeholder='Buscar usuario'
-                    value={selectedUser}
-                    onChange={(e) => setSelectedUser(e.target.value)}
-                  />
+
+                {/* Filters */}
+                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:flex lg:space-x-3 lg:items-center'>
+                  {/* Worker Filter */}
+                  <div className='relative'>
+                    <input
+                      id='filter-worker'
+                      aria-label='Buscar trabajadora'
+                      type='text'
+                      className='w-full px-4 py-2 h-10 border border-gray-300 rounded-lg placeholder-gray-400 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors'
+                      placeholder='🔍 Buscar trabajadora'
+                      value={selectedWorker}
+                      onChange={(e) => setSelectedWorker(e.target.value)}
+                    />
+                  </div>
+
+                  {/* User Filter */}
+                  <div className='relative'>
+                    <input
+                      id='filter-user'
+                      aria-label='Buscar usuario'
+                      type='text'
+                      className='w-full px-4 py-2 h-10 border border-gray-300 rounded-lg placeholder-gray-400 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors'
+                      placeholder='👤 Buscar usuario'
+                      value={selectedUser}
+                      onChange={(e) => setSelectedUser(e.target.value)}
+                    />
+                  </div>
+
+                  {/* Clear Filters */}
                   <Button
                     variant='outline'
                     size='sm'
-                    className='text-xs h-10'
+                    className='h-10 text-sm font-medium'
                     onClick={() => {
                       setSelectedWorker('');
                       setSelectedUser('');
                     }}
                   >
-                    Limpiar filtros
+                    <svg
+                      className='w-4 h-4 mr-1'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M6 18L18 6M6 6l12 12'
+                      />
+                    </svg>
+                    Limpiar
                   </Button>
-                  {/* Botón Nueva Entrada oculto de momento */}
+
+                  {/* Quick Actions */}
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='h-10 text-sm font-medium'
+                    onClick={() => setShowEntryModal(true)}
+                  >
+                    <svg
+                      className='w-4 h-4 mr-1'
+                      fill='none'
+                      stroke='currentColor'
+                      viewBox='0 0 24 24'
+                    >
+                      <path
+                        strokeLinecap='round'
+                        strokeLinejoin='round'
+                        strokeWidth={2}
+                        d='M12 4v16m8-8H4'
+                      />
+                    </svg>
+                    Nueva
+                  </Button>
                 </div>
               </div>
             </Card>
@@ -748,121 +799,152 @@ export default function PlanningPage() {
             </div>
           )}
 
-          {/* Month Grid */}
+          {/* Modern Month Calendar */}
           {!loading && (
             <div className='mb-8'>
-              {/* Cabecera de días en tablet y desktop */}
-              <div className='hidden md:grid grid-cols-7 gap-2 sm:gap-3 mb-2'>
-                {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((d) => (
-                  <div
-                    key={d}
-                    className='text-center text-sm font-semibold text-gray-700'
-                  >
-                    {d}
-                  </div>
-                ))}
-              </div>
+              {/* Calendar Header */}
+              <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
+                {/* Weekday Headers */}
+                <div className='grid grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200'>
+                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(
+                    (day) => (
+                      <div
+                        key={day}
+                        className='px-2 py-3 text-center text-sm font-semibold text-gray-700 border-r border-gray-200 last:border-r-0'
+                      >
+                        {day}
+                      </div>
+                    )
+                  )}
+                </div>
 
-              {/* Grid responsive: móvil 1 col, sm 2 cols, tablet/desktop 7 cols */}
-              <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-7 lg:grid-cols-7 gap-2 md:gap-3'>
-                {monthGrid.map((cell, idx) => {
-                  const dateKey = getDateKeyLocal(cell.date);
-                  const headerClasses = cell.isCurrentMonth
-                    ? 'text-gray-900'
-                    : 'text-gray-400';
-                  const borderHighlight =
-                    cell.isHoliday || cell.isWeekend
-                      ? 'border-red-300'
-                      : 'border-gray-200';
-                  const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
-                  return (
-                    <Card
-                      key={idx}
-                      role={cell.isCurrentMonth ? 'button' : undefined}
-                      tabIndex={cell.isCurrentMonth ? 0 : -1}
-                      aria-disabled={cell.isCurrentMonth ? undefined : true}
-                      aria-label={`Día ${cell.date.getDate()} ${cell.isHoliday ? `festivo ${cell.holidayName ?? ''}` : ''}`}
-                      className={`p-2 sm:p-3 border ${borderHighlight} ${
-                        cell.isCurrentMonth
-                          ? 'bg-white'
-                          : 'bg-gray-50 border-dashed text-gray-300 pointer-events-none'
-                      } min-h-24 focus:outline-none focus:ring-2 focus:ring-blue-500 ${todayRing}`}
-                      onClick={
-                        cell.isCurrentMonth
-                          ? () => handleOpenCell(dateKey)
-                          : undefined
-                      }
-                      onKeyDown={
-                        cell.isCurrentMonth
-                          ? (e: KeyboardEvent<HTMLDivElement>) => {
-                              if (e.key === 'Enter' || e.key === ' ')
-                                handleOpenCell(dateKey);
-                            }
-                          : undefined
-                      }
-                    >
-                      <div className='flex items-center justify-between mb-1'>
-                        <div className='flex items-center gap-2'>
-                          {/* Etiqueta de día de la semana en móvil/tablet */}
-                          <span className='lg:hidden inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
-                            {getWeekdayShort(cell.date)}
-                          </span>
+                {/* Calendar Grid */}
+                <div className='grid grid-cols-7 divide-x divide-gray-200 divide-y divide-gray-200'>
+                  {monthGrid.map((cell, idx) => {
+                    const dateKey = getDateKeyLocal(cell.date);
+                    const isCurrentMonth = cell.isCurrentMonth;
+                    const isToday = cell.isToday;
+                    const isWeekend = cell.isWeekend;
+                    const isHoliday = cell.isHoliday;
+
+                    // Estilos base
+                    let cellClasses =
+                      'min-h-[120px] md:min-h-[140px] lg:min-h-[160px] p-2 md:p-3 relative';
+
+                    if (!isCurrentMonth) {
+                      cellClasses += ' bg-gray-50 text-gray-400';
+                    } else if (isToday) {
+                      cellClasses += ' bg-blue-50 border-2 border-blue-500';
+                    } else if (isHoliday) {
+                      cellClasses += ' bg-red-50 border-l-4 border-red-500';
+                    } else if (isWeekend) {
+                      cellClasses +=
+                        ' bg-orange-50 border-l-4 border-orange-300';
+                    } else {
+                      cellClasses +=
+                        ' bg-white hover:bg-gray-50 transition-colors';
+                    }
+
+                    return (
+                      <div
+                        key={idx}
+                        className={cellClasses}
+                        onClick={
+                          isCurrentMonth
+                            ? () => handleOpenCell(dateKey)
+                            : undefined
+                        }
+                        role={isCurrentMonth ? 'button' : undefined}
+                        tabIndex={isCurrentMonth ? 0 : -1}
+                      >
+                        {/* Date Number */}
+                        <div className='flex items-center justify-between mb-2'>
                           <span
-                            className={`text-xs sm:text-sm font-medium ${headerClasses}`}
+                            className={`text-sm md:text-base font-semibold ${
+                              isToday
+                                ? 'text-blue-700'
+                                : isHoliday
+                                  ? 'text-red-700'
+                                  : isWeekend
+                                    ? 'text-orange-700'
+                                    : 'text-gray-900'
+                            }`}
                           >
                             {cell.date.getDate()}
                           </span>
+
+                          {/* Holiday Indicator */}
+                          {isHoliday && (
+                            <span
+                              className='text-xs text-red-600 font-medium'
+                              title={cell.holidayName}
+                            >
+                              🎉
+                            </span>
+                          )}
+
+                          {/* Today Indicator */}
+                          {isToday && (
+                            <span className='text-xs text-blue-600 font-medium'>
+                              Hoy
+                            </span>
+                          )}
                         </div>
-                        {cell.isHoliday && (
-                          <span
-                            className='text-[10px] sm:text-xs text-red-600 font-medium'
-                            title={cell.holidayName}
-                          >
-                            🎉
-                          </span>
-                        )}
-                      </div>
-                      <div className='space-y-1 max-h-64 sm:max-h-56 md:max-h-48 overflow-y-auto pr-0.5'>
-                        {(cell.entries ?? []).slice(0, 4).map((e, i) => (
-                          <div
-                            key={`${dateKey}-${i}`}
-                            className={`rounded px-1.5 py-1 ${getEntryStyle(e.assignmentType).container}`}
-                          >
-                            <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
-                              {e.workerName}
-                            </div>
-                            <div className='flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
-                              <span
-                                className='hidden md:inline'
-                                aria-hidden='true'
+
+                        {/* Entries */}
+                        {isCurrentMonth && (
+                          <div className='space-y-1 max-h-20 md:max-h-24 lg:max-h-28 overflow-y-auto'>
+                            {cell.entries.slice(0, 3).map((entry, i) => (
+                              <div
+                                key={`${dateKey}-${i}`}
+                                className={`rounded-lg px-2 py-1.5 text-xs border-l-3 ${
+                                  entry.assignmentType === 'laborables'
+                                    ? 'bg-blue-100 border-blue-500 text-blue-800'
+                                    : entry.assignmentType === 'festivos'
+                                      ? 'bg-orange-100 border-orange-500 text-orange-800'
+                                      : entry.assignmentType === 'flexible'
+                                        ? 'bg-purple-100 border-purple-500 text-purple-800'
+                                        : 'bg-gray-100 border-gray-500 text-gray-800'
+                                }`}
                               >
-                                ⏰
-                              </span>
-                              <span>
-                                {e.start}–{e.end}
-                              </span>
-                            </div>
-                            <div className='text-[10px] sm:text-[11px] text-gray-700 truncate'>
-                              {e.userName}
-                            </div>
+                                <div className='font-medium truncate'>
+                                  {entry.workerName}
+                                </div>
+                                <div className='text-xs opacity-75 truncate'>
+                                  {entry.userName}
+                                </div>
+                                <div className='text-xs font-semibold'>
+                                  {entry.start}-{entry.end}
+                                </div>
+                              </div>
+                            ))}
+
+                            {/* More entries indicator */}
+                            {cell.entries.length > 3 && (
+                              <button
+                                className='w-full text-xs text-blue-600 hover:text-blue-800 font-medium text-center py-1 hover:bg-blue-50 rounded'
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenCell(dateKey);
+                                }}
+                              >
+                                +{cell.entries.length - 3} más
+                              </button>
+                            )}
                           </div>
-                        ))}
-                        {cell.entries.length > 4 && (
-                          <button
-                            type='button'
-                            className='w-full text-[10px] sm:text-xs text-blue-700 hover:underline text-left'
-                            onClick={(ev) => {
-                              ev.stopPropagation();
-                              handleOpenCell(dateKey);
-                            }}
-                          >
-                            Ver {cell.entries.length - 4} más
-                          </button>
+                        )}
+
+                        {/* Empty state for current month */}
+                        {isCurrentMonth && cell.entries.length === 0 && (
+                          <div className='text-center py-4 text-gray-400'>
+                            <div className='text-lg'>📅</div>
+                            <div className='text-xs'>Sin servicios</div>
+                          </div>
                         )}
                       </div>
-                    </Card>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           )}
