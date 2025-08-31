@@ -930,7 +930,7 @@ export default function AssignmentsPage() {
                     'Trabajador', // Usar valor por defecto
                     data.worker_id,
                     'Usuario', // Usar valor por defecto
-                    data.user_id,
+                    user?.id ?? '',
                     data.start_date,
                     data.end_date,
                     calculateWeeklyHours(scheduleWithHoliday)
@@ -1119,7 +1119,7 @@ export default function AssignmentsPage() {
                     'Trabajador', // Usar valor por defecto
                     data.worker_id,
                     'Usuario', // Usar valor por defecto
-                    data.user_id,
+                    user?.id ?? '',
                     data.start_date,
                     data.end_date,
                     updatedWeeklyHours

@@ -36,10 +36,10 @@ export default function Navigation({ variant = 'mobile' }: NavigationProps) {
       mobileIcon: '📅',
     },
     {
-      href: '/holidays',
-      icon: '🎯',
-      label: 'Festivos',
-      mobileIcon: '🎯',
+      href: '/balances',
+      icon: '⏰',
+      label: 'Balance de Horas',
+      mobileIcon: '⏰',
     },
   ];
 

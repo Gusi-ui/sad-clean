@@ -134,7 +134,7 @@ export const getActivities = async (): Promise<Activity[]> => {
       `
       )
       .order('created_at', { ascending: false })
-      .limit(50);
+      .limit(6);
 
     if (error !== null) {
       logger.error('Error al obtener actividades', error);
@@ -172,7 +172,12 @@ export const logWorkerActivity = async (
     user_id: workerId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'worker_management',
+    activity_type:
+      action === 'creó'
+        ? 'worker_created'
+        : action === 'actualizó'
+          ? 'worker_updated'
+          : 'worker_deleted',
     entity_type: 'worker',
     entity_id: workerId,
     entity_name: workerName,
@@ -197,7 +202,12 @@ export const logUserActivity = async (
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'user_management',
+    activity_type:
+      action === 'creó'
+        ? 'user_created'
+        : action === 'actualizó'
+          ? 'user_updated'
+          : 'user_deleted',
     entity_type: 'user',
     entity_id: userId,
     entity_name: userName,
@@ -222,7 +232,7 @@ export const logAssignmentActivity = async (
     user_id: '', // No tenemos user_id específico aquí
     user_name: createdBy,
     user_email: '', // No tenemos user_email específico aquí
-    activity_type: 'assignment_management',
+    activity_type: 'assignment_created',
     entity_type: 'assignment',
     entity_id: '', // No tenemos entity_id específico aquí
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
@@ -248,7 +258,7 @@ export const logAssignmentUpdateActivity = async (
     user_id: '', // No tenemos user_id específico aquí
     user_name: updatedBy,
     user_email: '', // No tenemos user_email específico aquí
-    activity_type: 'assignment_management',
+    activity_type: 'assignment_updated',
     entity_type: 'assignment',
     entity_id: '', // No tenemos entity_id específico aquí
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
@@ -274,7 +284,7 @@ export const logAssignmentDeleteActivity = async (
     user_id: '', // No tenemos user_id específico aquí
     user_name: deletedBy,
     user_email: '', // No tenemos user_email específico aquí
-    activity_type: 'assignment_management',
+    activity_type: 'assignment_cancelled',
     entity_type: 'assignment',
     entity_id: '', // No tenemos entity_id específico aquí
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
@@ -306,7 +316,7 @@ export const logAssignmentCreationActivity = async (
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'assignment_creation',
+    activity_type: 'assignment_created',
     entity_type: 'assignment',
     entity_id: '', // No tenemos entity_id específico aquí
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
@@ -343,7 +353,7 @@ export const logAssignmentUpdateActivityDetailed = async (
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'assignment_update',
+    activity_type: 'assignment_updated',
     entity_type: 'assignment',
     entity_id: assignmentId,
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
@@ -379,7 +389,7 @@ export const logAssignmentStatusChangeActivity = async (
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'assignment_status_change',
+    activity_type: 'assignment_completed',
     entity_type: 'assignment',
     entity_id: assignmentId,
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
@@ -408,7 +418,12 @@ export const logUserManagementActivity = async (
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'user_management',
+    activity_type:
+      action === 'creó'
+        ? 'user_created'
+        : action === 'actualizó'
+          ? 'user_updated'
+          : 'user_deleted',
     entity_type: 'user',
     entity_id: userId,
     entity_name: userName,
@@ -433,7 +448,7 @@ export const logUserUpdateActivity = async (
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'user_update',
+    activity_type: 'user_updated',
     entity_type: 'user',
     entity_id: userId,
     entity_name: userName,
