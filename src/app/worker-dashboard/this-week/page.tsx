@@ -8,7 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
-import { getNextWeekRange, getWeekRange } from '@/lib/date-utils';
+import { getWeekRange } from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -32,11 +32,13 @@ const WeekServicesList = (props: {
   getWeekSlots: (
     schedule: unknown,
     assignmentType: string,
-    date: Date
+    date: Date,
+    currentHolidaySet: ReadonlySet<string>
   ) => Array<{ start: string; end: string }>;
   holidaySet: ReadonlySet<string>;
+  weekRange: { start: string; end: string };
 }): React.JSX.Element => {
-  const { assignments, getWeekSlots, holidaySet } = props;
+  const { assignments, getWeekSlots, holidaySet, weekRange } = props;
 
   type Row = {
     assignmentId: string;
@@ -105,7 +107,6 @@ const WeekServicesList = (props: {
   };
 
   // Calcular el rango de la semana actual usando las utilidades de fecha española
-  const weekRange = getWeekRange();
   const weekStart = new Date(weekRange.start);
   const weekEnd = new Date(weekRange.end);
 
@@ -127,7 +128,12 @@ const WeekServicesList = (props: {
         continue;
       }
 
-      const slots = getWeekSlots(a.schedule, a.assignment_type, currentDate);
+      const slots = getWeekSlots(
+        a.schedule,
+        a.assignment_type,
+        currentDate,
+        holidaySet
+      );
 
       // Solo agregar servicios si hay slots para este día
       if (slots.length > 0) {
@@ -240,7 +246,7 @@ export default function ThisWeekPage(): React.JSX.Element {
   const [weekAssignments, setWeekAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
-  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
+  const [currentWeekOffset, setCurrentWeekOffset] = useState<number>(0);
 
   type TimeSlotRange = { start: string; end: string };
 
@@ -248,7 +254,8 @@ export default function ThisWeekPage(): React.JSX.Element {
     (
       schedule: unknown,
       assignmentType: string,
-      date: Date
+      date: Date,
+      currentHolidaySet: ReadonlySet<string>
     ): TimeSlotRange[] => {
       try {
         const sc =
@@ -313,20 +320,40 @@ export default function ThisWeekPage(): React.JSX.Element {
         const type = (assignmentType ?? '').toLowerCase();
         const dateKey = date.toISOString().split('T')[0] ?? '';
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isOfficialHoliday = holidaySet.has(dateKey);
-        const mustUseHoliday =
-          isWeekend || isOfficialHoliday || type === 'festivos';
+        const isOfficialHoliday = currentHolidaySet.has(dateKey);
+
+        // Para trabajadoras de festivos, solo devolver slots en fines de semana y festivos
+        if (type === 'festivos') {
+          if ((isWeekend || isOfficialHoliday) && holidaySlots.length > 0)
+            return holidaySlots;
+          return [];
+        }
+
+        // Para trabajadoras de días laborables, solo devolver slots en días laborables (no fines de semana)
+        if (type === 'laborables') {
+          if (!isWeekend && !isOfficialHoliday && daySlots.length > 0)
+            return daySlots;
+          return [];
+        }
+
+        // Para trabajadoras flexibles, usar la lógica normal
+        const mustUseHoliday = isWeekend || isOfficialHoliday;
         if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
         if (daySlots.length > 0) return daySlots;
-        return holidaySlots;
+        return [];
       } catch {
         return [];
       }
     },
-    [holidaySet]
+    []
   );
 
-  const weekRange = useMemo(() => getNextWeekRange(), []);
+  const weekRange = useMemo(() => {
+    const baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + currentWeekOffset * 7);
+    const range = getWeekRange(baseDate);
+    return range;
+  }, [currentWeekOffset]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -337,7 +364,7 @@ export default function ThisWeekPage(): React.JSX.Element {
       }
 
       try {
-        if (!hasLoadedOnce) setLoading(true);
+        setLoading(true);
 
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
@@ -412,7 +439,8 @@ export default function ThisWeekPage(): React.JSX.Element {
               const slots = getWeekSlots(
                 a.schedule,
                 a.assignment_type,
-                current
+                current,
+                hset
               );
               if (slots.length > 0) {
                 hasSlotsInWeek = true;
@@ -426,24 +454,19 @@ export default function ThisWeekPage(): React.JSX.Element {
             const t = (a.assignment_type ?? '').toLowerCase();
             return t === 'laborables' || t === 'flexible' || t === 'festivos';
           });
+
+          // Simplemente pasar las asignaciones filtradas, sin generar slots diarios
           setWeekAssignments(filtered);
         } else {
           setWeekAssignments([]);
         }
       } finally {
-        if (!hasLoadedOnce) setLoading(false);
-        setHasLoadedOnce(true);
+        setLoading(false);
       }
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [
-    getWeekSlots,
-    weekRange.start,
-    weekRange.end,
-    currentUser?.email,
-    hasLoadedOnce,
-  ]);
+  }, [currentUser?.email, currentWeekOffset, getWeekSlots, weekRange]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
@@ -455,6 +478,18 @@ export default function ThisWeekPage(): React.JSX.Element {
   const weekStart = useMemo(() => new Date(weekRange.start), [weekRange.start]);
 
   const weekEnd = useMemo(() => new Date(weekRange.end), [weekRange.end]);
+
+  const handlePrevWeek = () => {
+    setCurrentWeekOffset((prev) => prev - 1);
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekOffset((prev) => prev + 1);
+  };
+
+  const handleCurrentWeek = () => {
+    setCurrentWeekOffset(0);
+  };
 
   return (
     <ProtectedRoute requiredRole='worker'>
@@ -491,6 +526,80 @@ export default function ThisWeekPage(): React.JSX.Element {
                   </p>
                 </div>
               </div>
+
+              {/* Planning Navigation */}
+              <div className='flex items-center space-x-2'>
+                <Link href='/worker-dashboard/this-week'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                  >
+                    Esta Semana
+                  </Button>
+                </Link>
+                <Link href='/worker-dashboard/this-month'>
+                  <Button variant='outline' size='sm'>
+                    Este Mes
+                  </Button>
+                </Link>
+              </div>
+
+              {/* Week Navigation */}
+              <div className='flex items-center space-x-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handlePrevWeek}
+                  className='flex items-center space-x-1 px-3 py-2 text-sm font-medium'
+                >
+                  <svg
+                    className='w-4 h-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M15 19l-7-7 7-7'
+                    />
+                  </svg>
+                  <span className='hidden sm:inline'>Anterior</span>
+                </Button>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleCurrentWeek}
+                  className='px-3 py-2 text-sm font-medium'
+                >
+                  Esta Semana
+                </Button>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleNextWeek}
+                  className='flex items-center space-x-1 px-3 py-2 text-sm font-medium'
+                >
+                  <span className='hidden sm:inline'>Siguiente</span>
+                  <svg
+                    className='w-4 h-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M9 5l7 7-7 7'
+                    />
+                  </svg>
+                </Button>
+              </div>
             </div>
           </div>
         </header>
@@ -524,6 +633,7 @@ export default function ThisWeekPage(): React.JSX.Element {
                   assignments={weekAssignments}
                   getWeekSlots={getWeekSlots}
                   holidaySet={holidaySet}
+                  weekRange={weekRange}
                 />
               )}
             </div>

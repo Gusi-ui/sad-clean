@@ -43,8 +43,8 @@ export const getWeekRange = (
   const sunday = getSundayOfWeek(date);
 
   return {
-    start: monday.toISOString().split('T')[0] ?? '',
-    end: sunday.toISOString().split('T')[0] ?? '',
+    start: monday.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
+    end: sunday.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
   };
 };
 
@@ -79,8 +79,8 @@ export const getMonthRange = (
   const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
   return {
-    start: start.toISOString().split('T')[0] ?? '',
-    end: end.toISOString().split('T')[0] ?? '',
+    start: start.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
+    end: end.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
   };
 };
 

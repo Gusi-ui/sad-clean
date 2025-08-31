@@ -119,8 +119,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const normalizedEmail = credentials.email.toLowerCase().trim();
 
       // Login directo con Supabase
-
-      // Usar Supabase directamente como funcionaba antes
       const { data: authData, error: authError } =
         await supabase.auth.signInWithPassword({
           email: normalizedEmail,
@@ -128,36 +126,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         });
 
       if (authError) {
-        throw new Error('Credenciales inválidas');
+        throw new Error(`Error de autenticación: ${authError.message}`);
       }
 
       if (authData.user == null) {
-        throw new Error('Error de autenticación');
+        throw new Error('Error de autenticación: Usuario no encontrado');
       }
 
       // Autenticación exitosa con Supabase
+      // Usar directamente los datos de Supabase Auth sin consultar auth_users
 
-      // Obtener información del usuario desde auth_users
-      const { data: userData, error: userError } = await supabase
-        .from('auth_users')
-        .select('id, email, role')
-        .eq('id', authData.user.id)
-        .single();
-
-      if (userError != null || userData == null) {
-        throw new Error('Usuario no encontrado en la base de datos');
-      }
-
-      // Datos de usuario obtenidos correctamente
-
-      // Crear objeto worker basado en los datos de Supabase
+      // Crear objeto worker basado en los datos de Supabase Auth
       const metadata = authData.user.user_metadata as Record<
         string,
         unknown
       > | null;
+
+      // Determinar el rol basado en el email o metadata
+      let role: 'worker' | 'admin' | 'super_admin' = 'worker';
+      if (authData.user.email === 'conectomail@gmail.com') {
+        role = 'super_admin';
+      } else if (authData.user.email === 'webmaster@gusi.dev') {
+        role = 'admin';
+      } else {
+        // Para otros usuarios, asumir que son workers
+        role = 'worker';
+      }
+
       const worker: Worker = {
-        id: userData.id,
-        email: userData.email,
+        id: authData.user.id,
+        email: authData.user.email ?? '',
         name:
           (metadata?.name as string) ??
           authData.user.email?.split('@')[0] ??
@@ -165,8 +163,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         surname: (metadata?.surname as string) ?? '',
         phone: (metadata?.phone as string) ?? '',
         dni: (metadata?.dni as string) ?? '',
-        worker_type: (metadata?.worker_type as string) ?? 'general',
-        role: userData.role as 'worker' | 'admin' | 'super_admin',
+        worker_type: (metadata?.worker_type as string) ?? 'cuidadora',
+        role,
         is_active: true,
         created_at: authData.user.created_at,
         updated_at: authData.user.updated_at ?? authData.user.created_at,
@@ -186,8 +184,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: 'AUTH_SUCCESS', payload: worker });
 
       // Login completado exitosamente
-
-      // Retornar el worker para usar en signIn
       return worker;
     } catch (error) {
       const errorMessage =
@@ -254,6 +250,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Redirección determinada según el rol del usuario
+      // No resetear loading aquí, mantenerlo activo durante la redirección
 
       return { redirectTo };
     } catch {
