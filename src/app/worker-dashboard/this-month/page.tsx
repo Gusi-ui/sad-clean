@@ -322,7 +322,6 @@ export default function ThisMonthPage(): React.JSX.Element {
   const [monthAssignments, setMonthAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
-  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
   const [currentMonthOffset, setCurrentMonthOffset] = useState<number>(0);
 
   type TimeSlotRange = { start: string; end: string };
@@ -424,7 +423,7 @@ export default function ThisMonthPage(): React.JSX.Element {
       }
 
       try {
-        if (!hasLoadedOnce) setLoading(true);
+        setLoading(true);
 
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
@@ -518,8 +517,7 @@ export default function ThisMonthPage(): React.JSX.Element {
           setMonthAssignments([]);
         }
       } finally {
-        if (!hasLoadedOnce) setLoading(false);
-        setHasLoadedOnce(true);
+        setLoading(false);
       }
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -529,7 +527,6 @@ export default function ThisMonthPage(): React.JSX.Element {
     monthRange.start,
     monthRange.end,
     currentUser?.email,
-    hasLoadedOnce,
     currentMonthOffset,
   ]);
 

@@ -240,7 +240,6 @@ export default function ThisWeekPage(): React.JSX.Element {
   const [weekAssignments, setWeekAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
-  const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
   const [currentWeekOffset, setCurrentWeekOffset] = useState<number>(0);
 
   type TimeSlotRange = { start: string; end: string };
@@ -342,7 +341,7 @@ export default function ThisWeekPage(): React.JSX.Element {
       }
 
       try {
-        if (!hasLoadedOnce) setLoading(true);
+        setLoading(true);
 
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
@@ -436,8 +435,7 @@ export default function ThisWeekPage(): React.JSX.Element {
           setWeekAssignments([]);
         }
       } finally {
-        if (!hasLoadedOnce) setLoading(false);
-        setHasLoadedOnce(true);
+        setLoading(false);
       }
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
@@ -447,7 +445,6 @@ export default function ThisWeekPage(): React.JSX.Element {
     weekRange.start,
     weekRange.end,
     currentUser?.email,
-    hasLoadedOnce,
     currentWeekOffset,
   ]);
 
