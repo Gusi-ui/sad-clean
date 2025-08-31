@@ -32,11 +32,13 @@ const WeekServicesList = (props: {
   getWeekSlots: (
     schedule: unknown,
     assignmentType: string,
-    date: Date
+    date: Date,
+    currentHolidaySet: ReadonlySet<string>
   ) => Array<{ start: string; end: string }>;
   holidaySet: ReadonlySet<string>;
+  weekRange: { start: string; end: string };
 }): React.JSX.Element => {
-  const { assignments, getWeekSlots, holidaySet } = props;
+  const { assignments, getWeekSlots, holidaySet, weekRange } = props;
 
   type Row = {
     assignmentId: string;
@@ -105,7 +107,6 @@ const WeekServicesList = (props: {
   };
 
   // Calcular el rango de la semana actual usando las utilidades de fecha española
-  const weekRange = getWeekRange();
   const weekStart = new Date(weekRange.start);
   const weekEnd = new Date(weekRange.end);
 
@@ -127,7 +128,12 @@ const WeekServicesList = (props: {
         continue;
       }
 
-      const slots = getWeekSlots(a.schedule, a.assignment_type, currentDate);
+      const slots = getWeekSlots(
+        a.schedule,
+        a.assignment_type,
+        currentDate,
+        holidaySet
+      );
 
       // Solo agregar servicios si hay slots para este día
       if (slots.length > 0) {
@@ -248,7 +254,8 @@ export default function ThisWeekPage(): React.JSX.Element {
     (
       schedule: unknown,
       assignmentType: string,
-      date: Date
+      date: Date,
+      currentHolidaySet: ReadonlySet<string>
     ): TimeSlotRange[] => {
       try {
         const sc =
@@ -313,23 +320,39 @@ export default function ThisWeekPage(): React.JSX.Element {
         const type = (assignmentType ?? '').toLowerCase();
         const dateKey = date.toISOString().split('T')[0] ?? '';
         const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
-        const isOfficialHoliday = holidaySet.has(dateKey);
-        const mustUseHoliday =
-          isWeekend || isOfficialHoliday || type === 'festivos';
+        const isOfficialHoliday = currentHolidaySet.has(dateKey);
+
+        // Para trabajadoras de festivos, solo devolver slots en fines de semana y festivos
+        if (type === 'festivos') {
+          if ((isWeekend || isOfficialHoliday) && holidaySlots.length > 0)
+            return holidaySlots;
+          return [];
+        }
+
+        // Para trabajadoras de días laborables, solo devolver slots en días laborables (no fines de semana)
+        if (type === 'laborables') {
+          if (!isWeekend && !isOfficialHoliday && daySlots.length > 0)
+            return daySlots;
+          return [];
+        }
+
+        // Para trabajadoras flexibles, usar la lógica normal
+        const mustUseHoliday = isWeekend || isOfficialHoliday;
         if (mustUseHoliday && holidaySlots.length > 0) return holidaySlots;
         if (daySlots.length > 0) return daySlots;
-        return holidaySlots;
+        return [];
       } catch {
         return [];
       }
     },
-    [holidaySet]
+    []
   );
 
   const weekRange = useMemo(() => {
     const baseDate = new Date();
     baseDate.setDate(baseDate.getDate() + currentWeekOffset * 7);
-    return getWeekRange(baseDate);
+    const range = getWeekRange(baseDate);
+    return range;
   }, [currentWeekOffset]);
 
   useEffect(() => {
@@ -416,7 +439,8 @@ export default function ThisWeekPage(): React.JSX.Element {
               const slots = getWeekSlots(
                 a.schedule,
                 a.assignment_type,
-                current
+                current,
+                hset
               );
               if (slots.length > 0) {
                 hasSlotsInWeek = true;
@@ -430,6 +454,8 @@ export default function ThisWeekPage(): React.JSX.Element {
             const t = (a.assignment_type ?? '').toLowerCase();
             return t === 'laborables' || t === 'flexible' || t === 'festivos';
           });
+
+          // Simplemente pasar las asignaciones filtradas, sin generar slots diarios
           setWeekAssignments(filtered);
         } else {
           setWeekAssignments([]);
@@ -440,13 +466,7 @@ export default function ThisWeekPage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [
-    getWeekSlots,
-    weekRange.start,
-    weekRange.end,
-    currentUser?.email,
-    currentWeekOffset,
-  ]);
+  }, [currentUser?.email, currentWeekOffset, getWeekSlots, weekRange]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
@@ -613,6 +633,7 @@ export default function ThisWeekPage(): React.JSX.Element {
                   assignments={weekAssignments}
                   getWeekSlots={getWeekSlots}
                   holidaySet={holidaySet}
+                  weekRange={weekRange}
                 />
               )}
             </div>
