@@ -502,7 +502,7 @@ export default function DashboardPage() {
                 </Link>
 
                 <Link href='/holidays' className='block'>
-                  <div className='w-full text-left p-4 bg-gradient-to-r from-orange-50 to-orange-100 rounded-xl hover:from-orange-100 hover:to-orange-200 transition-all duration-200 border border-orange-200'>
+                  <div className='w-full text-left p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl hover:from-red-100 hover:to-red-200 transition-all duration-200 border border-red-200'>
                     <div className='flex items-center space-x-3'>
                       <span className='text-2xl'>🎯</span>
                       <div className='flex-1'>
@@ -514,7 +514,7 @@ export default function DashboardPage() {
                         </p>
                       </div>
                       <svg
-                        className='w-5 h-5 text-orange-600'
+                        className='w-5 h-5 text-red-600'
                         fill='none'
                         stroke='currentColor'
                         viewBox='0 0 24 24'
