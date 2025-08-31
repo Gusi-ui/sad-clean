@@ -763,10 +763,9 @@ export default function PlanningPage() {
             </div>
           )}
 
-          {/* Modern Month Calendar */}
+          {/* Desktop Calendar Grid */}
           {!loading && (
-            <div className='mb-8'>
-              {/* Calendar Header */}
+            <div className='hidden lg:block mb-8'>
               <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
                 {/* Weekday Headers */}
                 <div className='grid grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200'>
@@ -793,7 +792,7 @@ export default function PlanningPage() {
 
                     // Estilos base
                     let cellClasses =
-                      'min-h-[120px] md:min-h-[140px] lg:min-h-[160px] p-2 md:p-3 relative border-r border-b border-gray-200';
+                      'min-h-[160px] p-3 relative border-r border-b border-gray-200';
 
                     if (!isCurrentMonth) {
                       cellClasses += ' bg-gray-50 text-gray-400';
@@ -824,7 +823,7 @@ export default function PlanningPage() {
                         {/* Date Number */}
                         <div className='flex items-center justify-between mb-2'>
                           <span
-                            className={`text-sm md:text-base font-semibold ${
+                            className={`text-base font-semibold ${
                               isToday
                                 ? 'text-blue-700'
                                 : isHoliday
@@ -857,7 +856,7 @@ export default function PlanningPage() {
 
                         {/* Entries */}
                         {isCurrentMonth && (
-                          <div className='space-y-1 max-h-20 md:max-h-24 lg:max-h-28 overflow-y-auto'>
+                          <div className='space-y-1 max-h-28 overflow-y-auto'>
                             {cell.entries.slice(0, 3).map((entry, i) => (
                               <div
                                 key={`${dateKey}-${i}`}
@@ -910,6 +909,201 @@ export default function PlanningPage() {
                   })}
                 </div>
               </div>
+            </div>
+          )}
+
+          {/* Mobile/Tablet List View */}
+          {!loading && (
+            <div className='lg:hidden mb-8 space-y-4'>
+              {/* Group by week for better mobile experience */}
+              {(() => {
+                const weeks: Array<{
+                  weekStart: Date;
+                  weekEnd: Date;
+                  days: Array<{
+                    date: Date;
+                    entries: ExpandedEntry[];
+                    isToday: boolean;
+                    isHoliday: boolean;
+                    isWeekend: boolean;
+                    holidayName?: string;
+                  }>;
+                }> = [];
+
+                let currentWeek: (typeof weeks)[0] | null = null;
+
+                monthGrid
+                  .filter((cell) => cell.isCurrentMonth)
+                  .forEach((cell) => {
+                    const weekStart = new Date(cell.date);
+                    weekStart.setDate(
+                      weekStart.getDate() - weekStart.getDay() + 1
+                    ); // Monday
+
+                    if (
+                      !currentWeek ||
+                      currentWeek.weekStart.getTime() !== weekStart.getTime()
+                    ) {
+                      if (currentWeek) {
+                        weeks.push(currentWeek);
+                      }
+                      currentWeek = {
+                        weekStart,
+                        weekEnd: new Date(weekStart),
+                        days: [],
+                      };
+                      currentWeek.weekEnd.setDate(weekStart.getDate() + 6);
+                    }
+
+                    if (currentWeek !== null) {
+                      currentWeek.days.push({
+                        date: cell.date,
+                        entries: cell.entries,
+                        isToday: cell.isToday,
+                        isHoliday: cell.isHoliday,
+                        isWeekend: cell.isWeekend,
+                        holidayName: cell.holidayName,
+                      });
+                    }
+                  });
+
+                if (currentWeek !== null) {
+                  weeks.push(currentWeek);
+                }
+
+                return weeks.map((week, weekIndex) => (
+                  <div
+                    key={weekIndex}
+                    className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'
+                  >
+                    {/* Week Header */}
+                    <div className='bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200'>
+                      <h3 className='text-sm font-semibold text-gray-900'>
+                        Semana del{' '}
+                        {week.weekStart.toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}{' '}
+                        -{' '}
+                        {week.weekEnd.toLocaleDateString('es-ES', {
+                          day: 'numeric',
+                          month: 'short',
+                        })}
+                      </h3>
+                    </div>
+
+                    {/* Week Days */}
+                    <div className='divide-y divide-gray-200'>
+                      {week.days.map((day, dayIndex) => {
+                        const dayName = day.date.toLocaleDateString('es-ES', {
+                          weekday: 'long',
+                          day: 'numeric',
+                          month: 'short',
+                        });
+
+                        return (
+                          <div key={dayIndex} className='p-4'>
+                            {/* Day Header */}
+                            <div className='flex items-center justify-between mb-3'>
+                              <div className='flex items-center space-x-2'>
+                                <div
+                                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                                    day.isToday
+                                      ? 'bg-blue-500 text-white'
+                                      : day.isHoliday
+                                        ? 'bg-red-500 text-white'
+                                        : day.isWeekend
+                                          ? 'bg-orange-500 text-white'
+                                          : 'bg-gray-200 text-gray-700'
+                                  }`}
+                                >
+                                  {day.date.getDate()}
+                                </div>
+                                <div>
+                                  <h4 className='font-semibold text-gray-900'>
+                                    {dayName}
+                                  </h4>
+                                  {day.isHoliday && (
+                                    <p className='text-xs text-red-600'>
+                                      🎉 {day.holidayName}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className='text-right'>
+                                <span className='text-sm text-gray-500'>
+                                  {day.entries.length} servicios
+                                </span>
+                              </div>
+                            </div>
+
+                            {/* Day Entries */}
+                            {day.entries.length > 0 ? (
+                              <div className='space-y-2'>
+                                {day.entries.map((entry, entryIndex) => (
+                                  <div
+                                    key={entryIndex}
+                                    className={`p-3 rounded-lg border-l-4 ${
+                                      entry.assignmentType === 'laborables'
+                                        ? 'bg-blue-50 border-blue-500'
+                                        : entry.assignmentType === 'festivos'
+                                          ? 'bg-orange-50 border-orange-500'
+                                          : entry.assignmentType === 'flexible'
+                                            ? 'bg-purple-50 border-purple-500'
+                                            : 'bg-gray-50 border-gray-500'
+                                    }`}
+                                  >
+                                    <div className='flex items-center justify-between mb-1'>
+                                      <span className='font-medium text-gray-900'>
+                                        {entry.workerName}
+                                      </span>
+                                      <span
+                                        className={`text-xs px-2 py-1 rounded-full ${
+                                          entry.assignmentType === 'laborables'
+                                            ? 'bg-blue-100 text-blue-800'
+                                            : entry.assignmentType ===
+                                                'festivos'
+                                              ? 'bg-orange-100 text-orange-800'
+                                              : entry.assignmentType ===
+                                                  'flexible'
+                                                ? 'bg-purple-100 text-purple-800'
+                                                : 'bg-gray-100 text-gray-800'
+                                        }`}
+                                      >
+                                        {entry.assignmentType === 'laborables'
+                                          ? 'Laborables'
+                                          : entry.assignmentType === 'festivos'
+                                            ? 'Festivos'
+                                            : entry.assignmentType ===
+                                                'flexible'
+                                              ? 'Flexible'
+                                              : 'Otro'}
+                                      </span>
+                                    </div>
+                                    <p className='text-sm text-gray-700 mb-1'>
+                                      {entry.userName}
+                                    </p>
+                                    <p className='text-sm font-semibold text-gray-900'>
+                                      {entry.start} - {entry.end}
+                                    </p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className='text-center py-6 text-gray-400'>
+                                <div className='text-2xl mb-2'>📅</div>
+                                <p className='text-sm'>
+                                  Sin servicios programados
+                                </p>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
           )}
 
