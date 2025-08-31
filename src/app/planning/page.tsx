@@ -819,7 +819,7 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Calendar Grid */}
-                <div className='grid grid-cols-7 divide-x divide-y divide-gray-200'>
+                <div className='grid grid-cols-7 border border-gray-200'>
                   {monthGrid.map((cell, idx) => {
                     const dateKey = getDateKeyLocal(cell.date);
                     const isCurrentMonth = cell.isCurrentMonth;
@@ -829,7 +829,7 @@ export default function PlanningPage() {
 
                     // Estilos base
                     let cellClasses =
-                      'min-h-[120px] md:min-h-[140px] lg:min-h-[160px] p-2 md:p-3 relative';
+                      'min-h-[120px] md:min-h-[140px] lg:min-h-[160px] p-2 md:p-3 relative border-r border-b border-gray-200';
 
                     if (!isCurrentMonth) {
                       cellClasses += ' bg-gray-50 text-gray-400';
