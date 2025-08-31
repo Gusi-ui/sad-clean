@@ -1165,20 +1165,20 @@ export default function WorkerDashboard(): React.JSX.Element {
               </p>
             </div>
             <div className='p-4 sm:p-6'>
-              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
-                <Link href='/worker-dashboard/schedule'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4'>
+                <Link href='/worker-dashboard/this-week'>
                   <Button
                     className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
                     variant='outline'
                   >
                     <div className='flex items-center space-x-3'>
-                      <span className='text-xl sm:text-lg'>📋</span>
+                      <span className='text-xl sm:text-lg'>📅</span>
                       <div className='text-left'>
                         <div className='font-medium text-sm sm:text-base'>
-                          Ver Mi Horario
+                          Esta Semana
                         </div>
                         <div className='text-xs text-gray-500 hidden sm:block'>
-                          Completo
+                          Servicios programados
                         </div>
                       </div>
                     </div>
@@ -1202,6 +1202,25 @@ export default function WorkerDashboard(): React.JSX.Element {
                     </div>
                   </div>
                 </Button>
+
+                <Link href='/worker-dashboard/this-month'>
+                  <Button
+                    className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
+                    variant='outline'
+                  >
+                    <div className='flex items-center space-x-3'>
+                      <span className='text-xl sm:text-lg'>📊</span>
+                      <div className='text-left'>
+                        <div className='font-medium text-sm sm:text-base'>
+                          Este Mes
+                        </div>
+                        <div className='text-xs text-gray-500 hidden sm:block'>
+                          Vista mensual
+                        </div>
+                      </div>
+                    </div>
+                  </Button>
+                </Link>
 
                 <Link href='/worker-dashboard/route'>
                   <Button

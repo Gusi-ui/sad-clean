@@ -588,6 +588,24 @@ export default function ThisMonthPage(): React.JSX.Element {
                 </div>
               </div>
 
+              {/* Planning Navigation */}
+              <div className='flex items-center space-x-2'>
+                <Link href='/worker-dashboard/this-week'>
+                  <Button variant='outline' size='sm'>
+                    Esta Semana
+                  </Button>
+                </Link>
+                <Link href='/worker-dashboard/this-month'>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='bg-blue-50 border-blue-200 text-blue-700 hover:bg-blue-100'
+                  >
+                    Este Mes
+                  </Button>
+                </Link>
+              </div>
+
               {/* Month Navigation */}
               <div className='flex items-center space-x-2'>
                 <Button
