@@ -12,7 +12,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -82,15 +81,17 @@ export default function LoginForm() {
       if (signInError != null) {
         // Usa != para capturar tanto null como undefined
         setError(signInError ?? 'Error de autenticación');
+        setLoading(false); // Solo resetear loading si hay error
       } else if (redirectTo !== undefined) {
         // Redirigiendo al dashboard correspondiente
+        // Mantener loading activo durante la redirección
         router.push(redirectTo);
       } else {
         // No se recibió redirectTo válido
+        setLoading(false);
       }
     } catch {
       setError('Error inesperado. Inténtalo de nuevo.');
-    } finally {
       setLoading(false);
     }
   };
@@ -302,19 +303,24 @@ export default function LoginForm() {
               </div>
             )}
 
-            {/* Botón de Envío */}
-            <div>
-              <Button
-                type='submit'
-                className='w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200'
-                loading={loading || authLoading}
-                disabled={loading || authLoading || !isFormValid}
-              >
-                {loading || authLoading
-                  ? 'Iniciando sesión...'
-                  : '🔐 Iniciar Sesión'}
-              </Button>
-            </div>
+            {/* Botón de Inicio de Sesión */}
+            <Button
+              type='submit'
+              disabled={!isFormValid || loading}
+              className='w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
+            >
+              {loading ? (
+                <div className='flex items-center justify-center space-x-2'>
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+                  <span>Iniciando sesión...</span>
+                </div>
+              ) : (
+                <div className='flex items-center justify-center space-x-2'>
+                  <span>🔐</span>
+                  <span>Iniciar Sesión</span>
+                </div>
+              )}
+            </Button>
 
             {/* Información de Ayuda */}
             <div className='text-center'>
