@@ -1496,13 +1496,26 @@ export default function WorkersPage() {
                 <label className='block text-sm font-medium text-gray-900 mb-1'>
                   Contraseña de acceso (APP)
                 </label>
-                <div className='space-y-2'>
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  className='space-y-2'
+                >
+                  {/* Campo de usuario oculto para accesibilidad */}
+                  <input
+                    type='text'
+                    name='username'
+                    autoComplete='username'
+                    style={{ display: 'none' }}
+                    value={editingWorker.email ?? ''}
+                    readOnly
+                  />
                   <Input
                     id='worker-password-input'
                     className='w-full h-11 bg-white text-gray-900 placeholder:text-gray-400'
                     type={showWorkerPassword ? 'text' : 'password'}
                     placeholder='Introduce o genera una contraseña'
                     value={workerAccessPassword}
+                    autoComplete='new-password'
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setWorkerAccessPassword(e.target.value)
                     }
@@ -1538,7 +1551,7 @@ export default function WorkersPage() {
                       Copiar credenciales
                     </Button>
                   </div>
-                </div>
+                </form>
                 <p className='mt-1 text-xs text-gray-600'>
                   Mínimo 6 caracteres. Puedes editarla manualmente.
                 </p>
