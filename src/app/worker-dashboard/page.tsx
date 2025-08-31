@@ -615,14 +615,21 @@ export default function WorkerDashboard(): React.JSX.Element {
                     dayOfWeek <= 5 &&
                     holidays.has(key) === false
                   ) {
-                    count++;
+                    // Contar los slots de servicios para este día específico
+                    const slots = getSlotsForDate(
+                      assignment.schedule,
+                      assignment.assignment_type,
+                      false, // No es festivo
+                      current
+                    );
+                    count += slots.length;
                   }
                   current.setDate(current.getDate() + 1);
                 }
                 return count;
               }
 
-              // Para asignaciones diarias, contar días en el rango
+              // Para asignaciones diarias, contar servicios por día en el rango
               if (assignment.assignment_type === 'daily') {
                 const current = new Date(
                   Math.max(start.getTime(), assignmentStart.getTime())
@@ -633,13 +640,19 @@ export default function WorkerDashboard(): React.JSX.Element {
                 let count = 0;
 
                 while (current.getTime() <= rangeEnd.getTime()) {
-                  count++;
+                  const slots = getSlotsForDate(
+                    assignment.schedule,
+                    assignment.assignment_type,
+                    false,
+                    current
+                  );
+                  count += slots.length;
                   current.setDate(current.getDate() + 1);
                 }
                 return count;
               }
 
-              // Para asignaciones flexibles, contar todos los días (laborables, fines de semana y festivos)
+              // Para asignaciones flexibles, contar servicios todos los días
               if (assignment.assignment_type === 'flexible') {
                 const current = new Date(
                   Math.max(start.getTime(), assignmentStart.getTime())
@@ -650,13 +663,24 @@ export default function WorkerDashboard(): React.JSX.Element {
                 let count = 0;
 
                 while (current.getTime() <= rangeEnd.getTime()) {
-                  count++;
+                  const dayOfWeek = current.getDay();
+                  const key = current.toISOString().split('T')[0] ?? '';
+                  const isHoliday =
+                    holidays.has(key) || dayOfWeek === 0 || dayOfWeek === 6;
+
+                  const slots = getSlotsForDate(
+                    assignment.schedule,
+                    assignment.assignment_type,
+                    isHoliday,
+                    current
+                  );
+                  count += slots.length;
                   current.setDate(current.getDate() + 1);
                 }
                 return count;
               }
 
-              // Para asignaciones de festivos, contar fines de semana o festivos oficiales
+              // Para asignaciones de festivos, contar servicios en fines de semana o festivos oficiales
               if (assignment.assignment_type === 'festivos') {
                 const current = new Date(
                   Math.max(start.getTime(), assignmentStart.getTime())
@@ -676,7 +700,13 @@ export default function WorkerDashboard(): React.JSX.Element {
                   )}`;
                   const isWeekend = dayOfWeek === 0 || dayOfWeek === 6;
                   if (isWeekend || holidays.has(key)) {
-                    count++;
+                    const slots = getSlotsForDate(
+                      assignment.schedule,
+                      assignment.assignment_type,
+                      true, // Es festivo
+                      current
+                    );
+                    count += slots.length;
                   }
                   current.setDate(current.getDate() + 1);
                 }
@@ -690,7 +720,13 @@ export default function WorkerDashboard(): React.JSX.Element {
                   assignmentDate.getTime() >= start.getTime() &&
                   assignmentDate.getTime() <= end.getTime()
                 ) {
-                  return 1;
+                  const slots = getSlotsForDate(
+                    assignment.schedule,
+                    assignment.assignment_type,
+                    false,
+                    assignmentDate
+                  );
+                  return slots.length;
                 }
                 return 0;
               }
