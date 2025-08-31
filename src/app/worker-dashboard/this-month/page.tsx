@@ -47,6 +47,7 @@ const MonthServicesList = (props: {
     date: string;
     dayName: string;
     state: 'pending' | 'inprogress' | 'done';
+    assignmentType: string;
   };
 
   const toMinutes = (hhmm: string): number => {
@@ -144,6 +145,7 @@ const MonthServicesList = (props: {
             date: dateStr,
             dayName: formatDate(dateStr),
             state: 'pending' as const,
+            assignmentType: a.assignment_type,
           });
         });
       }
@@ -160,17 +162,6 @@ const MonthServicesList = (props: {
     if (dateCompare !== 0) return dateCompare;
     return a.startMinutes - b.startMinutes;
   });
-
-  const badgeClassByState: Record<Row['state'], string> = {
-    pending: 'bg-white/80 text-amber-800 ring-1 ring-amber-300',
-    inprogress: 'bg-white/80 text-green-800 ring-1 ring-green-300',
-    done: 'bg-white/80 text-rose-800 ring-1 ring-rose-300',
-  };
-  const containerClassByState: Record<Row['state'], string> = {
-    pending: 'bg-amber-100 border-amber-300 shadow-sm hover:bg-amber-50',
-    inprogress: 'bg-green-100 border-green-300 shadow-sm hover:bg-green-50',
-    done: 'bg-rose-100 border-rose-300 shadow-sm hover:bg-rose-50',
-  };
 
   // Agrupar por semana usando el formato español (lunes a domingo)
   const groupedByWeek = rows.reduce<Record<string, Row[]>>((acc, row) => {
@@ -216,74 +207,109 @@ const MonthServicesList = (props: {
   };
 
   return (
-    <div className='space-y-8'>
+    <div className='space-y-6'>
       {Object.entries(groupedByWeek).map(([weekStart, weekRows]) => (
-        <div key={weekStart} className='space-y-4'>
-          <h3 className='text-xl font-semibold text-gray-900 border-b border-gray-200 pb-3'>
-            Semana del {formatWeekLabel(weekStart)}
-          </h3>
+        <div
+          key={weekStart}
+          className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'
+        >
+          {/* Week Header */}
+          <div className='bg-gradient-to-r from-blue-50 to-indigo-50 px-6 py-4 border-b border-gray-200'>
+            <h3 className='text-lg font-semibold text-gray-900 flex items-center'>
+              <span className='mr-2'>📅</span>
+              Semana del {formatWeekLabel(weekStart)}
+            </h3>
+            <p className='text-sm text-gray-600 mt-1'>
+              {weekRows.length} servicios programados
+            </p>
+          </div>
 
-          {/* Agrupar por día dentro de la semana */}
-          {Object.entries(
-            weekRows.reduce<Record<string, Row[]>>((acc, row) => {
-              if (!(row.date in acc)) {
-                acc[row.date] = [];
-              }
-              const array = acc[row.date];
-              if (array !== undefined) {
-                array.push(row);
-              }
-              return acc;
-            }, {})
-          ).map(([date, dayRows]) => (
-            <div key={date} className='space-y-3 ml-4'>
-              <h4 className='text-lg font-medium text-gray-800 border-l-4 border-blue-500 pl-3'>
-                {formatDate(date)}
-              </h4>
-              {dayRows.map((r, idx) => (
-                <div
-                  key={`${r.assignmentId}-${r.start}-${r.end}-${idx}`}
-                  className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 md:p-5 rounded-xl border text-gray-900 ${containerClassByState[r.state]} ml-4`}
-                >
-                  <div className='flex items-start md:items-center gap-3'>
-                    <div className='w-8 h-8 md:w-10 md:h-10 bg-white text-blue-700 rounded-full flex items-center justify-center ring-2 ring-blue-200 shadow-sm'>
-                      <span className='font-bold text-sm'>{idx + 1}</span>
-                    </div>
-                    <div>
-                      <h3 className='text-sm md:text-base font-semibold text-gray-900 leading-tight'>
-                        {r.userLabel}
-                      </h3>
-                      <p className='mt-1 text-xs md:text-sm text-gray-700'>
-                        <span className='font-medium text-gray-900'>
-                          {r.start}
-                        </span>
-                        <span className='mx-1 text-gray-500'>a</span>
-                        <span className='font-medium text-gray-900'>
-                          {r.end}
-                        </span>
-                      </p>
-                      <span
-                        className={`mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeClassByState[r.state]}`}
-                      >
-                        Programado
-                      </span>
-                    </div>
-                  </div>
-                  <Link
-                    href={`/worker-dashboard/assignment/${r.assignmentId}?start=${r.start}&end=${r.end}`}
-                  >
-                    <Button
-                      size='sm'
-                      variant='outline'
-                      className='self-start md:self-auto text-xs'
-                    >
-                      Ver Detalles
-                    </Button>
-                  </Link>
+          {/* Week Content */}
+          <div className='p-6'>
+            {Object.entries(
+              weekRows.reduce<Record<string, Row[]>>((acc, row) => {
+                if (!(row.date in acc)) {
+                  acc[row.date] = [];
+                }
+                const array = acc[row.date];
+                if (array !== undefined) {
+                  array.push(row);
+                }
+                return acc;
+              }, {})
+            ).map(([date, dayRows]) => (
+              <div key={date} className='mb-6 last:mb-0'>
+                {/* Day Header */}
+                <div className='flex items-center mb-3'>
+                  <div className='w-2 h-2 bg-blue-500 rounded-full mr-3'></div>
+                  <h4 className='text-base font-semibold text-gray-800'>
+                    {formatDate(date)}
+                  </h4>
+                  <span className='ml-2 text-sm text-gray-500'>
+                    ({dayRows.length} servicios)
+                  </span>
                 </div>
-              ))}
-            </div>
-          ))}
+
+                {/* Day Services */}
+                <div className='space-y-3 ml-5'>
+                  {dayRows.map((r, idx) => (
+                    <div
+                      key={`${r.assignmentId}-${r.start}-${r.end}-${idx}`}
+                      className={`flex flex-col md:flex-row md:items-center justify-between gap-3 p-4 rounded-lg border-l-4 ${
+                        r.assignmentType === 'laborables'
+                          ? 'border-l-blue-500 bg-blue-50'
+                          : r.assignmentType === 'festivos'
+                            ? 'border-l-orange-500 bg-orange-50'
+                            : r.assignmentType === 'flexible'
+                              ? 'border-l-purple-500 bg-purple-50'
+                              : 'border-l-gray-500 bg-gray-50'
+                      } hover:shadow-md transition-shadow`}
+                    >
+                      <div className='flex items-start md:items-center gap-3'>
+                        <div className='w-8 h-8 bg-white text-blue-700 rounded-full flex items-center justify-center ring-2 ring-blue-200 shadow-sm'>
+                          <span className='font-bold text-sm'>{idx + 1}</span>
+                        </div>
+                        <div>
+                          <h3 className='text-sm font-semibold text-gray-900 leading-tight'>
+                            {r.userLabel}
+                          </h3>
+                          <p className='mt-1 text-xs text-gray-700'>
+                            <span className='font-medium text-gray-900'>
+                              {r.start}
+                            </span>
+                            <span className='mx-1 text-gray-500'>a</span>
+                            <span className='font-medium text-gray-900'>
+                              {r.end}
+                            </span>
+                          </p>
+                          <span className='mt-1 inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium bg-white/80 text-gray-700 ring-1 ring-gray-300'>
+                            {r.assignmentType === 'laborables'
+                              ? 'Días Laborables'
+                              : r.assignmentType === 'festivos'
+                                ? 'Festivos'
+                                : r.assignmentType === 'flexible'
+                                  ? 'Flexible'
+                                  : 'Otro'}
+                          </span>
+                        </div>
+                      </div>
+                      <Link
+                        href={`/worker-dashboard/assignment/${r.assignmentId}?start=${r.start}&end=${r.end}`}
+                      >
+                        <Button
+                          size='sm'
+                          variant='outline'
+                          className='self-start md:self-auto text-xs'
+                        >
+                          Ver Detalles
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       ))}
     </div>
@@ -297,6 +323,7 @@ export default function ThisMonthPage(): React.JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
+  const [currentMonthOffset, setCurrentMonthOffset] = useState<number>(0);
 
   type TimeSlotRange = { start: string; end: string };
 
@@ -382,7 +409,11 @@ export default function ThisMonthPage(): React.JSX.Element {
     [holidaySet]
   );
 
-  const monthRange = useMemo(() => getMonthRange(), []);
+  const monthRange = useMemo(() => {
+    const baseDate = new Date();
+    baseDate.setMonth(baseDate.getMonth() + currentMonthOffset);
+    return getMonthRange(baseDate);
+  }, [currentMonthOffset]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -499,16 +530,29 @@ export default function ThisMonthPage(): React.JSX.Element {
     monthRange.end,
     currentUser?.email,
     hasLoadedOnce,
+    currentMonthOffset,
   ]);
 
-  const currentMonth = useMemo(
-    () =>
-      new Date().toLocaleDateString('es-ES', {
-        month: 'long',
-        year: 'numeric',
-      }),
-    []
-  );
+  const currentMonth = useMemo(() => {
+    const baseDate = new Date();
+    baseDate.setMonth(baseDate.getMonth() + currentMonthOffset);
+    return baseDate.toLocaleDateString('es-ES', {
+      month: 'long',
+      year: 'numeric',
+    });
+  }, [currentMonthOffset]);
+
+  const handlePrevMonth = () => {
+    setCurrentMonthOffset((prev) => prev - 1);
+  };
+
+  const handleNextMonth = () => {
+    setCurrentMonthOffset((prev) => prev + 1);
+  };
+
+  const handleCurrentMonth = () => {
+    setCurrentMonthOffset(0);
+  };
 
   return (
     <ProtectedRoute requiredRole='worker'>
@@ -542,6 +586,62 @@ export default function ThisMonthPage(): React.JSX.Element {
                   </h1>
                   <p className='text-gray-600'>{currentMonth}</p>
                 </div>
+              </div>
+
+              {/* Month Navigation */}
+              <div className='flex items-center space-x-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handlePrevMonth}
+                  className='flex items-center space-x-1 px-3 py-2 text-sm font-medium'
+                >
+                  <svg
+                    className='w-4 h-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M15 19l-7-7 7-7'
+                    />
+                  </svg>
+                  <span className='hidden sm:inline'>Anterior</span>
+                </Button>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleCurrentMonth}
+                  className='px-3 py-2 text-sm font-medium'
+                >
+                  Este Mes
+                </Button>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleNextMonth}
+                  className='flex items-center space-x-1 px-3 py-2 text-sm font-medium'
+                >
+                  <span className='hidden sm:inline'>Siguiente</span>
+                  <svg
+                    className='w-4 h-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M9 5l7 7-7 7'
+                    />
+                  </svg>
+                </Button>
               </div>
             </div>
           </div>

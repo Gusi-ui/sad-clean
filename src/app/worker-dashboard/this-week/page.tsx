@@ -8,7 +8,7 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
-import { getNextWeekRange, getWeekRange } from '@/lib/date-utils';
+import { getWeekRange } from '@/lib/date-utils';
 
 interface AssignmentRow {
   id: string;
@@ -241,6 +241,7 @@ export default function ThisWeekPage(): React.JSX.Element {
   const [loading, setLoading] = useState<boolean>(true);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   const [hasLoadedOnce, setHasLoadedOnce] = useState<boolean>(false);
+  const [currentWeekOffset, setCurrentWeekOffset] = useState<number>(0);
 
   type TimeSlotRange = { start: string; end: string };
 
@@ -326,7 +327,11 @@ export default function ThisWeekPage(): React.JSX.Element {
     [holidaySet]
   );
 
-  const weekRange = useMemo(() => getNextWeekRange(), []);
+  const weekRange = useMemo(() => {
+    const baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() + currentWeekOffset * 7);
+    return getWeekRange(baseDate);
+  }, [currentWeekOffset]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -443,6 +448,7 @@ export default function ThisWeekPage(): React.JSX.Element {
     weekRange.end,
     currentUser?.email,
     hasLoadedOnce,
+    currentWeekOffset,
   ]);
 
   const formatLongDate = (d: Date): string =>
@@ -455,6 +461,18 @@ export default function ThisWeekPage(): React.JSX.Element {
   const weekStart = useMemo(() => new Date(weekRange.start), [weekRange.start]);
 
   const weekEnd = useMemo(() => new Date(weekRange.end), [weekRange.end]);
+
+  const handlePrevWeek = () => {
+    setCurrentWeekOffset((prev) => prev - 1);
+  };
+
+  const handleNextWeek = () => {
+    setCurrentWeekOffset((prev) => prev + 1);
+  };
+
+  const handleCurrentWeek = () => {
+    setCurrentWeekOffset(0);
+  };
 
   return (
     <ProtectedRoute requiredRole='worker'>
@@ -490,6 +508,62 @@ export default function ThisWeekPage(): React.JSX.Element {
                     {formatLongDate(weekStart)} - {formatLongDate(weekEnd)}
                   </p>
                 </div>
+              </div>
+
+              {/* Week Navigation */}
+              <div className='flex items-center space-x-2'>
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handlePrevWeek}
+                  className='flex items-center space-x-1 px-3 py-2 text-sm font-medium'
+                >
+                  <svg
+                    className='w-4 h-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M15 19l-7-7 7-7'
+                    />
+                  </svg>
+                  <span className='hidden sm:inline'>Anterior</span>
+                </Button>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleCurrentWeek}
+                  className='px-3 py-2 text-sm font-medium'
+                >
+                  Esta Semana
+                </Button>
+
+                <Button
+                  variant='outline'
+                  size='sm'
+                  onClick={handleNextWeek}
+                  className='flex items-center space-x-1 px-3 py-2 text-sm font-medium'
+                >
+                  <span className='hidden sm:inline'>Siguiente</span>
+                  <svg
+                    className='w-4 h-4'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M9 5l7 7-7 7'
+                    />
+                  </svg>
+                </Button>
               </div>
             </div>
           </div>
