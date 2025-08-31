@@ -670,22 +670,9 @@ export default function PlanningPage() {
                     <span className='hidden sm:inline'>Anterior</span>
                   </Button>
 
-                  <div className='flex items-center space-x-2'>
-                    <h2 className='text-lg lg:text-xl font-bold text-gray-900 text-center'>
-                      {formatMonthTitle(firstDayOfMonth)}
-                    </h2>
-                    <Button
-                      variant='outline'
-                      size='sm'
-                      onClick={() => {
-                        setYear(new Date().getFullYear());
-                        setMonth(new Date().getMonth() + 1);
-                      }}
-                      className='px-2 py-1 h-8 text-xs font-medium'
-                    >
-                      Hoy
-                    </Button>
-                  </div>
+                  <h2 className='text-lg lg:text-xl font-bold text-gray-900 text-center'>
+                    {formatMonthTitle(firstDayOfMonth)}
+                  </h2>
 
                   <Button
                     variant='outline'
@@ -711,7 +698,7 @@ export default function PlanningPage() {
                 </div>
 
                 {/* Filters */}
-                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 lg:flex lg:space-x-3 lg:items-center'>
+                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:flex lg:space-x-3 lg:items-center'>
                   {/* Worker Filter */}
                   <div className='relative'>
                     <input
@@ -762,29 +749,6 @@ export default function PlanningPage() {
                       />
                     </svg>
                     Limpiar
-                  </Button>
-
-                  {/* Quick Actions */}
-                  <Button
-                    variant='outline'
-                    size='sm'
-                    className='h-10 text-sm font-medium'
-                    onClick={() => setShowEntryModal(true)}
-                  >
-                    <svg
-                      className='w-4 h-4 mr-1'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
-                    >
-                      <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
-                        strokeWidth={2}
-                        d='M12 4v16m8-8H4'
-                      />
-                    </svg>
-                    Nueva
                   </Button>
                 </div>
               </div>
