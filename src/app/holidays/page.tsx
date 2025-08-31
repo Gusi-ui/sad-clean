@@ -2,7 +2,10 @@
 
 import React, { useEffect, useState } from 'react';
 
+import Link from 'next/link';
+
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import Navigation from '@/components/layout/Navigation';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
@@ -331,7 +334,16 @@ export default function HolidaysPage(): React.JSX.Element {
           <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6'>
             <div className='flex items-center justify-between'>
               <div>
-                <h1 className='text-3xl font-bold text-gray-900'>
+                <div className='flex items-center space-x-4'>
+                  <Link
+                    href='/dashboard'
+                    className='text-blue-600 hover:text-blue-800 font-medium text-sm flex items-center space-x-1 transition-colors'
+                  >
+                    <span>←</span>
+                    <span>Volver al Dashboard</span>
+                  </Link>
+                </div>
+                <h1 className='text-3xl font-bold text-gray-900 mt-2'>
                   🎯 Administración de Festivos
                 </h1>
                 <p className='mt-2 text-gray-600'>
@@ -773,6 +785,23 @@ export default function HolidaysPage(): React.JSX.Element {
             </Button>
           </div>
         </Modal>
+
+        {/* Footer - Mobile First */}
+        <footer className='border-t border-gray-200 bg-white py-6 md:py-8 mt-auto mb-16 md:mb-0'>
+          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
+            <div className='text-center'>
+              <p className='text-xs md:text-sm text-gray-600 mb-1 md:mb-2 font-medium'>
+                © 2025 SAD - Sistema de Gestión
+              </p>
+              <p className='text-xs text-gray-500'>
+                Administración de Festivos - Mataró
+              </p>
+            </div>
+          </div>
+        </footer>
+
+        {/* Navegación móvil fija */}
+        <Navigation variant='mobile' />
       </div>
     </ProtectedRoute>
   );

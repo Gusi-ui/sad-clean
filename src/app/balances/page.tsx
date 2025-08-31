@@ -74,6 +74,16 @@ export default function BalancesPage() {
     setCurrentMonth(d.getMonth() + 1);
   };
 
+  // Función para limpiar filtros
+  const clearFilters = (): void => {
+    setWorkerQuery('');
+    setUserQuery('');
+    setSelectedWorker(null);
+    setSelectedUser(null);
+    setShowWorkerDropdown(false);
+    setShowUserDropdown(false);
+  };
+
   // Cargar usuarios activos al montar
   useMemo(() => {
     const load = async () => {
@@ -311,6 +321,14 @@ export default function BalancesPage() {
                       </div>
                     )}
                   </div>
+                  <Button
+                    variant='outline'
+                    size='sm'
+                    className='text-xs h-11'
+                    onClick={clearFilters}
+                  >
+                    Limpiar filtros
+                  </Button>
                 </div>
               </div>
             </Card>
