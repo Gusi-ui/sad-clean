@@ -166,6 +166,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         worker_type: (metadata?.worker_type as string) ?? 'cuidadora',
         role,
         is_active: true,
+        monthly_contracted_hours:
+          (metadata?.monthly_contracted_hours as number) ?? 0,
         created_at: authData.user.created_at,
         updated_at: authData.user.updated_at ?? authData.user.created_at,
       };

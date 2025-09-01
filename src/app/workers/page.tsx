@@ -345,6 +345,7 @@ export default function WorkersPage() {
           dni: (editingWorker.dni ?? '').trim(),
           worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
+          monthly_contracted_hours: editingWorker.monthly_contracted_hours ?? 0,
         } as WorkerInsert;
 
         // Debug: log the data being sent
@@ -419,6 +420,17 @@ export default function WorkersPage() {
         ) {
           workerData.is_active = editingWorker.is_active;
         }
+        if (
+          editingWorker.monthly_contracted_hours !== undefined &&
+          editingWorker.monthly_contracted_hours !== null
+        ) {
+          workerData.monthly_contracted_hours =
+            editingWorker.monthly_contracted_hours;
+        }
+
+        // Debug: log de los datos que se van a enviar
+        // console.log('🔍 DEBUG - Datos a actualizar:', workerData);
+        // console.log('🔍 DEBUG - ID de trabajadora:', selectedWorker.id);
 
         const updatedWorker = await updateWorker(selectedWorker.id, workerData);
         if (updatedWorker) {
@@ -1406,6 +1418,36 @@ export default function WorkersPage() {
                   <option value='inactiva'>❌ Inactiva</option>
                 </select>
               </div>
+
+              {/* Horas Contratadas Mensuales */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>⏰</span>
+                  <span>Horas Contratadas Mensuales</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  type='number'
+                  min='0'
+                  max='300'
+                  step='0.5'
+                  placeholder='160'
+                  value={editingWorker.monthly_contracted_hours ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    const numValue =
+                      value === '' ? undefined : parseFloat(value);
+                    setEditingWorker({
+                      ...editingWorker,
+                      monthly_contracted_hours: numValue,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600'>
+                  Horas totales contratadas por mes (ej: 160h = 40h/semana × 4
+                  semanas)
+                </p>
+              </div>
             </div>
 
             {/* Botones de acción */}
@@ -1696,6 +1738,32 @@ export default function WorkersPage() {
                   <option value='inactiva'>Inactiva</option>
                 </select>
               </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Horas Contratadas Mensuales
+                </label>
+                <Input
+                  className='w-full'
+                  type='number'
+                  min='0'
+                  max='300'
+                  step='0.5'
+                  placeholder='160'
+                  value={editingWorker.monthly_contracted_hours ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    const numValue =
+                      value === '' ? undefined : parseFloat(value);
+                    setEditingWorker({
+                      ...editingWorker,
+                      monthly_contracted_hours: numValue,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Horas totales contratadas por mes
+                </p>
+              </div>
             </div>
             <div className='flex justify-end space-x-3 pt-4'>
               <Button
@@ -1929,12 +1997,9 @@ export default function WorkersPage() {
               <Button
                 variant='danger'
                 onClick={() => {
-                  handleDeleteWorker().catch((deleteError) => {
-                    // eslint-disable-next-line no-console
-                    console.error(
-                      'Error al eliminar trabajadora:',
-                      deleteError
-                    );
+                  handleDeleteWorker().catch(() => {
+                    // Error al eliminar trabajadora - en producción usar sistema de logging apropiado
+                    // console.error('Error al eliminar trabajadora:', deleteError);
                   });
                 }}
                 disabled={deletingWorker}

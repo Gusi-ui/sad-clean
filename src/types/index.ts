@@ -13,6 +13,7 @@ export interface Worker {
   worker_type: string;
   role: 'worker' | 'admin' | 'super_admin';
   is_active: boolean | null;
+  monthly_contracted_hours: number;
   created_at: string | null;
   updated_at: string | null;
   user_metadata?: Record<string, unknown>;
@@ -27,6 +28,7 @@ export interface WorkerInsert {
   worker_type: string;
   role?: 'worker' | 'admin' | 'super_admin';
   is_active?: boolean | null;
+  monthly_contracted_hours?: number;
 }
 
 export interface WorkerUpdate {
@@ -38,6 +40,7 @@ export interface WorkerUpdate {
   worker_type?: string;
   role?: 'worker' | 'admin' | 'super_admin';
   is_active?: boolean | null;
+  monthly_contracted_hours?: number;
 }
 
 // User Types (basado en el esquema de Supabase)
