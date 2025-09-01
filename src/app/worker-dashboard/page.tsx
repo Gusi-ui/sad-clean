@@ -180,6 +180,27 @@ export default function WorkerDashboard(): React.JSX.Element {
     thisMonth: 0,
   });
 
+  // Nuevos estados para días festivos y control de horas
+  const [monthHolidays, setMonthHolidays] = useState<{
+    holidays: number;
+    weekends: number;
+    total: number;
+  }>({
+    holidays: 0,
+    weekends: 0,
+    total: 0,
+  });
+
+  const [hoursControl, setHoursControl] = useState<{
+    contracted: number;
+    worked: number;
+    balance: number;
+  }>({
+    contracted: 0,
+    worked: 0,
+    balance: 0,
+  });
+
   type TimeSlotRange = { start: string; end: string };
 
   const getTodaySlots = useCallback(
@@ -369,8 +390,120 @@ export default function WorkerDashboard(): React.JSX.Element {
 
   const currentWeekRange = useMemo(() => getWeekRange(), []);
   const nextWeekRange = useMemo(() => getNextWeekRange(), []);
-
   const thisMonthRange = useMemo(() => getMonthRange(), []);
+
+  // Función para cargar días festivos del mes actual
+  const loadMonthHolidays = useCallback(async (): Promise<void> => {
+    try {
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+
+      // Obtener festivos oficiales del mes
+      const { data: holidaysData, error: holidaysError } = await supabase
+        .from('holidays')
+        .select('day, month, year')
+        .eq('year', currentYear)
+        .eq('month', currentMonth);
+
+      if (holidaysError) {
+        // Log del error para debugging (en producción se usaría un sistema de logging apropiado)
+        return;
+      }
+
+      // Calcular fines de semana del mes
+      const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
+      let weekendDays = 0;
+
+      for (let day = 1; day <= daysInMonth; day++) {
+        const date = new Date(currentYear, currentMonth - 1, day);
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) {
+          // Domingo (0) o Sábado (6)
+          weekendDays++;
+        }
+      }
+
+      const officialHolidays = holidaysData?.length ?? 0;
+      const totalNonWorkingDays = officialHolidays + weekendDays;
+
+      setMonthHolidays({
+        holidays: officialHolidays,
+        weekends: weekendDays,
+        total: totalNonWorkingDays,
+      });
+    } catch {
+      // Log del error para debugging (en producción se usaría un sistema de logging apropiado)
+    }
+  }, []);
+
+  // Función para cargar control de horas contratadas vs trabajadas
+  const loadHoursControl = useCallback(async (): Promise<void> => {
+    const userEmail = currentUser?.email;
+    if (typeof userEmail !== 'string' || userEmail === '') return;
+
+    try {
+      // Buscar trabajadora por email
+      const { data: workerData, error: workerError } = await supabase
+        .from('workers')
+        .select('id')
+        .ilike('email', userEmail)
+        .maybeSingle();
+
+      if (workerError || !workerData) return;
+
+      const workerId = workerData.id;
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth() + 1;
+
+      // Obtener horas contratadas (suma de weekly_hours de asignaciones activas)
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select('weekly_hours, start_date, end_date')
+        .eq('worker_id', workerId)
+        .eq('status', 'active');
+
+      if (assignmentsError) return;
+
+      // Calcular horas contratadas mensuales (weekly_hours * 4.33 semanas promedio)
+      const contractedHours = (assignmentsData ?? []).reduce(
+        (total, assignment) => {
+          const assignmentWeeklyHours = assignment.weekly_hours ?? 0;
+          return total + assignmentWeeklyHours * 4.33; // Promedio de semanas por mes
+        },
+        0
+      );
+
+      // Obtener horas trabajadas del mes actual desde hours_balances
+      const { data: balanceData, error: balanceError } = await supabase
+        .from('hours_balances')
+        .select('worked_hours, total_hours')
+        .eq('worker_id', workerId)
+        .eq('year', currentYear)
+        .eq('month', currentMonth)
+        .maybeSingle();
+
+      let workedHours = 0;
+      if (!balanceError && balanceData) {
+        workedHours = balanceData.worked_hours ?? 0;
+      } else {
+        // Si no hay registro en hours_balances, calcular desde assignments
+        // Esto es un fallback temporal hasta implementar el sistema completo
+        workedHours = weeklyHours * 4.33; // Usar las horas semanales como aproximación
+      }
+
+      const balance = workedHours - contractedHours;
+
+      setHoursControl({
+        contracted: Math.round(contractedHours * 100) / 100,
+        worked: Math.round(workedHours * 100) / 100,
+        balance: Math.round(balance * 100) / 100,
+      });
+    } catch {
+      // Log del error para debugging (en producción se usaría un sistema de logging apropiado)
+    }
+  }, [currentUser?.email, weeklyHours]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -735,7 +868,7 @@ export default function WorkerDashboard(): React.JSX.Element {
             };
 
             // Calcular servicios para cada período con festivos cargados por rango
-            const [tomorrowHolidays, weekHolidays, monthHolidays] =
+            const [tomorrowHolidays, weekHolidays, monthHolidaysData] =
               await Promise.all([
                 buildHolidaySet(tomorrowKey ?? '', tomorrowKey ?? ''),
                 buildHolidaySet(
@@ -802,7 +935,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                       0
                     ).getDate()
                   ).padStart(2, '0')}`,
-                  monthHolidays
+                  monthHolidaysData
                 ),
               0
             );
@@ -873,6 +1006,16 @@ export default function WorkerDashboard(): React.JSX.Element {
     const id = window.setInterval(recompute, 30000);
     return () => window.clearInterval(id);
   }, [todayAssignments, getTodaySlots, isHolidayToday]);
+
+  // Cargar días festivos del mes actual
+  useEffect(() => {
+    void loadMonthHolidays();
+  }, [loadMonthHolidays]);
+
+  // Cargar control de horas contratadas vs trabajadas
+  useEffect(() => {
+    void loadHoursControl();
+  }, [loadHoursControl]);
 
   const displayName = useMemo(() => {
     const meta = currentUser?.name;
@@ -1165,81 +1308,173 @@ export default function WorkerDashboard(): React.JSX.Element {
               </p>
             </div>
             <div className='p-4 sm:p-6'>
-              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4'>
-                <Link href='/worker-dashboard/schedule'>
+              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4'>
+                {/* Botones en la parte superior - 2 columnas */}
+                <div className='sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4'>
+                  {/* Contactar Coordinación */}
                   <Button
                     className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
                     variant='outline'
+                    onClick={() => window.open('tel:+34600000000', '_blank')}
                   >
                     <div className='flex items-center space-x-3'>
-                      <span className='text-xl sm:text-lg'>📋</span>
+                      <span className='text-xl sm:text-lg'>📞</span>
                       <div className='text-left'>
                         <div className='font-medium text-sm sm:text-base'>
-                          Ver Mi Horario
+                          Contactar
                         </div>
                         <div className='text-xs text-gray-500 hidden sm:block'>
-                          Completo
+                          Coordinación
                         </div>
                       </div>
                     </div>
                   </Button>
-                </Link>
 
-                <Button
-                  className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
-                  variant='outline'
-                  onClick={() => window.open('tel:+34600000000', '_blank')}
-                >
-                  <div className='flex items-center space-x-3'>
-                    <span className='text-xl sm:text-lg'>📞</span>
-                    <div className='text-left'>
-                      <div className='font-medium text-sm sm:text-base'>
-                        Contactar
+                  {/* Ruta de Hoy */}
+                  <Link href='/worker-dashboard/route'>
+                    <Button
+                      className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
+                      variant='outline'
+                    >
+                      <div className='flex items-center space-x-3'>
+                        <span className='text-xl sm:text-lg'>🗺️</span>
+                        <div className='text-left'>
+                          <div className='font-medium text-sm sm:text-base'>
+                            Ruta de Hoy
+                          </div>
+                          <div className='text-xs text-gray-500 hidden sm:block'>
+                            Servicios
+                          </div>
+                        </div>
                       </div>
-                      <div className='text-xs text-gray-500 hidden sm:block'>
-                        Coordinación
+                    </Button>
+                  </Link>
+                </div>
+
+                {/* Tarjetas grandes en la parte inferior - 3 columnas */}
+                {/* Días Festivos del Mes */}
+                <div className='bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4 sm:p-6'>
+                  <div className='flex items-center space-x-3'>
+                    <span className='text-2xl'>🎉</span>
+                    <div className='flex-1'>
+                      <h3 className='font-semibold text-gray-900 text-sm sm:text-base'>
+                        Días Festivos
+                      </h3>
+                      <p className='text-xs text-gray-600 mt-1'>
+                        {new Date().toLocaleDateString('es-ES', {
+                          month: 'long',
+                          year: 'numeric',
+                        })}
+                      </p>
+                      <div className='mt-2 space-y-1'>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>Festivos:</span>
+                          <span className='font-medium text-green-600'>
+                            {loading ? '...' : monthHolidays.holidays}
+                          </span>
+                        </div>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>
+                            Fines de semana:
+                          </span>
+                          <span className='font-medium text-blue-600'>
+                            {loading ? '...' : monthHolidays.weekends}
+                          </span>
+                        </div>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>Total:</span>
+                          <span className='font-medium text-purple-600'>
+                            {loading ? '...' : monthHolidays.total}
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </Button>
+                </div>
 
-                <Link href='/worker-dashboard/route'>
-                  <Button
-                    className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
-                    variant='outline'
-                  >
-                    <div className='flex items-center space-x-3'>
-                      <span className='text-xl sm:text-lg'>🗺️</span>
-                      <div className='text-left'>
-                        <div className='font-medium text-sm sm:text-base'>
-                          Ruta de Hoy
+                {/* Control de Horas Contratadas */}
+                <div className='bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 sm:p-6'>
+                  <div className='flex items-center space-x-3'>
+                    <span className='text-2xl'>⏰</span>
+                    <div className='flex-1'>
+                      <h3 className='font-semibold text-gray-900 text-sm sm:text-base'>
+                        Control de Horas
+                      </h3>
+                      <p className='text-xs text-gray-600 mt-1'>
+                        Contratadas vs Trabajadas
+                      </p>
+                      <div className='mt-2 space-y-1'>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>Contratadas:</span>
+                          <span className='font-medium text-purple-600'>
+                            {loading ? '...' : `${hoursControl.contracted}h`}
+                          </span>
                         </div>
-                        <div className='text-xs text-gray-500 hidden sm:block'>
-                          Servicios
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>Trabajadas:</span>
+                          <span className='font-medium text-green-600'>
+                            {loading ? '...' : `${hoursControl.worked}h`}
+                          </span>
+                        </div>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>Balance:</span>
+                          <span
+                            className={`font-medium ${
+                              hoursControl.balance > 0
+                                ? 'text-green-600'
+                                : hoursControl.balance < 0
+                                  ? 'text-red-600'
+                                  : 'text-blue-600'
+                            }`}
+                          >
+                            {loading
+                              ? '...'
+                              : `${hoursControl.balance > 0 ? '+' : ''}${hoursControl.balance}h`}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  </Button>
-                </Link>
+                  </div>
+                </div>
 
-                <Link href='/worker-dashboard/route'>
-                  <Button
-                    className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
-                    variant='outline'
-                  >
-                    <div className='flex items-center space-x-3'>
-                      <span className='text-xl sm:text-lg'>🗺️</span>
-                      <div className='text-left'>
-                        <div className='font-medium text-sm sm:text-base'>
-                          Ruta de Hoy
+                {/* Estadísticas */}
+                <div className='bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 sm:p-6'>
+                  <div className='flex items-center space-x-3'>
+                    <span className='text-2xl'>📊</span>
+                    <div className='flex-1'>
+                      <h3 className='font-semibold text-gray-900 text-sm sm:text-base'>
+                        Mis Estadísticas
+                      </h3>
+                      <p className='text-xs text-gray-600 mt-1'>
+                        Resumen de rendimiento
+                      </p>
+                      <div className='mt-2 space-y-1'>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>
+                            Horas esta semana:
+                          </span>
+                          <span className='font-medium text-blue-600'>
+                            {loading ? '...' : `${weeklyHours.toFixed(1)}h`}
+                          </span>
                         </div>
-                        <div className='text-xs text-gray-500 hidden sm:block'>
-                          Servicios
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>
+                            Usuarios activos:
+                          </span>
+                          <span className='font-medium text-green-600'>
+                            {loading ? '...' : activeUsers}
+                          </span>
+                        </div>
+                        <div className='flex justify-between text-xs'>
+                          <span className='text-gray-600'>Servicios hoy:</span>
+                          <span className='font-medium text-orange-600'>
+                            {loading ? '...' : todayAssignments.length}
+                          </span>
                         </div>
                       </div>
                     </div>
-                  </Button>
-                </Link>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
