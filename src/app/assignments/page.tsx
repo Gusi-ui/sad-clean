@@ -12,6 +12,7 @@ import Navigation from '@/components/layout/Navigation';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardUrl } from '@/hooks/useDashboardUrl';
 import {
@@ -50,6 +51,10 @@ export default function AssignmentsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] =
+    useState<Assignment | null>(null);
+  const [deletingAssignment, setDeletingAssignment] = useState(false);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
@@ -219,77 +224,85 @@ export default function AssignmentsPage() {
   };
 
   const handleDeleteAssignment = async (assignment: Assignment) => {
-    // eslint-disable-next-line no-alert
-    const confirmed = window.confirm(
-      `¿Estás seguro de que quieres eliminar la asignación de ${assignment.worker?.name} ${assignment.worker?.surname} para ${assignment.user?.name} ${assignment.user?.surname}?`
-    );
+    setAssignmentToDelete(assignment);
+    setShowDeleteModal(true);
+  };
 
-    if (confirmed) {
-      try {
-        const { error: deleteError } = await supabase
-          .from('assignments')
-          .delete()
-          .eq('id', assignment.id);
+  const handleDeleteAssignmentConfirm = async () => {
+    if (!assignmentToDelete) return;
 
-        if (deleteError !== null) {
-          logger.error('Error eliminando asignación:', deleteError);
-          setError('Error eliminando asignación');
-        } else {
-          setAssignments((prev) => prev.filter((a) => a.id !== assignment.id));
-          setSuccessMessage('Asignación eliminada correctamente');
+    setDeletingAssignment(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', assignmentToDelete.id);
 
-          // Log de eliminación de asignación
-          const nameMeta = user?.user_metadata?.['name'];
-          const adminName =
-            typeof nameMeta === 'string' && nameMeta.trim().length > 0
-              ? nameMeta
-              : 'Administrador';
-          // const adminEmail = typeof user?.email === 'string' ? user.email : ''; // Comentado porque no se usa
-          const workerFullName =
-            assignment.worker?.name !== undefined &&
-            assignment.worker?.surname !== undefined
-              ? `${assignment.worker.name} ${assignment.worker.surname}`
-              : undefined;
-          const userFullName =
-            assignment.user?.name !== undefined &&
-            assignment.user?.surname !== undefined
-              ? `${assignment.user.name} ${assignment.user.surname}`
-              : undefined;
-
-          const deleteDetails: {
-            assignment_id: string;
-            worker_id: string;
-            user_id: string;
-            worker_name?: string;
-            user_name?: string;
-          } = {
-            assignment_id: assignment.id,
-            worker_id: assignment.worker_id,
-            user_id: assignment.user_id,
-          };
-          if (
-            typeof workerFullName === 'string' &&
-            workerFullName.trim() !== ''
-          ) {
-            deleteDetails.worker_name = workerFullName;
-          }
-          if (typeof userFullName === 'string' && userFullName.trim() !== '') {
-            deleteDetails.user_name = userFullName;
-          }
-
-          await logAssignmentDeleteActivity(
-            adminName,
-            'eliminó',
-            assignment.assignment_type,
-            `${assignment.worker?.name} ${assignment.worker?.surname}`,
-            `${assignment.user?.name} ${assignment.user?.surname}`
-          );
-        }
-      } catch (deleteErr) {
-        logger.error('Error eliminando asignación:', deleteErr);
+      if (deleteError !== null) {
+        logger.error('Error eliminando asignación:', deleteError);
         setError('Error eliminando asignación');
+      } else {
+        setAssignments((prev) =>
+          prev.filter((a) => a.id !== assignmentToDelete.id)
+        );
+        setSuccessMessage('Asignación eliminada correctamente');
+
+        // Log de eliminación de asignación
+        const nameMeta = user?.user_metadata?.['name'];
+        const adminName =
+          typeof nameMeta === 'string' && nameMeta.trim().length > 0
+            ? nameMeta
+            : 'Administrador';
+        const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+        // Obtener nombres reales del trabajador y usuario
+        const { data: workerData } = await supabase
+          .from('workers')
+          .select('name, surname')
+          .eq('id', assignmentToDelete.worker_id)
+          .single();
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name, surname')
+          .eq('id', assignmentToDelete.user_id)
+          .single();
+
+        const workerName = workerData
+          ? `${workerData.name} ${workerData.surname}`.trim()
+          : 'Trabajador Desconocido';
+
+        const userName = userData
+          ? `${userData.name} ${userData.surname}`.trim()
+          : 'Usuario Desconocido';
+
+        await logAssignmentDeleteActivity(
+          adminName,
+          adminEmail,
+          'eliminó',
+          assignmentToDelete.assignment_type,
+          workerName,
+          assignmentToDelete.worker_id,
+          userName,
+          assignmentToDelete.user_id
+        );
+
+        // Cerrar modal y limpiar estado
+        setShowDeleteModal(false);
+        setAssignmentToDelete(null);
       }
+    } catch (deleteErr) {
+      logger.error('Error eliminando asignación:', deleteErr);
+      setError('Error eliminando asignación');
+    } finally {
+      setDeletingAssignment(false);
     }
+  };
+
+  const handleDeleteModalClose = () => {
+    setShowDeleteModal(false);
+    setAssignmentToDelete(null);
+    setDeletingAssignment(false);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -900,39 +913,38 @@ export default function AssignmentsPage() {
                   const adminEmail =
                     typeof user?.email === 'string' ? user.email : '';
 
-                  const createDetails: {
-                    assignment_type?: string;
-                    worker_id?: string;
-                    user_id?: string;
-                    start_date?: string;
-                    end_date?: string | null;
-                  } = {};
-                  if (typeof data.assignment_type === 'string') {
-                    createDetails.assignment_type = data.assignment_type;
-                  }
-                  if (typeof data.worker_id === 'string') {
-                    createDetails.worker_id = data.worker_id;
-                  }
-                  if (typeof data.user_id === 'string') {
-                    createDetails.user_id = data.user_id;
-                  }
-                  if (typeof data.start_date === 'string') {
-                    createDetails.start_date = data.start_date;
-                  }
-                  createDetails.end_date =
-                    data.end_date.trim() === '' ? null : data.end_date;
+                  // Obtener nombres reales del trabajador y usuario
+                  const { data: workerData } = await supabase
+                    .from('workers')
+                    .select('name, surname')
+                    .eq('id', data.worker_id)
+                    .single();
+
+                  const { data: userData } = await supabase
+                    .from('users')
+                    .select('name, surname')
+                    .eq('id', data.user_id)
+                    .single();
+
+                  const workerName = workerData
+                    ? `${workerData.name} ${workerData.surname}`.trim()
+                    : 'Trabajador Desconocido';
+
+                  const userName = userData
+                    ? `${userData.name} ${userData.surname}`.trim()
+                    : 'Usuario Desconocido';
 
                   await logAssignmentCreationActivity(
                     adminName,
                     adminEmail,
                     'creó',
                     data.assignment_type,
-                    'Trabajador', // Usar valor por defecto
+                    workerName,
                     data.worker_id,
-                    'Usuario', // Usar valor por defecto
-                    user?.id ?? '',
+                    userName,
+                    data.user_id,
                     data.start_date,
-                    data.end_date,
+                    data.end_date.trim() === '' ? '' : data.end_date,
                     calculateWeeklyHours(scheduleWithHoliday)
                   );
                 }
@@ -1060,55 +1072,27 @@ export default function AssignmentsPage() {
                       : 'Administrador';
                   const adminEmail =
                     typeof user?.email === 'string' ? user.email : '';
-                  const workerFullName =
-                    editingAssignment.worker?.name !== undefined &&
-                    editingAssignment.worker?.surname !== undefined
-                      ? `${editingAssignment.worker.name} ${editingAssignment.worker.surname}`
-                      : undefined;
-                  const userFullName =
-                    editingAssignment.user?.name !== undefined &&
-                    editingAssignment.user?.surname !== undefined
-                      ? `${editingAssignment.user.name} ${editingAssignment.user.surname}`
-                      : undefined;
 
-                  const updateDetails: {
-                    assignment_id: string;
-                    assignment_type?: string;
-                    worker_id?: string;
-                    user_id?: string;
-                    start_date?: string;
-                    end_date?: string | null;
-                    worker_name?: string;
-                    user_name?: string;
-                  } = {
-                    assignment_id: editingAssignment.id,
-                  };
-                  if (typeof data.assignment_type === 'string') {
-                    updateDetails.assignment_type = data.assignment_type;
-                  }
-                  if (typeof data.worker_id === 'string') {
-                    updateDetails.worker_id = data.worker_id;
-                  }
-                  if (typeof data.user_id === 'string') {
-                    updateDetails.user_id = data.user_id;
-                  }
-                  if (typeof data.start_date === 'string') {
-                    updateDetails.start_date = data.start_date;
-                  }
-                  updateDetails.end_date =
-                    data.end_date.trim() === '' ? null : data.end_date;
-                  if (
-                    typeof workerFullName === 'string' &&
-                    workerFullName.trim() !== ''
-                  ) {
-                    updateDetails.worker_name = workerFullName;
-                  }
-                  if (
-                    typeof userFullName === 'string' &&
-                    userFullName.trim() !== ''
-                  ) {
-                    updateDetails.user_name = userFullName;
-                  }
+                  // Obtener nombres reales del trabajador y usuario
+                  const { data: workerData } = await supabase
+                    .from('workers')
+                    .select('name, surname')
+                    .eq('id', data.worker_id)
+                    .single();
+
+                  const { data: userData } = await supabase
+                    .from('users')
+                    .select('name, surname')
+                    .eq('id', data.user_id)
+                    .single();
+
+                  const workerName = workerData
+                    ? `${workerData.name} ${workerData.surname}`.trim()
+                    : 'Trabajador Desconocido';
+
+                  const userName = userData
+                    ? `${userData.name} ${userData.surname}`.trim()
+                    : 'Usuario Desconocido';
 
                   await logAssignmentUpdateActivityDetailed(
                     adminName,
@@ -1116,12 +1100,12 @@ export default function AssignmentsPage() {
                     'actualizó',
                     editingAssignment.id,
                     data.assignment_type,
-                    'Trabajador', // Usar valor por defecto
+                    workerName,
                     data.worker_id,
-                    'Usuario', // Usar valor por defecto
-                    user?.id ?? '',
+                    userName,
+                    data.user_id,
                     data.start_date,
-                    data.end_date,
+                    data.end_date.trim() === '' ? '' : data.end_date,
                     updatedWeeklyHours
                   );
                 }
@@ -1200,6 +1184,100 @@ export default function AssignmentsPage() {
           }
           mode='view'
         />
+
+        {/* Modal de Confirmación de Eliminación */}
+        <Modal
+          isOpen={showDeleteModal}
+          onClose={handleDeleteModalClose}
+          title='Confirmar Eliminación'
+          size='md'
+        >
+          <div className='space-y-6'>
+            <div className='text-center'>
+              <div className='mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4'>
+                <svg
+                  className='h-6 w-6 text-red-600'
+                  fill='none'
+                  viewBox='0 0 24 24'
+                  stroke='currentColor'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z'
+                  />
+                </svg>
+              </div>
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                ¿Eliminar Asignación?
+              </h3>
+              <p className='text-sm text-gray-500'>
+                ¿Estás seguro de que quieres eliminar la asignación de{' '}
+                <span className='font-semibold text-gray-700'>
+                  {assignmentToDelete?.worker?.name}{' '}
+                  {assignmentToDelete?.worker?.surname}
+                </span>{' '}
+                para{' '}
+                <span className='font-semibold text-gray-700'>
+                  {assignmentToDelete?.user?.name}{' '}
+                  {assignmentToDelete?.user?.surname}
+                </span>
+                ?
+              </p>
+              <p className='text-xs text-gray-400 mt-2'>
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className='flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3'>
+              <Button
+                variant='outline'
+                className='w-full sm:w-auto'
+                onClick={() => {
+                  handleDeleteModalClose();
+                }}
+                disabled={deletingAssignment}
+              >
+                ❌ Cancelar
+              </Button>
+              <Button
+                className='w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white'
+                onClick={() => {
+                  void handleDeleteAssignmentConfirm();
+                }}
+                disabled={deletingAssignment}
+              >
+                {deletingAssignment ? (
+                  <>
+                    <svg
+                      className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                    >
+                      <circle
+                        className='opacity-25'
+                        cx='12'
+                        cy='12'
+                        r='10'
+                        stroke='currentColor'
+                        strokeWidth='4'
+                      />
+                      <path
+                        className='opacity-75'
+                        fill='currentColor'
+                        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                      />
+                    </svg>
+                    Eliminando...
+                  </>
+                ) : (
+                  '🗑️ Eliminar Asignación'
+                )}
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Footer - Mobile First */}
         <footer className='border-t border-gray-200 bg-white py-6 md:py-8 mt-auto mb-16 md:mb-0'>

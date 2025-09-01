@@ -100,10 +100,10 @@ export interface Activity {
   activity_type: string;
   entity_type: string;
   description: string;
-  user_id: string;
+  user_id: string | null; // Permitir null para coincidir con la BD
   user_email: string;
   user_name: string;
-  entity_id: string;
+  entity_id: string | null; // Permitir null para coincidir con la BD
   entity_name: string;
   details: Record<string, unknown> | null;
   ip_address: string | null;
@@ -116,10 +116,10 @@ export interface ActivityInsert {
   activity_type: string;
   entity_type: string;
   description: string;
-  user_id: string;
+  user_id: string | null; // Permitir null para coincidir con la BD
   user_email: string;
   user_name: string;
-  entity_id: string;
+  entity_id: string | null; // Permitir null para coincidir con la BD
   entity_name: string;
   details?: Record<string, unknown> | null;
   ip_address?: string | null;

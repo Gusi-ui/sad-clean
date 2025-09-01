@@ -11,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { logWorkerActivity } from '@/lib/activities-query';
 import {
   createWorker,
   deleteWorker,
@@ -352,6 +353,22 @@ export default function WorkersPage() {
         const newWorker = await createWorker(workerData);
         workerLogger.created(newWorker);
 
+        // Log de creación de trabajadora
+        const nameMeta = user?.user_metadata?.['name'];
+        const adminName =
+          typeof nameMeta === 'string' && nameMeta.trim().length > 0
+            ? nameMeta
+            : 'Administrador';
+        const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+        await logWorkerActivity(
+          adminName,
+          adminEmail,
+          'creó',
+          `${newWorker.name} ${newWorker.surname}`,
+          newWorker.id
+        );
+
         setWorkers([...workers, newWorker]);
         setIsAddModalOpen(false);
         setEditingWorker({});
@@ -405,6 +422,31 @@ export default function WorkersPage() {
 
         const updatedWorker = await updateWorker(selectedWorker.id, workerData);
         if (updatedWorker) {
+          // Log de actualización de trabajadora (antes de la actualización de contraseña)
+          const nameMeta = user?.user_metadata?.['name'];
+          const adminName =
+            typeof nameMeta === 'string' && nameMeta.trim().length > 0
+              ? nameMeta
+              : 'Administrador';
+          const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+          try {
+            await logWorkerActivity(
+              adminName,
+              adminEmail,
+              'actualizó',
+              `${updatedWorker.name} ${updatedWorker.surname}`,
+              updatedWorker.id
+            );
+            // Actividad registrada correctamente (sin log en consola)
+          } catch (logError) {
+            workerLogger.error(
+              'Error al registrar actividad de actualización:'
+            );
+            workerLogger.error(logError);
+            // No fallar la operación principal por un error de logging
+          }
+
           // Si el admin ha introducido una contraseña válida, también actualizamos el acceso de Supabase Auth
           const trimmedPassword = workerAccessPassword.trim();
           if (
@@ -446,6 +488,8 @@ export default function WorkersPage() {
           setWorkers(updatedWorkers);
           setIsEditModalOpen(false);
           setSuccessMessage('Trabajadora actualizada con éxito.');
+        } else {
+          workerLogger.error('No se pudo obtener la trabajadora actualizada');
         }
       }
       setEditingWorker({});
@@ -481,6 +525,23 @@ export default function WorkersPage() {
       await deleteWorker(workerToDelete.id);
       setWorkers(workers.filter((w) => w.id !== workerToDelete.id));
       setSuccessMessage('Trabajadora eliminada con éxito.');
+
+      // Log de eliminación de trabajadora
+      const nameMeta = user?.user_metadata?.['name'];
+      const adminName =
+        typeof nameMeta === 'string' && nameMeta.trim().length > 0
+          ? nameMeta
+          : 'Administrador';
+      const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+      await logWorkerActivity(
+        adminName,
+        adminEmail,
+        'eliminó',
+        `${workerToDelete.name} ${workerToDelete.surname}`,
+        workerToDelete.id
+      );
+
       handleDeleteModalClose();
     } catch (err) {
       const errorMessage =
