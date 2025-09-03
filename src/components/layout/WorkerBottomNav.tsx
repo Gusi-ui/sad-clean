@@ -15,7 +15,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Inicio', href: '/worker-dashboard', icon: '🏠' },
   { label: 'Ruta', href: '/worker-dashboard/route', icon: '🗺️' },
   { label: 'Planilla', href: '/worker-dashboard/schedule', icon: '📋' },
-  { label: 'Próximos', href: '/worker-dashboard/this-week', icon: '📅' },
   { label: 'Balance', href: '/worker-dashboard/balances', icon: '⏱️' },
 ];
 

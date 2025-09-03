@@ -239,6 +239,8 @@ export type Database = {
           email: string;
           id: string;
           is_active: boolean | null;
+          monthly_contracted_hours: number;
+          weekly_contracted_hours: number;
           name: string;
           phone: string;
           surname: string;
@@ -251,6 +253,8 @@ export type Database = {
           email: string;
           id?: string;
           is_active?: boolean | null;
+          monthly_contracted_hours?: number;
+          weekly_contracted_hours?: number;
           name: string;
           phone: string;
           surname: string;
@@ -263,6 +267,8 @@ export type Database = {
           email?: string;
           id?: string;
           is_active?: boolean | null;
+          monthly_contracted_hours?: number;
+          weekly_contracted_hours?: number;
           name?: string;
           phone?: string;
           surname?: string;
