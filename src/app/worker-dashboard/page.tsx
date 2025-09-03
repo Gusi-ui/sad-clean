@@ -171,8 +171,8 @@ export default function WorkerDashboard(): React.JSX.Element {
   const findWorkerByEmail = async (
     email: string,
     context = '',
-    selectFields = 'id'
-  ): Promise<{ id: string; monthly_contracted_hours?: number } | null> => {
+    selectFields = 'id, weekly_contracted_hours'
+  ): Promise<{ id: string; weekly_contracted_hours?: number } | null> => {
     try {
       const { data: workerData, error: workerError } = await supabase
         .from('workers')
@@ -205,7 +205,7 @@ export default function WorkerDashboard(): React.JSX.Element {
 
       return workerData as unknown as {
         id: string;
-        monthly_contracted_hours?: number;
+        weekly_contracted_hours?: number;
       };
     } catch {
       // Error inesperado al buscar trabajadora
@@ -646,8 +646,8 @@ export default function WorkerDashboard(): React.JSX.Element {
       }
 
       const workerId = workerData.id;
-      // Valor por defecto hasta que se añada la columna weekly_contracted_hours a la BD
-      const weeklyContractedHours = 0;
+      // Obtener horas contratadas semanales de la trabajadora
+      const weeklyContractedHours = workerData.weekly_contracted_hours ?? 0;
 
       // Obtener asignaciones activas del mes actual con sus horarios
       const lastDayOfMonth = new Date(currentYear, currentMonth, 0).getDate();
@@ -1478,87 +1478,167 @@ export default function WorkerDashboard(): React.JSX.Element {
               </p>
             </div>
             <div className='p-4 sm:p-6'>
-              <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4'>
-                {/* Botones en la parte superior - 2 columnas */}
-                <div className='sm:col-span-2 lg:col-span-3 grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4'>
-                  {/* Contactar Coordinación */}
+              {/* Botones en la parte superior - 2 columnas */}
+              <div className='grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-6'>
+                {/* Contactar Coordinación */}
+                <Button
+                  className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
+                  variant='outline'
+                  onClick={() => window.open('tel:+34600000000', '_blank')}
+                >
+                  <div className='flex items-center space-x-3'>
+                    <span className='text-xl sm:text-lg'>📞</span>
+                    <div className='text-left'>
+                      <div className='font-medium text-sm sm:text-base'>
+                        Contactar
+                      </div>
+                      <div className='text-xs text-gray-500 hidden sm:block'>
+                        Coordinación
+                      </div>
+                    </div>
+                  </div>
+                </Button>
+
+                {/* Ruta de Hoy */}
+                <Link href='/worker-dashboard/route'>
                   <Button
                     className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
                     variant='outline'
-                    onClick={() => window.open('tel:+34600000000', '_blank')}
                   >
                     <div className='flex items-center space-x-3'>
-                      <span className='text-xl sm:text-lg'>📞</span>
+                      <span className='text-xl sm:text-lg'>🗺️</span>
                       <div className='text-left'>
                         <div className='font-medium text-sm sm:text-base'>
-                          Contactar
+                          Ruta de Hoy
                         </div>
                         <div className='text-xs text-gray-500 hidden sm:block'>
-                          Coordinación
+                          Servicios
                         </div>
                       </div>
                     </div>
                   </Button>
+                </Link>
+              </div>
 
-                  {/* Ruta de Hoy */}
-                  <Link href='/worker-dashboard/route'>
-                    <Button
-                      className='w-full h-16 sm:h-14 justify-start px-4 sm:px-6'
-                      variant='outline'
-                    >
-                      <div className='flex items-center space-x-3'>
-                        <span className='text-xl sm:text-lg'>🗺️</span>
-                        <div className='text-left'>
-                          <div className='font-medium text-sm sm:text-base'>
-                            Ruta de Hoy
-                          </div>
-                          <div className='text-xs text-gray-500 hidden sm:block'>
-                            Servicios
-                          </div>
-                        </div>
-                      </div>
-                    </Button>
-                  </Link>
-                </div>
-
-                {/* Tarjetas grandes en la parte inferior - 3 columnas */}
-                {/* Días Festivos del Mes */}
-                <div className='bg-gradient-to-r from-green-50 to-green-100 border border-green-200 rounded-xl p-4 sm:p-6'>
-                  <div className='flex items-center space-x-3'>
-                    <span className='text-2xl'>🎉</span>
-                    <div className='flex-1'>
-                      <h3 className='font-semibold text-gray-900 text-sm sm:text-base'>
-                        Días Festivos
-                      </h3>
-                      <p className='text-xs text-gray-600 mt-1'>
-                        {new Date().toLocaleDateString('es-ES', {
+              {/* Tarjetas grandes en la parte inferior - 2 columnas en escritorio, 1 en móvil */}
+              <div className='grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6'>
+                {/* Mes Actual */}
+                <div className='bg-white rounded-lg shadow-md p-6 border-l-4 border-green-500'>
+                  <div className='flex items-center justify-between mb-4'>
+                    <h3 className='text-lg font-semibold text-gray-800'>
+                      {new Date()
+                        .toLocaleDateString('es-ES', {
                           month: 'long',
                           year: 'numeric',
-                        })}
-                      </p>
-                      <div className='mt-2 space-y-1'>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>Festivos:</span>
-                          <span className='font-medium text-green-600'>
-                            {loading ? '...' : monthHolidays.holidays}
+                        })
+                        .charAt(0)
+                        .toUpperCase() +
+                        new Date()
+                          .toLocaleDateString('es-ES', {
+                            month: 'long',
+                            year: 'numeric',
+                          })
+                          .slice(1)}
+                    </h3>
+                    <div className='w-3 h-3 bg-green-500 rounded-full'></div>
+                  </div>
+                  <p className='text-sm text-gray-600 mb-4'>Resumen del mes</p>
+
+                  <div className='space-y-3 mb-4'>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>
+                        Fines de semana:
+                      </span>
+                      <span className='font-medium text-gray-800'>
+                        {loading ? '...' : monthHolidays.weekends}
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>Festivos:</span>
+                      <span className='font-medium text-gray-800'>
+                        {loading ? '...' : monthHolidays.holidays}
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>Total:</span>
+                      <span className='font-medium text-gray-800'>
+                        {loading ? '...' : monthHolidays.total}
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>
+                        Días laborables:
+                      </span>
+                      <span className='font-semibold text-lg text-blue-600'>
+                        {loading
+                          ? '...'
+                          : new Date(
+                              new Date().getFullYear(),
+                              new Date().getMonth() + 1,
+                              0
+                            ).getDate() - monthHolidays.total}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Destacados con colores identificativos */}
+                  <div className='border-t pt-4'>
+                    <div className='grid grid-cols-2 gap-4'>
+                      <div className='text-center'>
+                        <div className='flex items-center justify-center space-x-2 mb-1'>
+                          <div className='w-4 h-4 rounded-full bg-red-500'></div>
+                          <span className='text-xs text-gray-600'>
+                            Días festivos
                           </span>
                         </div>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>
-                            Fines de semana:
-                          </span>
-                          <span className='font-medium text-blue-600'>
-                            {loading ? '...' : monthHolidays.weekends}
-                          </span>
-                        </div>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>Total:</span>
-                          <span className='font-medium text-purple-600'>
-                            {loading ? '...' : monthHolidays.total}
+                        <span className='font-semibold text-lg text-red-600'>
+                          {loading ? '...' : monthHolidays.total}
+                        </span>
+                      </div>
+                      <div className='text-center'>
+                        <div className='flex items-center justify-center space-x-2 mb-1'>
+                          <div className='w-4 h-4 rounded-full bg-blue-500'></div>
+                          <span className='text-xs text-gray-600'>
+                            Días laborables
                           </span>
                         </div>
+                        <span className='font-semibold text-lg text-blue-600'>
+                          {loading
+                            ? '...'
+                            : new Date(
+                                new Date().getFullYear(),
+                                new Date().getMonth() + 1,
+                                0
+                              ).getDate() - monthHolidays.total}
+                        </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Total de días del mes */}
+                  <div className='mt-4 p-3 rounded-lg bg-gray-50 border'>
+                    <p className='text-sm font-medium text-center text-gray-700'>
+                      {new Date()
+                        .toLocaleDateString('es-ES', {
+                          month: 'long',
+                          year: 'numeric',
+                        })
+                        .charAt(0)
+                        .toUpperCase() +
+                        new Date()
+                          .toLocaleDateString('es-ES', {
+                            month: 'long',
+                            year: 'numeric',
+                          })
+                          .slice(1)}
+                      ,{' '}
+                      {new Date(
+                        new Date().getFullYear(),
+                        new Date().getMonth() + 1,
+                        0
+                      ).getDate()}{' '}
+                      días
+                    </p>
                   </div>
                 </div>
 
@@ -1605,40 +1685,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                     </div>
                   </div>
 
-                  {/* Estado con indicador visual prominente */}
-                  <div className='border-t pt-4'>
-                    <div className='flex items-center justify-between'>
-                      <span className='text-sm text-gray-600'>Estado:</span>
-                      <div className='flex items-center space-x-2'>
-                        <div
-                          className={`w-4 h-4 rounded-full ${
-                            hoursControl.balance > 0
-                              ? 'bg-green-500'
-                              : hoursControl.balance < 0
-                                ? 'bg-red-500'
-                                : 'bg-blue-500'
-                          }`}
-                        />
-                        <span
-                          className={`font-semibold text-sm ${
-                            hoursControl.balance > 0
-                              ? 'text-green-600'
-                              : hoursControl.balance < 0
-                                ? 'text-red-600'
-                                : 'text-blue-600'
-                          }`}
-                        >
-                          {hoursControl.balance > 0
-                            ? 'Exceso'
-                            : hoursControl.balance < 0
-                              ? 'Defecto'
-                              : 'Equilibrado'}
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Barra de progreso mejorada */}
+                  {/* Barra de progreso mejorada basada en días del mes */}
                   <div className='mt-4'>
                     {/* Información del progreso diario */}
                     <div className='flex justify-between items-center mb-2'>
@@ -1651,20 +1698,12 @@ export default function WorkerDashboard(): React.JSX.Element {
                       </span>
                     </div>
 
-                    {/* Barra de progreso del tiempo */}
-                    <div className='w-full bg-gray-200 rounded-full h-2 mb-3'>
-                      <div
-                        className='bg-gray-400 h-2 rounded-full transition-all duration-300'
-                        style={{
-                          width: `${calculateDailyProgress().progressPercentage}%`,
-                        }}
-                      />
-                    </div>
-
                     {/* Etiquetas de horas */}
                     <div className='flex justify-between text-xs text-gray-500 mb-1'>
                       <span>0h</span>
-                      <span>{formatHoursToHHMM(hoursControl.contracted)}</span>
+                      <span className='text-blue-600 font-medium'>
+                        {formatHoursToHHMM(hoursControl.contracted)}
+                      </span>
                       <span>
                         {formatHoursToHHMM(
                           Math.max(hoursControl.worked, hoursControl.contracted)
@@ -1672,42 +1711,80 @@ export default function WorkerDashboard(): React.JSX.Element {
                       </span>
                     </div>
 
-                    {/* Barra de progreso de horas */}
+                    {/* Barra de progreso unificada */}
                     <div className='w-full bg-gray-200 rounded-full h-3 relative'>
                       {/* Línea de referencia para horas contratadas */}
                       <div
-                        className='absolute top-0 bottom-0 w-px bg-blue-500 z-10'
+                        className='absolute top-0 bottom-0 w-px bg-blue-500 z-20'
                         style={{
                           left: `${(hoursControl.contracted / Math.max(hoursControl.worked, hoursControl.contracted)) * 100}%`,
                         }}
                       />
 
-                      {/* Barra de progreso de horas trabajadas */}
+                      {/* Barra base según progreso de días del mes */}
                       <div
-                        className={`h-3 rounded-full transition-all duration-500 ${
-                          hoursControl.balance > 0
-                            ? 'bg-green-500'
-                            : hoursControl.balance < 0
-                              ? 'bg-red-500'
-                              : 'bg-blue-500'
-                        }`}
+                        className='bg-blue-200 h-3 rounded-full transition-all duration-500'
                         style={{
-                          width: `${Math.min(
-                            (hoursControl.worked /
-                              Math.max(
-                                hoursControl.worked,
-                                hoursControl.contracted
-                              )) *
-                              100,
-                            100
-                          )}%`,
+                          width: `${calculateDailyProgress().progressPercentage}%`,
                         }}
                       />
+
+                      {/* Barra de horas trabajadas hasta las contratadas */}
+                      {hoursControl.worked <= hoursControl.contracted && (
+                        <div
+                          className='absolute top-0 h-3 bg-blue-500 rounded-full transition-all duration-500'
+                          style={{
+                            width: `${(hoursControl.worked / hoursControl.contracted) * calculateDailyProgress().progressPercentage}%`,
+                          }}
+                        />
+                      )}
+
+                      {/* Barra de horas trabajadas cuando se superan las contratadas */}
+                      {hoursControl.worked > hoursControl.contracted && (
+                        <>
+                          {/* Parte hasta las horas contratadas */}
+                          <div
+                            className='absolute top-0 h-3 bg-blue-500 rounded-full transition-all duration-500'
+                            style={{
+                              width: `${calculateDailyProgress().progressPercentage}%`,
+                            }}
+                          />
+                          {/* Parte de exceso en verde */}
+                          <div
+                            className='absolute top-0 h-3 bg-green-500 rounded-full transition-all duration-500'
+                            style={{
+                              left: `${calculateDailyProgress().progressPercentage}%`,
+                              width: `${Math.min(
+                                ((hoursControl.worked -
+                                  hoursControl.contracted) /
+                                  hoursControl.contracted) *
+                                  (100 -
+                                    calculateDailyProgress()
+                                      .progressPercentage),
+                                100 -
+                                  calculateDailyProgress().progressPercentage
+                              )}%`,
+                            }}
+                          />
+                        </>
+                      )}
+
+                      {/* Indicador de déficit en los días restantes si no se alcanzan las horas contratadas */}
+                      {hoursControl.worked < hoursControl.contracted &&
+                        calculateDailyProgress().progressPercentage < 100 && (
+                          <div
+                            className='absolute top-0 h-3 bg-red-300 rounded-full transition-all duration-500'
+                            style={{
+                              left: `${calculateDailyProgress().progressPercentage}%`,
+                              width: `${100 - calculateDailyProgress().progressPercentage}%`,
+                            }}
+                          />
+                        )}
                     </div>
 
                     {/* Etiquetas de referencia */}
                     <div className='flex justify-between text-xs text-gray-500 mt-1'>
-                      <span>Inicio</span>
+                      <span>Inicio mes</span>
                       <span className='text-blue-600 font-medium'>
                         Contratadas
                       </span>
@@ -1723,7 +1800,7 @@ export default function WorkerDashboard(): React.JSX.Element {
                         {hoursControl.balance > 0
                           ? 'Exceso'
                           : hoursControl.balance < 0
-                            ? 'Defecto'
+                            ? 'Déficit'
                             : 'Equilibrado'}
                       </span>
                     </div>
@@ -1746,45 +1823,6 @@ export default function WorkerDashboard(): React.JSX.Element {
                           ? `Faltan ${formatHoursToHHMM(Math.abs(hoursControl.balance))} para cumplir el contrato`
                           : 'Horas perfectamente equilibradas'}
                     </p>
-                  </div>
-                </div>
-
-                {/* Estadísticas */}
-                <div className='bg-gradient-to-r from-blue-50 to-blue-100 border border-blue-200 rounded-xl p-4 sm:p-6'>
-                  <div className='flex items-center space-x-3'>
-                    <span className='text-2xl'>📊</span>
-                    <div className='flex-1'>
-                      <h3 className='font-semibold text-gray-900 text-sm sm:text-base'>
-                        Mis Estadísticas
-                      </h3>
-                      <p className='text-xs text-gray-600 mt-1'>
-                        Resumen de rendimiento
-                      </p>
-                      <div className='mt-2 space-y-1'>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>
-                            Horas esta semana:
-                          </span>
-                          <span className='font-medium text-blue-600'>
-                            {loading ? '...' : `${weeklyHours.toFixed(1)}h`}
-                          </span>
-                        </div>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>
-                            Usuarios activos:
-                          </span>
-                          <span className='font-medium text-green-600'>
-                            {loading ? '...' : activeUsers}
-                          </span>
-                        </div>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>Servicios hoy:</span>
-                          <span className='font-medium text-orange-600'>
-                            {loading ? '...' : todayAssignments.length}
-                          </span>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
               </div>
