@@ -20,6 +20,14 @@ import {
   getWeekRange,
 } from '@/lib/date-utils';
 
+type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json | undefined }
+  | Json[];
+
 interface AssignmentRow {
   id: string;
   assignment_type: string;
@@ -158,6 +166,52 @@ const ServicesTodayList = (props: {
 export default function WorkerDashboard(): React.JSX.Element {
   const { user } = useAuth();
   const currentUser = user;
+
+  // Helper function para buscar worker por email con manejo de errores
+  const findWorkerByEmail = async (
+    email: string,
+    context = '',
+    selectFields = 'id'
+  ): Promise<{ id: string; monthly_contracted_hours?: number } | null> => {
+    try {
+      const { data: workerData, error: workerError } = await supabase
+        .from('workers')
+        .select(selectFields)
+        .ilike('email', email)
+        .maybeSingle();
+
+      if (workerError) {
+        // eslint-disable-next-line no-console
+        console.error(`Error al buscar trabajadora ${context}:`, workerError);
+        // eslint-disable-next-line no-console
+        console.error('Detalles del error:', {
+          message: workerError.message,
+          details: workerError.details,
+          hint: workerError.hint,
+          code: workerError.code,
+        });
+        return null;
+      }
+
+      if (!workerData) {
+        // eslint-disable-next-line no-console
+        console.warn(`No se encontró trabajadora con email ${context}:`, email);
+        // eslint-disable-next-line no-console
+        console.info(
+          'Esto puede indicar que el usuario no tiene un registro en la tabla workers'
+        );
+        return null;
+      }
+
+      return workerData as unknown as {
+        id: string;
+        monthly_contracted_hours?: number;
+      };
+    } catch {
+      // Error inesperado al buscar trabajadora
+      return null;
+    }
+  };
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
   const [weeklyHours, setWeeklyHours] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
@@ -369,17 +423,9 @@ export default function WorkerDashboard(): React.JSX.Element {
     return toKey(new Date());
   }, []);
 
-  const weekRange = useMemo(() => {
-    const now = new Date();
-    const start = new Date(now);
-    start.setDate(now.getDate() - now.getDay());
-    const end = new Date(start);
-    end.setDate(start.getDate() + 6);
-    return {
-      start: start.toISOString().split('T')[0],
-      end: end.toISOString().split('T')[0],
-    };
-  }, []);
+  const weekRange = useMemo(() => getWeekRange(), []);
+  const nextWeekRange = useMemo(() => getNextWeekRange(), []);
+  const thisMonthRange = useMemo(() => getMonthRange(), []);
 
   // Fechas para próximos servicios
   const tomorrowKey = useMemo(() => {
@@ -389,8 +435,6 @@ export default function WorkerDashboard(): React.JSX.Element {
   }, []);
 
   const currentWeekRange = useMemo(() => getWeekRange(), []);
-  const nextWeekRange = useMemo(() => getNextWeekRange(), []);
-  const thisMonthRange = useMemo(() => getMonthRange(), []);
 
   // Función para cargar días festivos del mes actual
   const loadMonthHolidays = useCallback(async (): Promise<void> => {
@@ -433,77 +477,263 @@ export default function WorkerDashboard(): React.JSX.Element {
         total: totalNonWorkingDays,
       });
     } catch {
-      // Log del error para debugging (en producción se usaría un sistema de logging apropiado)
+      // Error en loadHoursControl - resetear el estado
+      // Resetear el estado en caso de error
+      setHoursControl({
+        contracted: 0,
+        worked: 0,
+        balance: 0,
+      });
     }
   }, []);
+
+  // Función para calcular el progreso diario del mes
+  const calculateDailyProgress = (): {
+    currentDay: number;
+    totalDays: number;
+    progressPercentage: number;
+  } => {
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+    const currentDay = now.getDate();
+    const totalDays = new Date(currentYear, currentMonth, 0).getDate();
+
+    return {
+      currentDay,
+      totalDays,
+      progressPercentage: (currentDay / totalDays) * 100,
+    };
+  };
+
+  // Función para formatear horas en formato HH:MM
+  const formatHoursToHHMM = (hours: number): string => {
+    const wholeHours = Math.floor(Math.abs(hours));
+    const minutes = Math.round((Math.abs(hours) - wholeHours) * 60);
+
+    if (minutes === 0) {
+      return `${wholeHours}h`;
+    }
+
+    return `${wholeHours}h ${minutes.toString().padStart(2, '0')}m`;
+  };
 
   // Función para cargar control de horas contratadas vs trabajadas
   const loadHoursControl = useCallback(async (): Promise<void> => {
     const userEmail = currentUser?.email;
-    if (typeof userEmail !== 'string' || userEmail === '') return;
+
+    if (typeof userEmail !== 'string' || userEmail === '') {
+      return;
+    }
+
+    // Cargar festivos del mes actual primero
+    const currentDate = new Date();
+    const currentYear = currentDate.getFullYear();
+    const currentMonth = currentDate.getMonth() + 1;
+
+    const { data: holidaysData, error: holidaysError } = await supabase
+      .from('holidays')
+      .select('day, month, year')
+      .eq('year', currentYear)
+      .eq('month', currentMonth);
+
+    if (holidaysError) {
+      return;
+    }
+
+    const monthHolidaysData = (holidaysData ?? []) as Array<{
+      day: number;
+      month: number;
+      year: number;
+    }>;
+
+    // Funciones helper para calcular horas (definidas dentro del callback)
+    const getDayName = (day: number, year: number, month: number): string => {
+      const date = new Date(year, month - 1, day);
+      const dayOfWeek = date.getDay(); // 0 = Domingo, 1 = Lunes, etc.
+
+      const days = [
+        'sunday', // 0
+        'monday', // 1
+        'tuesday', // 2
+        'wednesday', // 3
+        'thursday', // 4
+        'friday', // 5
+        'saturday', // 6
+      ];
+
+      return days[dayOfWeek];
+    };
+
+    const isHolidayDate = (day: number, year: number, month: number): boolean =>
+      monthHolidaysData.some(
+        (holiday: { day: number; month: number; year: number }) =>
+          holiday.day === day &&
+          holiday.month === month &&
+          holiday.year === year
+      );
+
+    const calculateDayHours = (
+      timeSlots: Array<{ start: string; end: string }>
+    ): number =>
+      timeSlots.reduce((total, slot) => {
+        const start = new Date(`2000-01-01T${slot.start}`);
+        const end = new Date(`2000-01-01T${slot.end}`);
+        const diffMs = end.getTime() - start.getTime();
+        return total + diffMs / (1000 * 60 * 60);
+      }, 0);
+
+    const calculateMonthlyHoursFromSchedule = (
+      schedule: Record<
+        string,
+        { enabled: boolean; timeSlots: Array<{ start: string; end: string }> }
+      >,
+      assignmentType: string,
+      year: number,
+      month: number,
+      monthDays: number
+    ): number => {
+      let totalHours = 0;
+
+      for (let day = 1; day <= monthDays; day++) {
+        const dayName = getDayName(day, year, month);
+        const daySchedule = schedule[dayName];
+
+        if (daySchedule?.enabled) {
+          // Verificar si es día festivo
+          if (isHolidayDate(day, year, month)) {
+            // Si es festivo, usar horario de festivos si existe
+            if (
+              assignmentType === 'festivos' ||
+              assignmentType === 'flexible'
+            ) {
+              const festivosSchedule = schedule['festivos'];
+              const festivoSchedule = schedule['festivo'];
+              const holidaySchedule = festivosSchedule ?? festivoSchedule;
+              if (
+                holidaySchedule != null &&
+                typeof holidaySchedule === 'object' &&
+                'timeSlots' in holidaySchedule &&
+                Array.isArray(holidaySchedule.timeSlots) &&
+                holidaySchedule.timeSlots.length > 0
+              ) {
+                const holidayHours = calculateDayHours(
+                  holidaySchedule.timeSlots
+                );
+                totalHours += holidayHours;
+              }
+            }
+          } else {
+            // Día normal, usar horario regular
+            const regularHours = calculateDayHours(daySchedule.timeSlots);
+            totalHours += regularHours;
+          }
+        }
+      }
+
+      return totalHours;
+    };
 
     try {
       // Buscar trabajadora por email
-      const { data: workerData, error: workerError } = await supabase
-        .from('workers')
-        .select('id')
-        .ilike('email', userEmail)
-        .maybeSingle();
-
-      if (workerError || !workerData) return;
-
-      const workerId = workerData.id;
-      const currentDate = new Date();
-      const currentYear = currentDate.getFullYear();
-      const currentMonth = currentDate.getMonth() + 1;
-
-      // Obtener horas contratadas (suma de weekly_hours de asignaciones activas)
-      const { data: assignmentsData, error: assignmentsError } = await supabase
-        .from('assignments')
-        .select('weekly_hours, start_date, end_date')
-        .eq('worker_id', workerId)
-        .eq('status', 'active');
-
-      if (assignmentsError) return;
-
-      // Calcular horas contratadas mensuales (weekly_hours * 4.33 semanas promedio)
-      const contractedHours = (assignmentsData ?? []).reduce(
-        (total, assignment) => {
-          const assignmentWeeklyHours = assignment.weekly_hours ?? 0;
-          return total + assignmentWeeklyHours * 4.33; // Promedio de semanas por mes
-        },
-        0
+      const workerData = await findWorkerByEmail(
+        userEmail,
+        'en loadHoursControl'
       );
 
-      // Obtener horas trabajadas del mes actual desde hours_balances
+      if (!workerData) {
+        return;
+      }
+
+      const workerId = workerData.id;
+      // Valor por defecto hasta que se añada la columna weekly_contracted_hours a la BD
+      const weeklyContractedHours = 0;
+
+      // Obtener asignaciones activas del mes actual con sus horarios
+      const lastDayOfMonth = new Date(currentYear, currentMonth, 0).getDate();
+      const firstDayOfMonth = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-01`;
+      const lastDayOfMonthStr = `${currentYear}-${currentMonth.toString().padStart(2, '0')}-${lastDayOfMonth.toString().padStart(2, '0')}`;
+
+      const { data: assignmentsData, error: assignmentsError } = await supabase
+        .from('assignments')
+        .select(
+          `
+          id,
+          weekly_hours,
+          start_date,
+          end_date,
+          schedule,
+          assignment_type
+        `
+        )
+        .eq('worker_id', workerId)
+        .eq('status', 'active')
+        .lte('start_date', lastDayOfMonthStr)
+        .or(`end_date.is.null,end_date.gte.${firstDayOfMonth}`);
+
+      if (assignmentsError) {
+        return;
+      }
+
+      // Calcular horas trabajadas reales basándose en los horarios de las asignaciones
+      let totalWorkedHours = 0;
+      const currentMonthDays = new Date(currentYear, currentMonth, 0).getDate();
+
+      for (const assignment of assignmentsData ?? []) {
+        const assignmentData = assignment as unknown as {
+          schedule: Json;
+          assignment_type: string;
+        };
+        const schedule = assignmentData.schedule as Record<
+          string,
+          { enabled: boolean; timeSlots: Array<{ start: string; end: string }> }
+        > | null;
+
+        if (!schedule) continue;
+
+        // Calcular horas trabajadas para este mes
+        const assignmentHours = calculateMonthlyHoursFromSchedule(
+          schedule,
+          assignmentData.assignment_type,
+          currentYear,
+          currentMonth,
+          currentMonthDays
+        );
+        totalWorkedHours += assignmentHours;
+      }
+
+      // Obtener horas trabajadas del mes actual desde hours_balances (si existe)
       const { data: balanceData, error: balanceError } = await supabase
         .from('hours_balances')
-        .select('worked_hours, total_hours')
+        .select('worked_hours')
         .eq('worker_id', workerId)
         .eq('year', currentYear)
         .eq('month', currentMonth)
         .maybeSingle();
 
-      let workedHours = 0;
-      if (!balanceError && balanceData) {
-        workedHours = balanceData.worked_hours ?? 0;
-      } else {
-        // Si no hay registro en hours_balances, calcular desde assignments
-        // Esto es un fallback temporal hasta implementar el sistema completo
-        workedHours = weeklyHours * 4.33; // Usar las horas semanales como aproximación
+      // Si hay registro en hours_balances, usarlo; si no, usar el cálculo de asignaciones
+      let finalWorkedHours = totalWorkedHours;
+      if (
+        !balanceError &&
+        balanceData &&
+        typeof balanceData.worked_hours === 'number'
+      ) {
+        finalWorkedHours = balanceData.worked_hours;
       }
 
-      const balance = workedHours - contractedHours;
+      // Convertir horas semanales a mensuales para el cálculo (4.33 semanas promedio por mes)
+      const monthlyContractedHours = weeklyContractedHours * 4.33;
+      const balance = finalWorkedHours - monthlyContractedHours;
 
       setHoursControl({
-        contracted: Math.round(contractedHours * 100) / 100,
-        worked: Math.round(workedHours * 100) / 100,
+        contracted: Math.round(monthlyContractedHours * 100) / 100,
+        worked: Math.round(finalWorkedHours * 100) / 100,
         balance: Math.round(balance * 100) / 100,
       });
     } catch {
       // Log del error para debugging (en producción se usaría un sistema de logging apropiado)
     }
-  }, [currentUser?.email, weeklyHours]);
+  }, [currentUser?.email]);
 
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -517,13 +747,13 @@ export default function WorkerDashboard(): React.JSX.Element {
         setLoading(true);
 
         // Buscar trabajadora por email
-        const { data: workerData, error: workerError } = await supabase
-          .from('workers')
-          .select('id')
-          .ilike('email', currentUser.email)
-          .maybeSingle();
+        const workerData = await findWorkerByEmail(
+          currentUser.email,
+          'en loadTodayAssignments',
+          'id'
+        );
 
-        if (workerError !== null || workerData === null) {
+        if (!workerData) {
           setTodayAssignments([]);
           setLoading(false);
           return;
@@ -1233,66 +1463,6 @@ export default function WorkerDashboard(): React.JSX.Element {
                     </div>
                   </div>
                 </Link>
-
-                <Link
-                  href='/worker-dashboard/this-week'
-                  className='block hover:bg-gray-100 transition-colors rounded-lg'
-                >
-                  <div className='flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100'>
-                    <div>
-                      <p className='font-medium text-gray-900'>Esta Semana</p>
-                      <p className='text-sm text-gray-600'>Próximos días</p>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <span className='text-green-600 font-semibold'>
-                        {upcomingServices.thisWeek}
-                      </span>
-                      <svg
-                        className='w-4 h-4 text-gray-400'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M9 5l7 7-7 7'
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
-
-                <Link
-                  href='/worker-dashboard/this-month'
-                  className='block hover:bg-gray-100 transition-colors rounded-lg'
-                >
-                  <div className='flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100'>
-                    <div>
-                      <p className='font-medium text-gray-900'>Este Mes</p>
-                      <p className='text-sm text-gray-600'>Vista general</p>
-                    </div>
-                    <div className='flex items-center space-x-2'>
-                      <span className='text-purple-600 font-semibold'>
-                        {upcomingServices.thisMonth}
-                      </span>
-                      <svg
-                        className='w-4 h-4 text-gray-400'
-                        fill='none'
-                        stroke='currentColor'
-                        viewBox='0 0 24 24'
-                      >
-                        <path
-                          strokeLinecap='round'
-                          strokeLinejoin='round'
-                          strokeWidth={2}
-                          d='M9 5l7 7-7 7'
-                        />
-                      </svg>
-                    </div>
-                  </div>
-                </Link>
               </div>
             </div>
           </div>
@@ -1392,48 +1562,190 @@ export default function WorkerDashboard(): React.JSX.Element {
                   </div>
                 </div>
 
-                {/* Control de Horas Contratadas */}
-                <div className='bg-gradient-to-r from-purple-50 to-purple-100 border border-purple-200 rounded-xl p-4 sm:p-6'>
-                  <div className='flex items-center space-x-3'>
-                    <span className='text-2xl'>⏰</span>
-                    <div className='flex-1'>
-                      <h3 className='font-semibold text-gray-900 text-sm sm:text-base'>
-                        Control de Horas
-                      </h3>
-                      <p className='text-xs text-gray-600 mt-1'>
-                        Contratadas vs Trabajadas
-                      </p>
-                      <div className='mt-2 space-y-1'>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>Contratadas:</span>
-                          <span className='font-medium text-purple-600'>
-                            {loading ? '...' : `${hoursControl.contracted}h`}
-                          </span>
-                        </div>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>Trabajadas:</span>
-                          <span className='font-medium text-green-600'>
-                            {loading ? '...' : `${hoursControl.worked}h`}
-                          </span>
-                        </div>
-                        <div className='flex justify-between text-xs'>
-                          <span className='text-gray-600'>Balance:</span>
-                          <span
-                            className={`font-medium ${
-                              hoursControl.balance > 0
-                                ? 'text-green-600'
-                                : hoursControl.balance < 0
-                                  ? 'text-red-600'
-                                  : 'text-blue-600'
-                            }`}
-                          >
-                            {loading
-                              ? '...'
-                              : `${hoursControl.balance > 0 ? '+' : ''}${hoursControl.balance}h`}
-                          </span>
-                        </div>
+                {/* Control de Horas */}
+                <div className='bg-white rounded-lg shadow-md p-6 border-l-4 border-blue-500'>
+                  <div className='flex items-center justify-between mb-4'>
+                    <h3 className='text-lg font-semibold text-gray-800'>
+                      Control de Horas
+                    </h3>
+                    <div className='w-3 h-3 bg-blue-500 rounded-full'></div>
+                  </div>
+                  <p className='text-sm text-gray-600 mb-4'>
+                    Contratadas vs Trabajadas
+                  </p>
+
+                  <div className='space-y-3 mb-4'>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>
+                        Contratadas:
+                      </span>
+                      <span className='font-medium text-gray-800'>
+                        {formatHoursToHHMM(hoursControl.contracted)}
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>Trabajadas:</span>
+                      <span className='font-medium text-gray-800'>
+                        {formatHoursToHHMM(hoursControl.worked)}
+                      </span>
+                    </div>
+                    <div className='flex justify-between items-center'>
+                      <span className='text-sm text-gray-600'>Balance:</span>
+                      <span
+                        className={`font-semibold text-lg ${
+                          hoursControl.balance > 0
+                            ? 'text-green-600'
+                            : hoursControl.balance < 0
+                              ? 'text-red-600'
+                              : 'text-blue-600'
+                        }`}
+                      >
+                        {formatHoursToHHMM(hoursControl.balance)}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Estado con indicador visual prominente */}
+                  <div className='border-t pt-4'>
+                    <div className='flex items-center justify-between'>
+                      <span className='text-sm text-gray-600'>Estado:</span>
+                      <div className='flex items-center space-x-2'>
+                        <div
+                          className={`w-4 h-4 rounded-full ${
+                            hoursControl.balance > 0
+                              ? 'bg-green-500'
+                              : hoursControl.balance < 0
+                                ? 'bg-red-500'
+                                : 'bg-blue-500'
+                          }`}
+                        />
+                        <span
+                          className={`font-semibold text-sm ${
+                            hoursControl.balance > 0
+                              ? 'text-green-600'
+                              : hoursControl.balance < 0
+                                ? 'text-red-600'
+                                : 'text-blue-600'
+                          }`}
+                        >
+                          {hoursControl.balance > 0
+                            ? 'Exceso'
+                            : hoursControl.balance < 0
+                              ? 'Defecto'
+                              : 'Equilibrado'}
+                        </span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Barra de progreso mejorada */}
+                  <div className='mt-4'>
+                    {/* Información del progreso diario */}
+                    <div className='flex justify-between items-center mb-2'>
+                      <span className='text-xs text-gray-600'>
+                        Progreso del mes:
+                      </span>
+                      <span className='text-xs font-medium text-gray-800'>
+                        Día {calculateDailyProgress().currentDay} de{' '}
+                        {calculateDailyProgress().totalDays}
+                      </span>
+                    </div>
+
+                    {/* Barra de progreso del tiempo */}
+                    <div className='w-full bg-gray-200 rounded-full h-2 mb-3'>
+                      <div
+                        className='bg-gray-400 h-2 rounded-full transition-all duration-300'
+                        style={{
+                          width: `${calculateDailyProgress().progressPercentage}%`,
+                        }}
+                      />
+                    </div>
+
+                    {/* Etiquetas de horas */}
+                    <div className='flex justify-between text-xs text-gray-500 mb-1'>
+                      <span>0h</span>
+                      <span>{formatHoursToHHMM(hoursControl.contracted)}</span>
+                      <span>
+                        {formatHoursToHHMM(
+                          Math.max(hoursControl.worked, hoursControl.contracted)
+                        )}
+                      </span>
+                    </div>
+
+                    {/* Barra de progreso de horas */}
+                    <div className='w-full bg-gray-200 rounded-full h-3 relative'>
+                      {/* Línea de referencia para horas contratadas */}
+                      <div
+                        className='absolute top-0 bottom-0 w-px bg-blue-500 z-10'
+                        style={{
+                          left: `${(hoursControl.contracted / Math.max(hoursControl.worked, hoursControl.contracted)) * 100}%`,
+                        }}
+                      />
+
+                      {/* Barra de progreso de horas trabajadas */}
+                      <div
+                        className={`h-3 rounded-full transition-all duration-500 ${
+                          hoursControl.balance > 0
+                            ? 'bg-green-500'
+                            : hoursControl.balance < 0
+                              ? 'bg-red-500'
+                              : 'bg-blue-500'
+                        }`}
+                        style={{
+                          width: `${Math.min(
+                            (hoursControl.worked /
+                              Math.max(
+                                hoursControl.worked,
+                                hoursControl.contracted
+                              )) *
+                              100,
+                            100
+                          )}%`,
+                        }}
+                      />
+                    </div>
+
+                    {/* Etiquetas de referencia */}
+                    <div className='flex justify-between text-xs text-gray-500 mt-1'>
+                      <span>Inicio</span>
+                      <span className='text-blue-600 font-medium'>
+                        Contratadas
+                      </span>
+                      <span
+                        className={`font-medium ${
+                          hoursControl.balance > 0
+                            ? 'text-green-600'
+                            : hoursControl.balance < 0
+                              ? 'text-red-600'
+                              : 'text-blue-600'
+                        }`}
+                      >
+                        {hoursControl.balance > 0
+                          ? 'Exceso'
+                          : hoursControl.balance < 0
+                            ? 'Defecto'
+                            : 'Equilibrado'}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Mensaje informativo destacado */}
+                  <div className='mt-4 p-3 rounded-lg bg-gray-50 border'>
+                    <p
+                      className={`text-sm font-medium text-center ${
+                        hoursControl.balance > 0
+                          ? 'text-green-700'
+                          : hoursControl.balance < 0
+                            ? 'text-red-700'
+                            : 'text-blue-700'
+                      }`}
+                    >
+                      {hoursControl.balance > 0
+                        ? `Trabajando ${formatHoursToHHMM(hoursControl.balance)} más de lo contratado`
+                        : hoursControl.balance < 0
+                          ? `Faltan ${formatHoursToHHMM(Math.abs(hoursControl.balance))} para cumplir el contrato`
+                          : 'Horas perfectamente equilibradas'}
+                    </p>
                   </div>
                 </div>
 

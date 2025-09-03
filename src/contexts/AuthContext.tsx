@@ -168,6 +168,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         is_active: true,
         monthly_contracted_hours:
           (metadata?.monthly_contracted_hours as number) ?? 0,
+        weekly_contracted_hours:
+          (metadata?.weekly_contracted_hours as number) ?? 0,
         created_at: authData.user.created_at,
         updated_at: authData.user.updated_at ?? authData.user.created_at,
       };

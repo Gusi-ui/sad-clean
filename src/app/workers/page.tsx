@@ -345,7 +345,7 @@ export default function WorkersPage() {
           dni: (editingWorker.dni ?? '').trim(),
           worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
-          monthly_contracted_hours: editingWorker.monthly_contracted_hours ?? 0,
+          weekly_contracted_hours: editingWorker.weekly_contracted_hours ?? 0,
         } as WorkerInsert;
 
         // Debug: log the data being sent
@@ -421,11 +421,11 @@ export default function WorkersPage() {
           workerData.is_active = editingWorker.is_active;
         }
         if (
-          editingWorker.monthly_contracted_hours !== undefined &&
-          editingWorker.monthly_contracted_hours !== null
+          editingWorker.weekly_contracted_hours !== undefined &&
+          editingWorker.weekly_contracted_hours !== null
         ) {
-          workerData.monthly_contracted_hours =
-            editingWorker.monthly_contracted_hours;
+          workerData.weekly_contracted_hours =
+            editingWorker.weekly_contracted_hours;
         }
 
         // Debug: log de los datos que se van a enviar
@@ -1419,33 +1419,33 @@ export default function WorkersPage() {
                 </select>
               </div>
 
-              {/* Horas Contratadas Mensuales */}
+              {/* Horas Contratadas Semanales */}
               <div className='space-y-2'>
                 <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
                   <span className='text-blue-600'>⏰</span>
-                  <span>Horas Contratadas Mensuales</span>
+                  <span>Horas Contratadas Semanales</span>
                 </label>
                 <Input
                   className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
                   type='number'
                   min='0'
-                  max='300'
+                  max='80'
                   step='0.5'
-                  placeholder='160'
-                  value={editingWorker.monthly_contracted_hours ?? ''}
+                  placeholder='40'
+                  value={editingWorker.weekly_contracted_hours ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value;
                     const numValue =
                       value === '' ? undefined : parseFloat(value);
                     setEditingWorker({
                       ...editingWorker,
-                      monthly_contracted_hours: numValue,
+                      weekly_contracted_hours: numValue,
                     });
                   }}
                 />
                 <p className='text-xs text-gray-600'>
-                  Horas totales contratadas por mes (ej: 160h = 40h/semana × 4
-                  semanas)
+                  Horas totales contratadas por semana (ej: 40h = jornada
+                  completa)
                 </p>
               </div>
             </div>
