@@ -176,6 +176,45 @@ export const updateWorker = async (
   updates: Partial<Worker>
 ): Promise<Worker | null> => {
   try {
+    // Verificar autenticación del usuario
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (
+      userError !== null ||
+      userData.user === null ||
+      userData.user === undefined
+    ) {
+      throw new Error('Usuario no autenticado');
+    }
+
+    // Verificar que el usuario tiene permisos (admin o super_admin)
+    const userRole = userData.user.user_metadata?.['role'] as
+      | string
+      | undefined;
+    const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+    const isSuperAdmin =
+      userRole === 'super_admin' ||
+      userData.user.email === 'conectomail@gmail.com';
+
+    if (!isAdmin && !isSuperAdmin) {
+      // Verificar en la tabla auth_users si no está en metadatos
+      const { data: roleData, error: roleError } = await supabase
+        .from('auth_users')
+        .select('role')
+        .eq('id', userData.user.id)
+        .single();
+
+      if (
+        roleError ||
+        !roleData?.role ||
+        (roleData.role !== 'admin' && roleData.role !== 'super_admin')
+      ) {
+        throw new Error('No tienes permisos para actualizar trabajadoras');
+      }
+    }
+
+    // Log de los datos que se van a actualizar para debugging
+    securityLogger.info('Updating worker with data:', { id, updates });
+
     const { data, error } = await supabase
       .from('workers')
       .update(updates)

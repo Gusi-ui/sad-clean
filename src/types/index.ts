@@ -13,6 +13,8 @@ export interface Worker {
   worker_type: string;
   role: 'worker' | 'admin' | 'super_admin';
   is_active: boolean | null;
+  monthly_contracted_hours: number;
+  weekly_contracted_hours: number;
   created_at: string | null;
   updated_at: string | null;
   user_metadata?: Record<string, unknown>;
@@ -27,6 +29,8 @@ export interface WorkerInsert {
   worker_type: string;
   role?: 'worker' | 'admin' | 'super_admin';
   is_active?: boolean | null;
+  monthly_contracted_hours?: number;
+  weekly_contracted_hours?: number;
 }
 
 export interface WorkerUpdate {
@@ -38,6 +42,8 @@ export interface WorkerUpdate {
   worker_type?: string;
   role?: 'worker' | 'admin' | 'super_admin';
   is_active?: boolean | null;
+  monthly_contracted_hours?: number;
+  weekly_contracted_hours?: number;
 }
 
 // User Types (basado en el esquema de Supabase)
@@ -100,10 +106,10 @@ export interface Activity {
   activity_type: string;
   entity_type: string;
   description: string;
-  user_id: string;
+  user_id: string | null; // Permitir null para coincidir con la BD
   user_email: string;
   user_name: string;
-  entity_id: string;
+  entity_id: string | null; // Permitir null para coincidir con la BD
   entity_name: string;
   details: Record<string, unknown> | null;
   ip_address: string | null;
@@ -116,10 +122,10 @@ export interface ActivityInsert {
   activity_type: string;
   entity_type: string;
   description: string;
-  user_id: string;
+  user_id: string | null; // Permitir null para coincidir con la BD
   user_email: string;
   user_name: string;
-  entity_id: string;
+  entity_id: string | null; // Permitir null para coincidir con la BD
   entity_name: string;
   details?: Record<string, unknown> | null;
   ip_address?: string | null;

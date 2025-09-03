@@ -11,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { logWorkerActivity } from '@/lib/activities-query';
 import {
   createWorker,
   deleteWorker,
@@ -344,6 +345,7 @@ export default function WorkersPage() {
           dni: (editingWorker.dni ?? '').trim(),
           worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
+          weekly_contracted_hours: editingWorker.weekly_contracted_hours ?? 0,
         } as WorkerInsert;
 
         // Debug: log the data being sent
@@ -351,6 +353,22 @@ export default function WorkersPage() {
 
         const newWorker = await createWorker(workerData);
         workerLogger.created(newWorker);
+
+        // Log de creación de trabajadora
+        const nameMeta = user?.user_metadata?.['name'];
+        const adminName =
+          typeof nameMeta === 'string' && nameMeta.trim().length > 0
+            ? nameMeta
+            : 'Administrador';
+        const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+        await logWorkerActivity(
+          adminName,
+          adminEmail,
+          'creó',
+          `${newWorker.name} ${newWorker.surname}`,
+          newWorker.id
+        );
 
         setWorkers([...workers, newWorker]);
         setIsAddModalOpen(false);
@@ -402,9 +420,45 @@ export default function WorkersPage() {
         ) {
           workerData.is_active = editingWorker.is_active;
         }
+        if (
+          editingWorker.weekly_contracted_hours !== undefined &&
+          editingWorker.weekly_contracted_hours !== null
+        ) {
+          workerData.weekly_contracted_hours =
+            editingWorker.weekly_contracted_hours;
+        }
+
+        // Debug: log de los datos que se van a enviar
+        // console.log('🔍 DEBUG - Datos a actualizar:', workerData);
+        // console.log('🔍 DEBUG - ID de trabajadora:', selectedWorker.id);
 
         const updatedWorker = await updateWorker(selectedWorker.id, workerData);
         if (updatedWorker) {
+          // Log de actualización de trabajadora (antes de la actualización de contraseña)
+          const nameMeta = user?.user_metadata?.['name'];
+          const adminName =
+            typeof nameMeta === 'string' && nameMeta.trim().length > 0
+              ? nameMeta
+              : 'Administrador';
+          const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+          try {
+            await logWorkerActivity(
+              adminName,
+              adminEmail,
+              'actualizó',
+              `${updatedWorker.name} ${updatedWorker.surname}`,
+              updatedWorker.id
+            );
+            // Actividad registrada correctamente (sin log en consola)
+          } catch (logError) {
+            workerLogger.error(
+              'Error al registrar actividad de actualización:'
+            );
+            workerLogger.error(logError);
+            // No fallar la operación principal por un error de logging
+          }
+
           // Si el admin ha introducido una contraseña válida, también actualizamos el acceso de Supabase Auth
           const trimmedPassword = workerAccessPassword.trim();
           if (
@@ -446,6 +500,8 @@ export default function WorkersPage() {
           setWorkers(updatedWorkers);
           setIsEditModalOpen(false);
           setSuccessMessage('Trabajadora actualizada con éxito.');
+        } else {
+          workerLogger.error('No se pudo obtener la trabajadora actualizada');
         }
       }
       setEditingWorker({});
@@ -481,6 +537,23 @@ export default function WorkersPage() {
       await deleteWorker(workerToDelete.id);
       setWorkers(workers.filter((w) => w.id !== workerToDelete.id));
       setSuccessMessage('Trabajadora eliminada con éxito.');
+
+      // Log de eliminación de trabajadora
+      const nameMeta = user?.user_metadata?.['name'];
+      const adminName =
+        typeof nameMeta === 'string' && nameMeta.trim().length > 0
+          ? nameMeta
+          : 'Administrador';
+      const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+      await logWorkerActivity(
+        adminName,
+        adminEmail,
+        'eliminó',
+        `${workerToDelete.name} ${workerToDelete.surname}`,
+        workerToDelete.id
+      );
+
       handleDeleteModalClose();
     } catch (err) {
       const errorMessage =
@@ -1345,6 +1418,36 @@ export default function WorkersPage() {
                   <option value='inactiva'>❌ Inactiva</option>
                 </select>
               </div>
+
+              {/* Horas Contratadas Semanales */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>⏰</span>
+                  <span>Horas Contratadas Semanales</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  type='number'
+                  min='0'
+                  max='80'
+                  step='0.5'
+                  placeholder='40'
+                  value={editingWorker.weekly_contracted_hours ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    const numValue =
+                      value === '' ? undefined : parseFloat(value);
+                    setEditingWorker({
+                      ...editingWorker,
+                      weekly_contracted_hours: numValue,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600'>
+                  Horas totales contratadas por semana (ej: 40h = jornada
+                  completa)
+                </p>
+              </div>
             </div>
 
             {/* Botones de acción */}
@@ -1635,6 +1738,32 @@ export default function WorkersPage() {
                   <option value='inactiva'>Inactiva</option>
                 </select>
               </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Horas Contratadas Mensuales
+                </label>
+                <Input
+                  className='w-full'
+                  type='number'
+                  min='0'
+                  max='300'
+                  step='0.5'
+                  placeholder='160'
+                  value={editingWorker.monthly_contracted_hours ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    const numValue =
+                      value === '' ? undefined : parseFloat(value);
+                    setEditingWorker({
+                      ...editingWorker,
+                      monthly_contracted_hours: numValue,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Horas totales contratadas por mes
+                </p>
+              </div>
             </div>
             <div className='flex justify-end space-x-3 pt-4'>
               <Button
@@ -1868,12 +1997,9 @@ export default function WorkersPage() {
               <Button
                 variant='danger'
                 onClick={() => {
-                  handleDeleteWorker().catch((deleteError) => {
-                    // eslint-disable-next-line no-console
-                    console.error(
-                      'Error al eliminar trabajadora:',
-                      deleteError
-                    );
+                  handleDeleteWorker().catch(() => {
+                    // Error al eliminar trabajadora - en producción usar sistema de logging apropiado
+                    // console.error('Error al eliminar trabajadora:', deleteError);
                   });
                 }}
                 disabled={deletingWorker}
