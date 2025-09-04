@@ -1,5 +1,69 @@
 import { securityLogger } from '@/utils/security-config';
 
+// Declaraciones de tipos para Google Maps
+declare global {
+  interface Window {
+    google?: {
+      maps?: {
+        Map?: new (element: HTMLElement, options?: unknown) => unknown;
+        Geocoder?: new () => {
+          geocode: (
+            request: {
+              address?: string;
+              location?: { lat: number; lng: number };
+              bounds?: unknown;
+              componentRestrictions?: unknown;
+            },
+            callback: (results: unknown, status: string) => void
+          ) => void;
+        };
+        Marker?: new (options: unknown) => unknown;
+        MapTypeId?: {
+          ROADMAP: unknown;
+        };
+        LatLngBounds?: new () => {
+          extend: (latLng: unknown) => void;
+          isEmpty: () => boolean;
+        };
+        Size?: new (width: number, height: number) => unknown;
+        DirectionsService?: new () => {
+          route: (
+            request: {
+              origin: { lat: number; lng: number } | string;
+              destination: string | { lat: number; lng: number };
+              waypoints?: Array<{
+                location: string | { lat: number; lng: number };
+              }>;
+              travelMode: unknown;
+              optimizeWaypoints?: boolean;
+              provideRouteAlternatives?: boolean;
+            },
+            callback: (
+              result: {
+                routes?: Array<{
+                  legs?: Array<{
+                    duration?: { value?: number };
+                    distance?: { value?: number };
+                  }>;
+                }>;
+              } | null,
+              status: unknown
+            ) => void
+          ) => void;
+        };
+        DirectionsRenderer?: new (options?: { suppressMarkers?: boolean }) => {
+          setMap: (map: unknown) => void;
+          setPanel: (panel: HTMLElement) => void;
+          setDirections: (directions: unknown) => void;
+        };
+        TravelMode?: { DRIVING: unknown; WALKING: unknown; TRANSIT: unknown };
+        DirectionsStatus?: { OK: unknown };
+      };
+    };
+    initMap?: () => void;
+  }
+}
+
 // Utilidades para Google Maps
 export interface GoogleMapsConfig {
   apiKey: string;
@@ -189,6 +253,10 @@ export const geocodeAddress = (
       return;
     }
 
+    if (!window.google?.maps?.Geocoder) {
+      reject(new Error('Google Maps Geocoder no está disponible'));
+      return;
+    }
     const geocoder = new window.google.maps.Geocoder();
 
     const request: {
@@ -200,6 +268,10 @@ export const geocodeAddress = (
       request['componentRestrictions'] = options.componentRestrictions;
     }
     if (options?.bounds) {
+      if (!window.google?.maps?.LatLngBounds) {
+        reject(new Error('Google Maps LatLngBounds no está disponible'));
+        return;
+      }
       const b = new window.google.maps.LatLngBounds();
       b.extend({
         lat: options.bounds.sw.lat,
@@ -230,7 +302,16 @@ export const geocodeAddress = (
           lng: location.lng(),
         });
       } else {
-        reject(new Error(`Error de geocodificación: ${status}`));
+        // Manejar ZERO_RESULTS de manera más silenciosa
+        if (status === 'ZERO_RESULTS') {
+          reject(
+            new Error(
+              `ZERO_RESULTS: No se encontraron resultados para la dirección: ${address}`
+            )
+          );
+        } else {
+          reject(new Error(`Error de geocodificación: ${status}`));
+        }
       }
     });
   });
@@ -251,7 +332,7 @@ export const createGoogleMap = (
   const defaultOptions = {
     zoom: 14,
     center: { lat: 41.542, lng: 2.444 }, // Centro aproximado de Mataró
-    mapTypeId: window.google.maps.MapTypeId.ROADMAP,
+    mapTypeId: window.google?.maps?.MapTypeId?.ROADMAP,
     mapTypeControl: false,
     streetViewControl: false,
     fullscreenControl: true,
@@ -291,6 +372,9 @@ export const createGoogleMap = (
     ],
   };
 
+  if (!window.google?.maps?.Map) {
+    throw new Error('Google Maps Map no está disponible');
+  }
   return new window.google.maps.Map(element, { ...defaultOptions, ...options });
 };
 
@@ -306,6 +390,9 @@ export const createMarker = (options: {
     throw new Error('Google Maps API no disponible');
   }
 
+  if (!window.google?.maps?.Marker) {
+    throw new Error('Google Maps Marker no está disponible');
+  }
   return new window.google.maps.Marker(options);
 };
 
@@ -318,6 +405,9 @@ export const createLatLngBounds = (): {
     throw new Error('Google Maps API no disponible');
   }
 
+  if (!window.google?.maps?.LatLngBounds) {
+    throw new Error('Google Maps LatLngBounds no está disponible');
+  }
   return new window.google.maps.LatLngBounds();
 };
 
@@ -327,6 +417,9 @@ export const createSize = (width: number, height: number): unknown => {
     throw new Error('Google Maps API no disponible');
   }
 
+  if (!window.google?.maps?.Size) {
+    throw new Error('Google Maps Size no está disponible');
+  }
   return new window.google.maps.Size(width, height);
 };
 
@@ -350,3 +443,136 @@ export const getGoogleMapsDiagnostics = () => {
         : 'No disponible',
   };
 };
+
+// Interfaz para el resultado del cálculo de tiempo de viaje
+export interface TravelTimeResult {
+  duration: number; // en segundos
+  distance: number; // en metros
+  status: 'OK' | 'ERROR';
+  errorMessage?: string;
+}
+
+// Calcular tiempo de viaje real entre dos direcciones usando Google Maps Directions API
+export const calculateTravelTime = (
+  fromAddress: string,
+  toAddress: string,
+  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT' = 'DRIVING'
+): Promise<TravelTimeResult> =>
+  new Promise((resolve) => {
+    if (!isGoogleMapsAvailable()) {
+      resolve({
+        duration: 0,
+        distance: 0,
+        status: 'ERROR',
+        errorMessage: 'Google Maps API no disponible',
+      });
+      return;
+    }
+
+    // Timeout para evitar llamadas colgadas
+    const timeoutId = setTimeout(() => {
+      resolve({
+        duration: 0,
+        distance: 0,
+        status: 'ERROR',
+        errorMessage:
+          'Timeout al calcular ruta - la API tardó demasiado en responder',
+      });
+    }, 10000); // 10 segundos de timeout
+
+    if (!window.google?.maps?.DirectionsService) {
+      resolve({
+        duration: 0,
+        distance: 0,
+        status: 'ERROR',
+        errorMessage: 'Google Maps DirectionsService no está disponible',
+      });
+      return;
+    }
+    const directionsService = new window.google.maps.DirectionsService();
+
+    // Mapear el modo de transporte al enum de Google Maps
+    if (!window.google?.maps?.TravelMode) {
+      resolve({
+        duration: 0,
+        distance: 0,
+        status: 'ERROR',
+        errorMessage: 'Google Maps TravelMode no está disponible',
+      });
+      return;
+    }
+
+    let googleTravelMode;
+    switch (travelMode) {
+      case 'WALKING':
+        googleTravelMode = window.google.maps.TravelMode.WALKING;
+        break;
+      case 'TRANSIT':
+        googleTravelMode = window.google.maps.TravelMode.TRANSIT;
+        break;
+      case 'DRIVING':
+      default:
+        googleTravelMode = window.google.maps.TravelMode.DRIVING;
+        break;
+    }
+
+    directionsService.route(
+      {
+        origin: fromAddress,
+        destination: toAddress,
+        travelMode: googleTravelMode,
+        optimizeWaypoints: false,
+        provideRouteAlternatives: false,
+      },
+      (result, status) => {
+        clearTimeout(timeoutId); // Limpiar timeout si la respuesta llega a tiempo
+
+        if (!window.google?.maps?.DirectionsStatus) {
+          resolve({
+            duration: 0,
+            distance: 0,
+            status: 'ERROR',
+            errorMessage: 'Google Maps DirectionsStatus no está disponible',
+          });
+          return;
+        }
+
+        if (
+          status === window.google.maps.DirectionsStatus.OK &&
+          result &&
+          'routes' in result &&
+          result.routes?.[0]
+        ) {
+          const route = result.routes[0];
+          const leg = route.legs?.[0];
+          if (
+            leg?.duration?.value != null &&
+            leg.duration.value > 0 &&
+            leg?.distance?.value != null &&
+            leg.distance.value > 0
+          ) {
+            resolve({
+              duration: leg.duration.value,
+              distance: leg.distance.value,
+              status: 'OK',
+            });
+          } else {
+            resolve({
+              duration: 0,
+              distance: 0,
+              status: 'ERROR',
+              errorMessage:
+                'No se pudo obtener información de duración o distancia',
+            });
+          }
+        } else {
+          resolve({
+            duration: 0,
+            distance: 0,
+            status: 'ERROR',
+            errorMessage: `Error en Directions API: ${String(status)}`,
+          });
+        }
+      }
+    );
+  });

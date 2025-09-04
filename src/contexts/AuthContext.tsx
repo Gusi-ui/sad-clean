@@ -77,35 +77,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Debug completado - AuthProvider funcionando correctamente
 
-  // Verificar autenticación solo al iniciar - una sola vez
+  // Verificar autenticación solo al iniciar - optimizado
   useEffect(() => {
-    let isInitialized = false;
+    if (typeof window === 'undefined') return;
 
     const initializeAuth = (): void => {
-      if (isInitialized) return;
-      if (typeof window === 'undefined') return;
-
       try {
         const workerData = secureStorage.getItem<Worker>('worker');
         const token = secureStorage.getItem<string>('token');
 
         if (workerData != null && token != null && token !== '') {
-          // Restaurar sesión previa
+          // Restaurar sesión previa inmediatamente
           dispatch({ type: 'AUTH_SUCCESS', payload: workerData });
         } else {
-          // No hay sesión previa - mostrar login
+          // No hay sesión previa - finalizar carga
           dispatch({ type: 'AUTH_FAILURE', payload: '' });
         }
       } catch {
-        // Error al restaurar sesión - limpiar y mostrar login
-        // Limpiar storage corrupto
+        // Error al restaurar sesión - limpiar y finalizar carga
         secureStorage.clear();
         dispatch({ type: 'AUTH_FAILURE', payload: '' });
       }
-
-      isInitialized = true;
     };
 
+    // Ejecutar inmediatamente sin demoras
     initializeAuth();
   }, []); // Solo al montar
 
@@ -244,21 +239,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const authenticatedUser = await login(credentials);
 
       // Determinar redirección basada en el rol del usuario
-      let redirectTo = '/dashboard';
-      if (authenticatedUser?.role === 'super_admin') {
-        redirectTo = '/super-dashboard';
-      } else if (authenticatedUser?.role === 'admin') {
-        redirectTo = '/dashboard';
-      } else if (authenticatedUser?.role === 'worker') {
-        redirectTo = '/worker-dashboard';
-      }
-
-      // Redirección determinada según el rol del usuario
-      // No resetear loading aquí, mantenerlo activo durante la redirección
+      const redirectTo =
+        authenticatedUser?.role === 'super_admin'
+          ? '/super-dashboard'
+          : authenticatedUser?.role === 'admin'
+            ? '/dashboard'
+            : '/worker-dashboard';
 
       return { redirectTo };
     } catch {
-      // Error en el proceso de signIn
       return {
         error: 'Error de autenticación',
       };
