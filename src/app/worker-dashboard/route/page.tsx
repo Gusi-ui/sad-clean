@@ -44,6 +44,8 @@ interface AssignmentRow {
     name: string | null;
     surname: string | null;
     address?: string | null;
+    postal_code?: string | null;
+    city?: string | null;
   } | null;
 }
 
@@ -55,7 +57,13 @@ const DailyRoute = (props: {
     schedule: unknown;
     start_date: string;
     end_date: string | null;
-    users?: { name: string | null; surname: string | null } | null;
+    users?: {
+      name: string | null;
+      surname: string | null;
+      address?: string | null;
+      postal_code?: string | null;
+      city?: string | null;
+    } | null;
   }>;
   getRouteSlots: (
     schedule: unknown,
@@ -73,6 +81,8 @@ const DailyRoute = (props: {
     startMinutes: number;
     order: number;
     address?: string | null;
+    postalCode?: string | null;
+    city?: string | null;
   };
 
   const toMinutes = (hhmm: string): number => {
@@ -97,12 +107,42 @@ const DailyRoute = (props: {
         end: s.end,
         startMinutes: sm,
         order: index + 1,
+        address: a.users?.address,
+        postalCode: a.users?.postal_code,
+        city: a.users?.city,
       };
     });
   });
 
   // Ordenar por hora de inicio
   routeStops.sort((a, b) => a.startMinutes - b.startMinutes);
+
+  // Optimizar rutas: eliminar paradas intermedias del mismo usuario
+  // Solo mantener la primera entrada y última salida de cada ubicación
+  const optimizedRouteStops: RouteStop[] = [];
+
+  for (let i = 0; i < routeStops.length; i++) {
+    const currentStop = routeStops[i];
+    const nextStop = routeStops[i + 1];
+
+    // Si es la primera parada o es un usuario diferente al anterior
+    const prevStop = routeStops[i - 1];
+    const isDifferentUser =
+      prevStop == null ||
+      prevStop.assignmentId !== currentStop.assignmentId ||
+      prevStop.address !== currentStop.address;
+
+    // Si es la última parada o el siguiente es un usuario diferente
+    const isLastOrDifferentNext =
+      nextStop == null ||
+      nextStop.assignmentId !== currentStop.assignmentId ||
+      nextStop.address !== currentStop.address;
+
+    // Solo agregar si es entrada a nuevo usuario o salida del último servicio
+    if (isDifferentUser || isLastOrDifferentNext) {
+      optimizedRouteStops.push(currentStop);
+    }
+  }
 
   // Calcular tiempo estimado entre paradas (30 minutos por defecto)
   const calculateEstimatedTime = (
@@ -121,7 +161,7 @@ const DailyRoute = (props: {
 
   return (
     <div className='space-y-4'>
-      {routeStops.length === 0 ? (
+      {optimizedRouteStops.length === 0 ? (
         <div className='text-center py-8'>
           <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
             <span className='text-2xl'>🏠</span>
@@ -135,7 +175,7 @@ const DailyRoute = (props: {
         </div>
       ) : (
         <div className='space-y-4'>
-          {routeStops.map((stop, index) => (
+          {optimizedRouteStops.map((stop, index) => (
             <div
               key={`${stop.assignmentId}-${stop.start}-${stop.end}-${index}`}
             >
@@ -175,13 +215,13 @@ const DailyRoute = (props: {
                         </span>
                       </div>
 
-                      {index < routeStops.length - 1 && (
+                      {index < optimizedRouteStops.length - 1 && (
                         <div className='flex items-center space-x-1'>
                           <span>🚗</span>
                           <span>
                             Viaje:{' '}
                             {(() => {
-                              const nextStop = routeStops[index + 1];
+                              const nextStop = optimizedRouteStops[index + 1];
                               return nextStop !== null && nextStop !== undefined
                                 ? calculateEstimatedTime(stop, nextStop)
                                 : '';
@@ -221,28 +261,30 @@ const DailyRoute = (props: {
               <div>
                 <p className='text-blue-600 font-medium'>Paradas</p>
                 <p className='text-blue-900 font-semibold'>
-                  {routeStops.length}
+                  {optimizedRouteStops.length}
                 </p>
               </div>
               <div>
                 <p className='text-blue-600 font-medium'>Primera Parada</p>
                 <p className='text-blue-900 font-semibold'>
-                  {routeStops[0]?.start ?? 'N/A'}
+                  {optimizedRouteStops[0]?.start ?? 'N/A'}
                 </p>
               </div>
               <div>
                 <p className='text-blue-600 font-medium'>Última Parada</p>
                 <p className='text-blue-900 font-semibold'>
-                  {routeStops[routeStops.length - 1]?.end ?? 'N/A'}
+                  {optimizedRouteStops[optimizedRouteStops.length - 1]?.end ??
+                    'N/A'}
                 </p>
               </div>
               <div>
                 <p className='text-blue-600 font-medium'>Tiempo Total</p>
                 <p className='text-blue-900 font-semibold'>
                   {(() => {
-                    if (routeStops.length === 0) return 'N/A';
-                    const firstStop = routeStops[0];
-                    const lastStop = routeStops[routeStops.length - 1];
+                    if (optimizedRouteStops.length === 0) return 'N/A';
+                    const firstStop = optimizedRouteStops[0];
+                    const lastStop =
+                      optimizedRouteStops[optimizedRouteStops.length - 1];
                     if (firstStop === undefined || lastStop === undefined)
                       return 'N/A';
                     return calculateDuration(firstStop.start, lastStop.end);
@@ -262,6 +304,11 @@ export default function RoutePage(): React.JSX.Element {
   const currentUser = user;
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [workerInfo, setWorkerInfo] = useState<{
+    address?: string | null;
+    postal_code?: string | null;
+    city?: string | null;
+  } | null>(null);
   // const [currentLocation, setCurrentLocation] = useState<{
   //   lat: number;
   //   lng: number;
@@ -336,6 +383,62 @@ export default function RoutePage(): React.JSX.Element {
     []
   );
 
+  // Memoize routeStops calculation to prevent infinite loops
+  const routeStops = useMemo(() => {
+    const isHoliday = new Date().getDay() === 0;
+    const stops = todayAssignments.flatMap((a) => {
+      const slots = getRouteSlots(a.schedule, a.assignment_type, isHoliday);
+      const label =
+        `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
+
+      return slots.map((s, index) => {
+        const startParts = s.start.split(':');
+        const startMinutes =
+          parseInt(startParts[0] ?? '0') * 60 + parseInt(startParts[1] ?? '0');
+        return {
+          assignmentId: a.id,
+          userLabel: label,
+          start: s.start,
+          end: s.end,
+          startMinutes,
+          order: index + 1,
+          address: a.users?.address ?? undefined,
+          postalCode: a.users?.postal_code ?? undefined,
+          city: a.users?.city ?? undefined,
+        };
+      });
+    });
+    stops.sort((a, b) => a.startMinutes - b.startMinutes);
+
+    // Optimizar rutas: eliminar paradas intermedias del mismo usuario
+    // Solo mantener la primera entrada y última salida de cada ubicación
+    const optimizedStops = [];
+
+    for (let i = 0; i < stops.length; i++) {
+      const currentStop = stops[i];
+      const nextStop = stops[i + 1];
+
+      // Si es la primera parada o es un usuario diferente al anterior
+      const prevStop = stops[i - 1];
+      const isDifferentUser =
+        prevStop == null ||
+        prevStop.assignmentId !== currentStop.assignmentId ||
+        prevStop.address !== currentStop.address;
+
+      // Si es la última parada o el siguiente es un usuario diferente
+      const isLastOrDifferentNext =
+        nextStop == null ||
+        nextStop.assignmentId !== currentStop.assignmentId ||
+        nextStop.address !== currentStop.address;
+
+      // Solo agregar si es entrada a nuevo usuario o salida del último servicio
+      if (isDifferentUser || isLastOrDifferentNext) {
+        optimizedStops.push(currentStop);
+      }
+    }
+    return optimizedStops;
+  }, [todayAssignments, getRouteSlots]);
+
   const todayKey = useMemo(() => {
     const today = new Date();
     return today.toISOString().split('T')[0];
@@ -358,6 +461,9 @@ export default function RoutePage(): React.JSX.Element {
           .select('id')
           .ilike('email', currentUser?.email)
           .maybeSingle();
+
+        // No usar dirección de la trabajadora - el primer servicio será el punto de referencia
+        setWorkerInfo(null);
 
         if (workerError !== null || workerData === null) {
           setTodayAssignments([]);
@@ -388,7 +494,7 @@ export default function RoutePage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname, address)
+            users(name, surname, address, postal_code, city)
           `
           )
           .eq('worker_id', workerId)
@@ -496,39 +602,16 @@ export default function RoutePage(): React.JSX.Element {
                   {/* Componente del Mapa */}
                   <div className='mt-6'>
                     <RouteMap
-                      routeStops={(() => {
-                        const isHoliday = new Date().getDay() === 0;
-                        const routeStops = todayAssignments.flatMap((a) => {
-                          const slots = getRouteSlots(
-                            a.schedule,
-                            a.assignment_type,
-                            isHoliday
-                          );
-                          const label =
-                            `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-                            'Servicio';
-
-                          return slots.map((s, index) => {
-                            const startParts = s.start.split(':');
-                            const startMinutes =
-                              parseInt(startParts[0] ?? '0') * 60 +
-                              parseInt(startParts[1] ?? '0');
-                            return {
-                              assignmentId: a.id,
-                              userLabel: label,
-                              start: s.start,
-                              end: s.end,
-                              startMinutes,
-                              order: index + 1,
-                              address: a.users?.address ?? undefined,
-                            };
-                          });
-                        });
-                        routeStops.sort(
-                          (a, b) => a.startMinutes - b.startMinutes
-                        );
-                        return routeStops;
-                      })()}
+                      routeStops={routeStops}
+                      workerInfo={
+                        workerInfo
+                          ? {
+                              address: workerInfo.address,
+                              postalCode: workerInfo.postal_code,
+                              city: workerInfo.city,
+                            }
+                          : null
+                      }
                     />
                   </div>
                 </>

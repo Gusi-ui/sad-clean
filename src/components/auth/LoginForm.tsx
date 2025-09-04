@@ -76,18 +76,14 @@ export default function LoginForm() {
         password,
       });
 
-      // Resultado del signIn recibido
-
       if (signInError != null) {
-        // Usa != para capturar tanto null como undefined
         setError(signInError ?? 'Error de autenticación');
-        setLoading(false); // Solo resetear loading si hay error
+        setLoading(false);
       } else if (redirectTo !== undefined) {
-        // Redirigiendo al dashboard correspondiente
-        // Mantener loading activo durante la redirección
-        router.push(redirectTo);
+        // Redirección inmediata sin mantener loading
+        router.replace(redirectTo);
       } else {
-        // No se recibió redirectTo válido
+        setError('Error de configuración. Contacta con soporte.');
         setLoading(false);
       }
     } catch {
@@ -312,7 +308,7 @@ export default function LoginForm() {
               {loading ? (
                 <div className='flex items-center justify-center space-x-2'>
                   <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
-                  <span>Iniciando sesión...</span>
+                  <span>Verificando credenciales...</span>
                 </div>
               ) : (
                 <div className='flex items-center justify-center space-x-2'>

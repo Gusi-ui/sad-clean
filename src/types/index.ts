@@ -15,6 +15,9 @@ export interface Worker {
   is_active: boolean | null;
   monthly_contracted_hours: number;
   weekly_contracted_hours: number;
+  address?: string;
+  postal_code?: string;
+  city?: string;
   created_at: string | null;
   updated_at: string | null;
   user_metadata?: Record<string, unknown>;
@@ -31,6 +34,9 @@ export interface WorkerInsert {
   is_active?: boolean | null;
   monthly_contracted_hours?: number;
   weekly_contracted_hours?: number;
+  address?: string;
+  postal_code?: string;
+  city?: string;
 }
 
 export interface WorkerUpdate {
@@ -44,6 +50,9 @@ export interface WorkerUpdate {
   is_active?: boolean | null;
   monthly_contracted_hours?: number;
   weekly_contracted_hours?: number;
+  address?: string;
+  postal_code?: string;
+  city?: string;
 }
 
 // User Types (basado en el esquema de Supabase)

@@ -346,6 +346,9 @@ export default function WorkersPage() {
           worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
           weekly_contracted_hours: editingWorker.weekly_contracted_hours ?? 0,
+          address: (editingWorker.address ?? '').trim(),
+          postal_code: (editingWorker.postal_code ?? '').trim(),
+          city: (editingWorker.city ?? '').trim(),
         } as WorkerInsert;
 
         // Debug: log the data being sent
@@ -426,6 +429,21 @@ export default function WorkersPage() {
         ) {
           workerData.weekly_contracted_hours =
             editingWorker.weekly_contracted_hours;
+        }
+        if (
+          editingWorker.address !== undefined &&
+          editingWorker.address !== null
+        ) {
+          workerData.address = editingWorker.address.trim();
+        }
+        if (
+          editingWorker.postal_code !== undefined &&
+          editingWorker.postal_code !== null
+        ) {
+          workerData.postal_code = editingWorker.postal_code.trim();
+        }
+        if (editingWorker.city !== undefined && editingWorker.city !== null) {
+          workerData.city = editingWorker.city.trim();
         }
 
         // Debug: log de los datos que se van a enviar
@@ -1448,6 +1466,66 @@ export default function WorkersPage() {
                   completa)
                 </p>
               </div>
+
+              {/* Dirección */}
+              <div className='space-y-2 md:col-span-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>🏠</span>
+                  <span>Dirección</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  placeholder='Calle Mayor, 123, 1º A'
+                  value={editingWorker.address ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      address: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600'>
+                  Dirección completa para el cálculo de rutas
+                </p>
+              </div>
+
+              {/* Código Postal */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>📮</span>
+                  <span>Código Postal</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  placeholder='28001'
+                  value={editingWorker.postal_code ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      postal_code: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+
+              {/* Ciudad */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>🏙️</span>
+                  <span>Ciudad</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  placeholder='Madrid'
+                  value={editingWorker.city ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      city: e.target.value,
+                    });
+                  }}
+                />
+              </div>
             </div>
 
             {/* Botones de acción */}
@@ -1740,28 +1818,89 @@ export default function WorkersPage() {
               </div>
               <div>
                 <label className='block text-sm font-medium text-gray-900 mb-1'>
-                  Horas Contratadas Mensuales
+                  Horas Contratadas Semanales
                 </label>
                 <Input
                   className='w-full'
                   type='number'
                   min='0'
-                  max='300'
+                  max='80'
                   step='0.5'
-                  placeholder='160'
-                  value={editingWorker.monthly_contracted_hours ?? ''}
+                  placeholder='40'
+                  value={editingWorker.weekly_contracted_hours ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value;
                     const numValue =
                       value === '' ? undefined : parseFloat(value);
                     setEditingWorker({
                       ...editingWorker,
-                      monthly_contracted_hours: numValue,
+                      weekly_contracted_hours: numValue,
                     });
                   }}
                 />
                 <p className='text-xs text-gray-600 mt-1'>
-                  Horas totales contratadas por mes
+                  Horas totales contratadas por semana (ej: 40h = jornada
+                  completa)
+                </p>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Dirección
+                </label>
+                <Input
+                  className='w-full'
+                  type='text'
+                  placeholder='Calle, número, piso...'
+                  value={editingWorker.address ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      address: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Dirección completa de la trabajadora
+                </p>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Código Postal
+                </label>
+                <Input
+                  className='w-full'
+                  type='text'
+                  placeholder='28001'
+                  value={editingWorker.postal_code ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      postal_code: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Código postal de la dirección
+                </p>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Ciudad
+                </label>
+                <Input
+                  className='w-full'
+                  type='text'
+                  placeholder='Madrid'
+                  value={editingWorker.city ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      city: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Ciudad de residencia
                 </p>
               </div>
             </div>

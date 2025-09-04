@@ -1,4 +1,4 @@
-import type { Worker, WorkerInsert } from '@/types';
+import type { Worker, WorkerInsert, WorkerUpdate } from '@/types';
 import { securityLogger } from '@/utils/security-config';
 
 import { supabase } from './database';
@@ -173,7 +173,7 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
  */
 export const updateWorker = async (
   id: string,
-  updates: Partial<Worker>
+  updates: WorkerUpdate
 ): Promise<Worker | null> => {
   try {
     // Verificar autenticación del usuario
