@@ -92,8 +92,8 @@ const DailyRoute = (props: {
 
   const isHoliday = new Date().getDay() === 0;
 
-  // Generar paradas de la ruta
-  const routeStops: RouteStop[] = assignments.flatMap((a) => {
+  // Generar todas las paradas de la ruta (sin optimizar)
+  const allRouteStops: RouteStop[] = assignments.flatMap((a) => {
     const slots = getRouteSlots(a.schedule, a.assignment_type, isHoliday);
     const label =
       `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
@@ -115,46 +115,58 @@ const DailyRoute = (props: {
   });
 
   // Ordenar por hora de inicio
-  routeStops.sort((a, b) => a.startMinutes - b.startMinutes);
+  allRouteStops.sort((a, b) => a.startMinutes - b.startMinutes);
 
-  // Optimizar rutas: eliminar paradas intermedias del mismo usuario
-  // Solo mantener la primera entrada y última salida de cada ubicación
-  const optimizedRouteStops: RouteStop[] = [];
+  // Generar segmentos de viaje según la lógica de negocio:
+  // - Un segmento por cada cambio de ubicación física
+  // - Si el trabajador se queda en la misma dirección, segmento de 0 minutos
+  // - Si regresa a una dirección anterior, nuevo segmento
+  const travelSegments: Array<{
+    from: RouteStop;
+    to: RouteStop;
+    travelTime: number; // en minutos
+    isZeroTravel: boolean; // true si es mismo domicilio
+  }> = [];
 
-  for (let i = 0; i < routeStops.length; i++) {
-    const currentStop = routeStops[i];
-    const nextStop = routeStops[i + 1];
-
-    // Si es la primera parada o es un usuario diferente al anterior
-    const prevStop = routeStops[i - 1];
-    const isDifferentUser =
-      prevStop == null ||
-      prevStop.assignmentId !== currentStop.assignmentId ||
-      prevStop.address !== currentStop.address;
-
-    // Si es la última parada o el siguiente es un usuario diferente
-    const isLastOrDifferentNext =
-      nextStop == null ||
-      nextStop.assignmentId !== currentStop.assignmentId ||
-      nextStop.address !== currentStop.address;
-
-    // Solo agregar si es entrada a nuevo usuario o salida del último servicio
-    if (isDifferentUser || isLastOrDifferentNext) {
-      optimizedRouteStops.push(currentStop);
+  for (let i = 0; i < allRouteStops.length - 1; i++) {
+    const currentStop = allRouteStops[i];
+    const nextStop = allRouteStops[i + 1];
+    
+    if (currentStop && nextStop) {
+      const currentAddress = currentStop.address?.trim() || '';
+      const nextAddress = nextStop.address?.trim() || '';
+      
+      // Calcular tiempo de viaje
+      const timeBetweenServices = nextStop.startMinutes - toMinutes(currentStop.end);
+      const isZeroTravel = currentAddress === nextAddress && currentAddress !== '';
+      
+      travelSegments.push({
+        from: currentStop,
+        to: nextStop,
+        travelTime: isZeroTravel ? 0 : Math.max(0, timeBetweenServices),
+        isZeroTravel
+      });
     }
   }
 
-  // Calcular tiempo estimado entre paradas (30 minutos por defecto)
-  const calculateEstimatedTime = (
-    currentStop: RouteStop,
-    nextStop: RouteStop
-  ): string => {
-    const timeDiff = nextStop.startMinutes - currentStop.startMinutes;
-    const hours = Math.floor(timeDiff / 60);
-    const minutes = timeDiff % 60;
+  // Para la visualización, usar todas las paradas (no optimizadas)
+  const optimizedRouteStops = allRouteStops;
+
+  // Calcular tiempo de viaje usando los segmentos calculados
+  const getTravelTimeForStop = (stopIndex: number): string => {
+    const segment = travelSegments[stopIndex];
+    if (!segment) return '';
+    
+    if (segment.isZeroTravel) {
+      return '0min (mismo domicilio)';
+    }
+    
+    const minutes = segment.travelTime;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
 
     if (hours > 0) {
-      return `${hours}h ${minutes}min`;
+      return `${hours}h ${remainingMinutes}min`;
     }
     return `${minutes}min`;
   };
@@ -219,13 +231,7 @@ const DailyRoute = (props: {
                         <div className='flex items-center space-x-1'>
                           <span>🚗</span>
                           <span>
-                            Viaje:{' '}
-                            {(() => {
-                              const nextStop = optimizedRouteStops[index + 1];
-                              return nextStop !== null && nextStop !== undefined
-                                ? calculateEstimatedTime(stop, nextStop)
-                                : '';
-                            })()}
+                            Viaje: {getTravelTimeForStop(index)}
                           </span>
                         </div>
                       )}
@@ -292,6 +298,103 @@ const DailyRoute = (props: {
                 </p>
               </div>
             </div>
+            
+            {/* Segmentos de Viaje */}
+            {travelSegments.length > 0 && (
+              <div className='mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-blue-200'>
+                <div className='flex items-center space-x-2 mb-4 sm:mb-6'>
+                  <div className='w-8 h-8 sm:w-10 sm:h-10 bg-blue-100 rounded-full flex items-center justify-center'>
+                    <span className='text-lg sm:text-xl'>🚗</span>
+                  </div>
+                  <h4 className='text-base sm:text-lg font-semibold text-blue-900'>Segmentos de Viaje</h4>
+                </div>
+                
+                <div className='space-y-3 sm:space-y-4'>
+                  {travelSegments.map((segment, index) => (
+                    <div key={index} className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm'>
+                      {/* Encabezado del segmento - Mobile First */}
+                      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
+                        <div className='flex-1 min-w-0'>
+                          <div className='flex items-center space-x-2 mb-2'>
+                            <span className='inline-flex items-center justify-center w-6 h-6 bg-blue-200 text-blue-800 text-xs font-bold rounded-full'>
+                              {index + 1}
+                            </span>
+                            <h5 className='text-sm sm:text-base font-medium text-blue-900 truncate'>
+                              {segment.from.userLabel} → {segment.to.userLabel}
+                            </h5>
+                          </div>
+                          
+                          {/* Direcciones - Responsive */}
+                          <div className='text-xs sm:text-sm text-blue-600 space-y-1'>
+                            <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
+                              <span className='font-medium text-blue-700'>Desde:</span>
+                              <span className='break-words'>{segment.from.address || 'Sin dirección'}</span>
+                            </div>
+                            <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
+                              <span className='font-medium text-blue-700'>Hasta:</span>
+                              <span className='break-words'>{segment.to.address || 'Sin dirección'}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Información de tiempo - Responsive */}
+                        <div className='flex flex-row sm:flex-col items-center sm:items-end space-x-4 sm:space-x-0 sm:space-y-1 mt-2 sm:mt-0'>
+                          <div className='text-center sm:text-right'>
+                            <div className='text-lg sm:text-xl font-bold text-blue-900'>
+                              {segment.isZeroTravel ? '0min' : `${segment.travelTime}min`}
+                            </div>
+                            <div className='text-xs text-blue-600'>
+                              Tiempo de viaje
+                            </div>
+                          </div>
+                          <div className='text-center sm:text-right'>
+                            <div className='text-sm font-medium text-blue-800'>
+                              {segment.from.end} - {segment.to.start}
+                            </div>
+                            <div className='text-xs text-blue-600'>
+                              Horario
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      {/* Indicador visual de tiempo cero */}
+                      {segment.isZeroTravel && (
+                        <div className='mt-2 flex items-center space-x-2 text-xs text-green-700 bg-green-50 rounded-md px-2 py-1'>
+                          <span>🏠</span>
+                          <span>Mismo domicilio - Sin desplazamiento</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+                
+                {/* Resumen total - Mejorado */}
+                <div className='mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-blue-200'>
+                  <div className='bg-blue-900 rounded-lg p-4 sm:p-6'>
+                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
+                      <div className='flex items-center space-x-3'>
+                        <div className='w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center'>
+                          <span className='text-blue-900 font-bold text-lg'>∑</span>
+                        </div>
+                        <div>
+                          <h5 className='text-white font-semibold text-base sm:text-lg'>Total tiempo de viaje</h5>
+                          <p className='text-blue-200 text-xs sm:text-sm'>Tiempo entre servicios</p>
+                        </div>
+                      </div>
+                      <div className='text-right sm:text-left'>
+                        <div className='text-2xl sm:text-3xl font-bold text-white'>
+                          {travelSegments.reduce((total, segment) => total + segment.travelTime, 0)}min
+                        </div>
+                        <div className='text-blue-200 text-xs sm:text-sm'>
+                          {Math.round(travelSegments.reduce((total, segment) => total + segment.travelTime, 0) / 60 * 10) / 10}h aproximadamente
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -300,15 +403,17 @@ const DailyRoute = (props: {
 };
 
 export default function RoutePage(): React.JSX.Element {
-  const { user } = useAuth();
-  const currentUser = user;
+  const { user: currentUser } = useAuth();
   const [todayAssignments, setTodayAssignments] = useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [workerInfo, setWorkerInfo] = useState<{
-    address?: string | null;
-    postal_code?: string | null;
-    city?: string | null;
+    name: string;
+    address: string;
+    postal_code?: string;
+    city?: string;
   } | null>(null);
+
+
   // const [currentLocation, setCurrentLocation] = useState<{
   //   lat: number;
   //   lng: number;
@@ -410,33 +515,17 @@ export default function RoutePage(): React.JSX.Element {
     });
     stops.sort((a, b) => a.startMinutes - b.startMinutes);
 
-    // Optimizar rutas: eliminar paradas intermedias del mismo usuario
-    // Solo mantener la primera entrada y última salida de cada ubicación
-    const optimizedStops = [];
+    // DEBUG: Log todas las paradas programadas
+    console.log('🔍 DEBUG - Paradas programadas para hoy:', stops.length);
+    stops.forEach((stop, index) => {
+      console.log(`  ${index + 1}. ${stop.userLabel} - ${stop.address || 'SIN DIRECCIÓN'} (${stop.start}-${stop.end}) (ID: ${stop.assignmentId})`);
+    });
 
-    for (let i = 0; i < stops.length; i++) {
-      const currentStop = stops[i];
-      const nextStop = stops[i + 1];
+    // Nueva lógica: mantener TODAS las paradas para generar segmentos de viaje correctos
+    // No eliminar duplicados - cada servicio es una parada independiente
+    console.log('🎯 DEBUG - Manteniendo todas las paradas para segmentos de viaje correctos');
 
-      // Si es la primera parada o es un usuario diferente al anterior
-      const prevStop = stops[i - 1];
-      const isDifferentUser =
-        prevStop == null ||
-        prevStop.assignmentId !== currentStop.assignmentId ||
-        prevStop.address !== currentStop.address;
-
-      // Si es la última parada o el siguiente es un usuario diferente
-      const isLastOrDifferentNext =
-        nextStop == null ||
-        nextStop.assignmentId !== currentStop.assignmentId ||
-        nextStop.address !== currentStop.address;
-
-      // Solo agregar si es entrada a nuevo usuario o salida del último servicio
-      if (isDifferentUser || isLastOrDifferentNext) {
-        optimizedStops.push(currentStop);
-      }
-    }
-    return optimizedStops;
+    return stops;
   }, [todayAssignments, getRouteSlots]);
 
   const todayKey = useMemo(() => {
@@ -485,6 +574,7 @@ export default function RoutePage(): React.JSX.Element {
         const useHoliday = holidayData !== null || new Date().getDay() === 0;
 
         // Obtener asignaciones de hoy
+        
         const { data: rows, error: err } = await supabase
           .from('assignments')
           .select(
@@ -502,7 +592,13 @@ export default function RoutePage(): React.JSX.Element {
           .lte('start_date', todayKey)
           .or(`end_date.is.null,end_date.gte.${todayKey}`);
 
-        if (err === null && rows !== null) {
+        if (err !== null) {
+          setTodayAssignments([]);
+          setLoading(false);
+          return;
+        }
+
+        if (rows !== null) {
           const filtered = rows.filter((a) => {
             const slots = getRouteSlots(
               a.schedule,
