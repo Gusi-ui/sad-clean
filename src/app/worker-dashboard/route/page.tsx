@@ -178,7 +178,7 @@ const DailyRoute = (props: {
   // Calcular tiempo de viaje usando los segmentos calculados (fallback a lógica local)
   const getTravelTimeForStop = (stopIndex: number): string => {
     // Intentar usar tiempo real primero
-    if (realTimeSegments?.[stopIndex]) {
+    if (realTimeSegments?.[stopIndex] != null) {
       const realSegment = realTimeSegments[stopIndex];
       if (realSegment.duration > 0) {
         return formatDuration(realSegment.duration);
@@ -371,7 +371,8 @@ const DailyRoute = (props: {
                   {travelSegments.map((segment, index) => {
                     // Obtener tiempo real si está disponible
                     const realSegment = realTimeSegments?.[index];
-                    const hasRealTime = realSegment && realSegment.duration > 0;
+                    const hasRealTime =
+                      realSegment != null && realSegment.duration > 0;
                     const displayTime = hasRealTime
                       ? formatDuration(realSegment.duration)
                       : segment.isZeroTravel
@@ -418,16 +419,17 @@ const DailyRoute = (props: {
                                   {segment.to.address ?? 'Sin dirección'}
                                 </span>
                               </div>
-                              {displayDistance && (
-                                <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
-                                  <span className='font-medium text-blue-700'>
-                                    Distancia:
-                                  </span>
-                                  <span className='text-blue-600'>
-                                    {displayDistance}
-                                  </span>
-                                </div>
-                              )}
+                              {displayDistance != null &&
+                                displayDistance !== '' && (
+                                  <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
+                                    <span className='font-medium text-blue-700'>
+                                      Distancia:
+                                    </span>
+                                    <span className='text-blue-600'>
+                                      {displayDistance}
+                                    </span>
+                                  </div>
+                                )}
                             </div>
                           </div>
 
@@ -465,7 +467,8 @@ const DailyRoute = (props: {
                         {/* Indicador de error en tiempo real */}
                         {!hasRealTime &&
                           !segment.isZeroTravel &&
-                          segmentsError && (
+                          segmentsError != null &&
+                          segmentsError !== '' && (
                             <div className='mt-2 flex items-center space-x-2 text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1'>
                               <span>⚠️</span>
                               <span>
@@ -504,7 +507,10 @@ const DailyRoute = (props: {
                             const totalMinutes = travelSegments.reduce(
                               (total, segment, index) => {
                                 const realSegment = realTimeSegments?.[index];
-                                if (realSegment && realSegment.duration > 0) {
+                                if (
+                                  realSegment != null &&
+                                  realSegment.duration > 0
+                                ) {
                                   return (
                                     total +
                                     Math.round(realSegment.duration / 60)
@@ -523,7 +529,10 @@ const DailyRoute = (props: {
                             const totalMinutes = travelSegments.reduce(
                               (total, segment, index) => {
                                 const realSegment = realTimeSegments?.[index];
-                                if (realSegment && realSegment.duration > 0) {
+                                if (
+                                  realSegment != null &&
+                                  realSegment.duration > 0
+                                ) {
                                   return (
                                     total +
                                     Math.round(realSegment.duration / 60)
@@ -537,7 +546,7 @@ const DailyRoute = (props: {
                           })()}
                           h aproximadamente
                         </div>
-                        {realTimeSegments &&
+                        {realTimeSegments != null &&
                           realTimeSegments.some((s) => s.duration > 0) && (
                             <div className='text-blue-200 text-xs mt-1'>
                               ✓ Incluye tiempos reales de{' '}
