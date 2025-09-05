@@ -4,6 +4,7 @@ import React, { useMemo, useState } from 'react';
 
 import { Button } from '@/components/ui';
 import useSimpleRouteSegments from '@/hooks/useSimpleRouteSegments';
+import { formatDistance, formatDuration } from '@/lib/real-travel-time';
 
 import RouteExportSummary from './RouteExportSummary';
 import SimpleRouteDetails from './SimpleRouteDetails';
@@ -155,6 +156,71 @@ const RouteMap = ({
           {showExportSummary ? 'Ocultar' : 'Mostrar'} resumen de exportación
         </Button>
       </div>
+
+      {/* Detalles de segmentos */}
+      {showSegmentDetails && (
+        <div className='bg-white rounded-lg shadow-sm border p-6'>
+          <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            Detalles Completos de Segmentos
+          </h3>
+          <div className='space-y-4'>
+            {segments.map((segment, index) => (
+              <div
+                key={segment.id}
+                className='border rounded-lg p-4 bg-gray-50'
+              >
+                <div className='flex items-center justify-between mb-3'>
+                  <h4 className='font-medium text-gray-900'>
+                    Segmento {index + 1}: {segment.from} → {segment.to}
+                  </h4>
+                  <span
+                    className={`px-2 py-1 rounded text-xs font-medium ${
+                      segment.duration > 0
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-red-100 text-red-800'
+                    }`}
+                  >
+                    {segment.duration > 0 ? 'Calculado' : 'Error'}
+                  </span>
+                </div>
+
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4 text-sm'>
+                  <div>
+                    <p className='text-gray-600 mb-1'>Direcciones:</p>
+                    <p className='text-gray-900'>
+                      Desde: {segment.fromAddress ?? 'No especificada'}
+                    </p>
+                    <p className='text-gray-900'>
+                      Hasta: {segment.toAddress ?? 'No especificada'}
+                    </p>
+                  </div>
+
+                  <div>
+                    <p className='text-gray-600 mb-1'>Métricas:</p>
+                    <p className='text-gray-900'>
+                      Tiempo: {formatDuration(segment.duration)}
+                    </p>
+                    <p className='text-gray-900'>
+                      Distancia: {formatDistance(segment.distance)}
+                    </p>
+                    <p className='text-gray-900'>
+                      Tiempo facturable: {segment.billableTime} min
+                    </p>
+                    <p className='text-gray-900'>
+                      Modo:{' '}
+                      {segment.travelMode === 'DRIVING'
+                        ? 'Conducir'
+                        : segment.travelMode === 'WALKING'
+                          ? 'Caminar'
+                          : 'Transporte público'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Resumen de exportación */}
       {showExportSummary && (
