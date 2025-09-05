@@ -149,10 +149,16 @@ export async function calculateRouteRealTravelTime(
   // Crear lista completa de paradas
   const allStops = workerStartAddress ? [workerStartAddress, ...stops] : stops;
 
+  // Calcular ruta entre todas las paradas
+
   // Calcular segmentos consecutivos
   for (let i = 0; i < allStops.length - 1; i++) {
     const fromStop = allStops[i];
     const toStop = allStops[i + 1];
+
+    if (fromStop === undefined || toStop === undefined) {
+      continue;
+    }
 
     const result = await calculateRealTravelTime(fromStop, toStop, travelMode);
 

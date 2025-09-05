@@ -116,11 +116,13 @@ const useSimpleRouteSegments = ({
             await loadGoogleMapsAPI();
           }
           // Preparar información de direcciones
+
           const addressStops: AddressInfo[] = routeStops
             .filter((stop: RouteStop) => {
               // Filtrar paradas que no tienen dirección válida
               const hasValidAddress =
                 Boolean(stop.address) && (stop.address?.trim().length ?? 0) > 0;
+              // Filtrar paradas sin dirección válida
               return hasValidAddress;
             })
             .map((stop: RouteStop) => ({
@@ -128,6 +130,8 @@ const useSimpleRouteSegments = ({
               postalCode: stop.postalCode ?? undefined,
               city: stop.city ?? undefined,
             }));
+
+          // Direcciones filtradas listas para cálculo
 
           // Si no hay direcciones válidas, no hacer cálculos
           if (addressStops.length === 0) {
@@ -201,14 +205,9 @@ const useSimpleRouteSegments = ({
             (seg) => seg.success
           );
 
-          if (failedSegments.length > 0) {
-            const errorDetails =
-              failedSegments.length === routeResult.segments.length
-                ? 'Todos los cálculos de tiempo fallaron'
-                : `${failedSegments.length} de ${routeResult.segments.length} cálculos fallaron`;
-            setError(
-              `${errorDetails}. ${successfulSegments.length > 0 ? 'Se muestran los cálculos exitosos.' : ''}`
-            );
+          // Solo mostrar error si TODOS los cálculos fallaron
+          if (failedSegments.length > 0 && successfulSegments.length === 0) {
+            setError('Todos los cálculos de tiempo fallaron');
           } else {
             setError(null);
           }
