@@ -8,7 +8,9 @@ import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import RouteMap from '@/components/route/RouteMap';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
+import useSimpleRouteSegments from '@/hooks/useSimpleRouteSegments';
 import { supabase } from '@/lib/database';
+import { formatDistance, formatDuration } from '@/lib/real-travel-time';
 
 // Función auxiliar para calcular duración
 const calculateDuration = (start: string, end: string): string => {
@@ -70,8 +72,16 @@ const DailyRoute = (props: {
     assignmentType: string,
     useHoliday: boolean
   ) => Array<{ start: string; end: string }>;
+  workerInfo: {
+    address: string;
+    postalCode?: string;
+    city?: string;
+  } | null;
 }): React.JSX.Element => {
-  const { assignments, getRouteSlots } = props;
+  const { assignments, getRouteSlots, workerInfo } = props;
+  const [travelMode, setTravelMode] = useState<
+    'DRIVING' | 'WALKING' | 'TRANSIT'
+  >('DRIVING');
 
   type RouteStop = {
     assignmentId: string;
@@ -154,8 +164,28 @@ const DailyRoute = (props: {
   // Para la visualización, usar todas las paradas (no optimizadas)
   const optimizedRouteStops = allRouteStops;
 
-  // Calcular tiempo de viaje usando los segmentos calculados
+  // Usar el hook de tiempo real para obtener segmentos con tiempos reales
+  const {
+    segments: realTimeSegments,
+    isLoading: segmentsLoading,
+    error: segmentsError,
+  } = useSimpleRouteSegments({
+    routeStops: optimizedRouteStops,
+    workerInfo,
+    travelMode,
+  });
+
+  // Calcular tiempo de viaje usando los segmentos calculados (fallback a lógica local)
   const getTravelTimeForStop = (stopIndex: number): string => {
+    // Intentar usar tiempo real primero
+    if (realTimeSegments?.[stopIndex] != null) {
+      const realSegment = realTimeSegments[stopIndex];
+      if (realSegment.duration > 0) {
+        return formatDuration(realSegment.duration);
+      }
+    }
+
+    // Fallback a lógica local
     const segment = travelSegments[stopIndex];
     if (segment === undefined) return '';
 
@@ -311,75 +341,144 @@ const DailyRoute = (props: {
                   </h4>
                 </div>
 
+                {/* Controles de modo de transporte */}
+                <div className='mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200'>
+                  <h5 className='text-sm font-medium text-blue-900 mb-2'>
+                    Modo de transporte:
+                  </h5>
+                  <div className='flex flex-wrap gap-2'>
+                    {(['DRIVING', 'WALKING', 'TRANSIT'] as const).map(
+                      (mode) => (
+                        <button
+                          key={mode}
+                          onClick={() => setTravelMode(mode)}
+                          className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
+                            travelMode === mode
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-white text-blue-600 border border-blue-300 hover:bg-blue-100'
+                          }`}
+                        >
+                          {mode === 'DRIVING' && '🚗 Coche'}
+                          {mode === 'WALKING' && '🚶 Andando'}
+                          {mode === 'TRANSIT' && '🚌 Transporte público'}
+                        </button>
+                      )
+                    )}
+                  </div>
+                </div>
+
                 <div className='space-y-3 sm:space-y-4'>
-                  {travelSegments.map((segment, index) => (
-                    <div
-                      key={index}
-                      className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm'
-                    >
-                      {/* Encabezado del segmento - Mobile First */}
-                      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
-                        <div className='flex-1 min-w-0'>
-                          <div className='flex items-center space-x-2 mb-2'>
-                            <span className='inline-flex items-center justify-center w-6 h-6 bg-blue-200 text-blue-800 text-xs font-bold rounded-full'>
-                              {index + 1}
-                            </span>
-                            <h5 className='text-sm sm:text-base font-medium text-blue-900 truncate'>
-                              {segment.from.userLabel} → {segment.to.userLabel}
-                            </h5>
+                  {travelSegments.map((segment, index) => {
+                    // Obtener tiempo real si está disponible
+                    const realSegment = realTimeSegments?.[index];
+                    const hasRealTime =
+                      realSegment != null && realSegment.duration > 0;
+                    const displayTime = hasRealTime
+                      ? formatDuration(realSegment.duration)
+                      : segment.isZeroTravel
+                        ? '0min'
+                        : `${segment.travelTime}min`;
+                    const displayDistance =
+                      hasRealTime && realSegment.distance > 0
+                        ? formatDistance(realSegment.distance)
+                        : null;
+
+                    return (
+                      <div
+                        key={index}
+                        className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm'
+                      >
+                        {/* Encabezado del segmento - Mobile First */}
+                        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
+                          <div className='flex-1 min-w-0'>
+                            <div className='flex items-center space-x-2 mb-2'>
+                              <span className='inline-flex items-center justify-center w-6 h-6 bg-blue-200 text-blue-800 text-xs font-bold rounded-full'>
+                                {index + 1}
+                              </span>
+                              <h5 className='text-sm sm:text-base font-medium text-blue-900 truncate'>
+                                {segment.from.userLabel} →{' '}
+                                {segment.to.userLabel}
+                              </h5>
+                            </div>
+
+                            {/* Direcciones - Responsive */}
+                            <div className='text-xs sm:text-sm text-blue-600 space-y-1'>
+                              <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
+                                <span className='font-medium text-blue-700'>
+                                  Desde:
+                                </span>
+                                <span className='break-words'>
+                                  {segment.from.address ?? 'Sin dirección'}
+                                </span>
+                              </div>
+                              <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
+                                <span className='font-medium text-blue-700'>
+                                  Hasta:
+                                </span>
+                                <span className='break-words'>
+                                  {segment.to.address ?? 'Sin dirección'}
+                                </span>
+                              </div>
+                              {displayDistance != null &&
+                                displayDistance !== '' && (
+                                  <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
+                                    <span className='font-medium text-blue-700'>
+                                      Distancia:
+                                    </span>
+                                    <span className='text-blue-600'>
+                                      {displayDistance}
+                                    </span>
+                                  </div>
+                                )}
+                            </div>
                           </div>
 
-                          {/* Direcciones - Responsive */}
-                          <div className='text-xs sm:text-sm text-blue-600 space-y-1'>
-                            <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
-                              <span className='font-medium text-blue-700'>
-                                Desde:
-                              </span>
-                              <span className='break-words'>
-                                {segment.from.address ?? 'Sin dirección'}
-                              </span>
+                          {/* Información de tiempo - Responsive */}
+                          <div className='flex flex-row sm:flex-col items-center sm:items-end space-x-4 sm:space-x-0 sm:space-y-1 mt-2 sm:mt-0'>
+                            <div className='text-center sm:text-right'>
+                              <div className='text-lg sm:text-xl font-bold text-blue-900'>
+                                {segmentsLoading ? '⏳' : displayTime}
+                              </div>
+                              <div className='text-xs text-blue-600'>
+                                {hasRealTime
+                                  ? 'Tiempo real'
+                                  : 'Tiempo estimado'}
+                              </div>
                             </div>
-                            <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
-                              <span className='font-medium text-blue-700'>
-                                Hasta:
-                              </span>
-                              <span className='break-words'>
-                                {segment.to.address ?? 'Sin dirección'}
-                              </span>
+                            <div className='text-center sm:text-right'>
+                              <div className='text-sm font-medium text-blue-800'>
+                                {segment.from.end} - {segment.to.start}
+                              </div>
+                              <div className='text-xs text-blue-600'>
+                                Horario
+                              </div>
                             </div>
                           </div>
                         </div>
 
-                        {/* Información de tiempo - Responsive */}
-                        <div className='flex flex-row sm:flex-col items-center sm:items-end space-x-4 sm:space-x-0 sm:space-y-1 mt-2 sm:mt-0'>
-                          <div className='text-center sm:text-right'>
-                            <div className='text-lg sm:text-xl font-bold text-blue-900'>
-                              {segment.isZeroTravel
-                                ? '0min'
-                                : `${segment.travelTime}min`}
-                            </div>
-                            <div className='text-xs text-blue-600'>
-                              Tiempo de viaje
-                            </div>
+                        {/* Indicador visual de tiempo cero */}
+                        {segment.isZeroTravel && (
+                          <div className='mt-2 flex items-center space-x-2 text-xs text-green-700 bg-green-50 rounded-md px-2 py-1'>
+                            <span>🏠</span>
+                            <span>Mismo domicilio - Sin desplazamiento</span>
                           </div>
-                          <div className='text-center sm:text-right'>
-                            <div className='text-sm font-medium text-blue-800'>
-                              {segment.from.end} - {segment.to.start}
+                        )}
+
+                        {/* Indicador de error en tiempo real */}
+                        {!hasRealTime &&
+                          !segment.isZeroTravel &&
+                          segmentsError != null &&
+                          segmentsError !== '' && (
+                            <div className='mt-2 flex items-center space-x-2 text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1'>
+                              <span>⚠️</span>
+                              <span>
+                                Usando tiempo estimado - Error en cálculo real
+                              </span>
                             </div>
-                            <div className='text-xs text-blue-600'>Horario</div>
-                          </div>
-                        </div>
+                          )}
                       </div>
-
-                      {/* Indicador visual de tiempo cero */}
-                      {segment.isZeroTravel && (
-                        <div className='mt-2 flex items-center space-x-2 text-xs text-green-700 bg-green-50 rounded-md px-2 py-1'>
-                          <span>🏠</span>
-                          <span>Mismo domicilio - Sin desplazamiento</span>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
 
                 {/* Resumen total - Mejorado */}
@@ -403,23 +502,61 @@ const DailyRoute = (props: {
                       </div>
                       <div className='text-right sm:text-left'>
                         <div className='text-2xl sm:text-3xl font-bold text-white'>
-                          {travelSegments.reduce(
-                            (total, segment) => total + segment.travelTime,
-                            0
-                          )}
+                          {(() => {
+                            // Usar tiempos reales si están disponibles, sino usar tiempos locales
+                            const totalMinutes = travelSegments.reduce(
+                              (total, segment, index) => {
+                                const realSegment = realTimeSegments?.[index];
+                                if (
+                                  realSegment != null &&
+                                  realSegment.duration > 0
+                                ) {
+                                  return (
+                                    total +
+                                    Math.round(realSegment.duration / 60)
+                                  );
+                                }
+                                return total + segment.travelTime;
+                              },
+                              0
+                            );
+                            return totalMinutes;
+                          })()}
                           min
                         </div>
                         <div className='text-blue-200 text-xs sm:text-sm'>
-                          {Math.round(
-                            (travelSegments.reduce(
-                              (total, segment) => total + segment.travelTime,
+                          {(() => {
+                            const totalMinutes = travelSegments.reduce(
+                              (total, segment, index) => {
+                                const realSegment = realTimeSegments?.[index];
+                                if (
+                                  realSegment != null &&
+                                  realSegment.duration > 0
+                                ) {
+                                  return (
+                                    total +
+                                    Math.round(realSegment.duration / 60)
+                                  );
+                                }
+                                return total + segment.travelTime;
+                              },
                               0
-                            ) /
-                              60) *
-                              10
-                          ) / 10}
+                            );
+                            return Math.round((totalMinutes / 60) * 10) / 10;
+                          })()}
                           h aproximadamente
                         </div>
+                        {realTimeSegments != null &&
+                          realTimeSegments.some((s) => s.duration > 0) && (
+                            <div className='text-blue-200 text-xs mt-1'>
+                              ✓ Incluye tiempos reales de{' '}
+                              {travelMode === 'DRIVING'
+                                ? 'conducir'
+                                : travelMode === 'WALKING'
+                                  ? 'caminar'
+                                  : 'transporte público'}
+                            </div>
+                          )}
                       </div>
                     </div>
                   </div>
@@ -716,6 +853,7 @@ export default function RoutePage(): React.JSX.Element {
                   <DailyRoute
                     assignments={todayAssignments}
                     getRouteSlots={getRouteSlots}
+                    workerInfo={workerInfo}
                   />
 
                   {/* Componente del Mapa */}

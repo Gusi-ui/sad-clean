@@ -60,6 +60,8 @@ const useSimpleRouteSegments = ({
   const refreshSegments = useCallback(() => {
     isCalculatingRef.current = false; // Reset para permitir nueva ejecución
     lastCalculationRef.current = ''; // Limpiar hash para forzar recálculo
+    // Forzar recálculo inmediato
+    setIsLoading(true);
   }, []);
 
   // Calcular totales
@@ -72,8 +74,15 @@ const useSimpleRouteSegments = ({
     0
   );
 
-  // Recalcular cuando cambien las dependencias con debounce
+  // Recalcular cuando cambien las dependencias
   useEffect(() => {
+    // Para cambios de modo de transporte, ejecutar inmediatamente
+    // Para otros cambios, usar debounce
+    const isOnlyTravelModeChange = lastCalculationRef.current.includes(
+      JSON.stringify({ routeStops, workerInfo })
+    );
+    const delay = isOnlyTravelModeChange ? 0 : 1000;
+
     const timeoutId = setTimeout(() => {
       const runCalculation = async () => {
         // Evitar múltiples llamadas simultáneas
@@ -226,7 +235,7 @@ const useSimpleRouteSegments = ({
       };
 
       void runCalculation();
-    }, 1000); // Debounce de 1000ms para reducir llamadas
+    }, delay); // Debounce variable: inmediato para modo de transporte, 1000ms para otros cambios
 
     return () => clearTimeout(timeoutId);
   }, [routeStops, workerInfo, travelMode]);
