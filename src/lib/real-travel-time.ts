@@ -149,26 +149,16 @@ export async function calculateRouteRealTravelTime(
   // Crear lista completa de paradas
   const allStops = workerStartAddress ? [workerStartAddress, ...stops] : stops;
 
-  // DEBUG: Log información de entrada
-  console.log('🔍 DEBUG calculateRouteRealTravelTime - Paradas totales:', allStops.length);
-  allStops.forEach((stop, index) => {
-    const address = buildFullAddress(stop);
-    console.log(`  ${index + 1}. ${address}`);
-  });
+  // Calcular ruta entre todas las paradas
 
   // Calcular segmentos consecutivos
   for (let i = 0; i < allStops.length - 1; i++) {
     const fromStop = allStops[i];
     const toStop = allStops[i + 1];
 
-    if (!fromStop || !toStop) {
-      console.log(`❌ Segmento ${i + 1}: Origen o destino faltante`);
+    if (fromStop === undefined || toStop === undefined) {
       continue;
     }
-
-    const fromAddress = buildFullAddress(fromStop);
-    const toAddress = buildFullAddress(toStop);
-    console.log(`🚗 Calculando segmento ${i + 1}: ${fromAddress} → ${toAddress}`);
 
     const result = await calculateRealTravelTime(fromStop, toStop, travelMode);
 
@@ -184,8 +174,6 @@ export async function calculateRouteRealTravelTime(
     segments.push(segment);
 
     if (result.success) {
-      console.log(`✅ Segmento ${i + 1} exitoso: ${Math.round(result.duration/60)}min, ${(result.distance/1000).toFixed(1)}km`);
-      
       // Solo incluir en el total si NO es el primer segmento (casa al primer servicio)
       // El primer segmento es cuando workerStartAddress existe y i === 0
       const isFirstSegmentFromHome = Boolean(workerStartAddress) && i === 0;
@@ -193,13 +181,8 @@ export async function calculateRouteRealTravelTime(
       if (!isFirstSegmentFromHome) {
         totalDuration += result.duration;
         totalDistance += result.distance;
-        console.log(`📊 Acumulando: ${Math.round(result.duration/60)}min, ${(result.distance/1000).toFixed(1)}km`);
-      } else {
-        console.log(`🏠 Saltando primer segmento (desde casa del trabajador)`);
       }
       successfulSegments++;
-    } else {
-      console.log(`❌ Segmento ${i + 1} falló: ${result.errorMessage}`);
     }
   }
 
