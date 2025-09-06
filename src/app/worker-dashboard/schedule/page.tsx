@@ -222,8 +222,8 @@ const WeeklySchedule = (props: {
     </div>
   );
 };
-// Calendario mensual estilo Planning para la trabajadora logueada (declaración superior para evitar no-use-before-define)
-const WorkerMonthCalendar = (props: {
+// Componente de lista móvil para vista de mes
+const MobileMonthList = (props: {
   assignments: Array<{
     id: string;
     assignment_type: string;
@@ -243,6 +243,252 @@ const WorkerMonthCalendar = (props: {
 }): React.JSX.Element => {
   const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
     props;
+
+  // Función para verificar si una fecha es festivo
+  const isKnownHoliday = (date: Date): boolean => {
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet?.has(dateKey) ?? false;
+  };
+
+  const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
+    const dayOfWeek = date.getDay();
+    const type = (assignmentType ?? '').toLowerCase();
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+
+    if (type === 'laborables')
+      return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+    if (type === 'festivos')
+      return dayOfWeek === 0 || dayOfWeek === 6 || isHoliday;
+    if (type === 'flexible' || type === 'daily') return true;
+    return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+  };
+
+  const getDateKeyLocal = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const firstDayOfMonth = new Date(
+    monthStart.getFullYear(),
+    monthStart.getMonth(),
+    1,
+    12,
+    0,
+    0
+  );
+  const lastDayOfMonth = new Date(
+    monthEnd.getFullYear(),
+    monthEnd.getMonth(),
+    monthEnd.getDate(),
+    12,
+    0,
+    0
+  );
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  type ExpandedEntry = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+  };
+
+  // Generar días con servicios
+  const daysWithServices: Array<{
+    date: Date;
+    key: string;
+    isHoliday: boolean;
+    entries: ExpandedEntry[];
+  }> = [];
+
+  for (let i = 0; i < daysInMonth; i++) {
+    const date = new Date(firstDayOfMonth);
+    date.setDate(firstDayOfMonth.getDate() + i);
+    const key = getDateKeyLocal(date);
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+    const entries: ExpandedEntry[] = [];
+    for (const a of assignments) {
+      const aStart = new Date(a.start_date);
+      const aEnd =
+        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+      if (date < aStart || date > aEnd) continue;
+      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+
+      const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
+      if (slots.length > 0) {
+        const userLabel =
+          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
+          'Servicio';
+        slots.forEach((s) => {
+          entries.push({
+            assignmentId: a.id,
+            userLabel,
+            start: s.start,
+            end: s.end,
+          });
+        });
+      }
+    }
+
+    if (entries.length > 0) {
+      daysWithServices.push({ date, key, isHoliday, entries });
+    }
+  }
+
+  return (
+    <div>
+      <div className='mb-4'>
+        <h3 className='text-lg font-semibold text-gray-900 mb-2'>Este Mes</h3>
+        <p className='text-base text-gray-600'>
+          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
+          {lastDayOfMonth.toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
+      {daysWithServices.length === 0 ? (
+        <div className='text-center py-8'>
+          <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
+            <span className='text-2xl'>📅</span>
+          </div>
+          <p className='text-gray-600 mb-4'>
+            No tienes servicios programados este mes.
+          </p>
+        </div>
+      ) : (
+        <div className='space-y-3'>
+          {daysWithServices.map((day) => (
+            <div
+              key={day.key}
+              className='bg-white border rounded-lg p-4 shadow-sm'
+            >
+              <div className='flex items-center justify-between mb-3'>
+                <h4 className='font-semibold text-gray-900'>
+                  {day.date.toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </h4>
+                {day.isHoliday && (
+                  <span className='text-red-600 text-sm'>🎉 Festivo</span>
+                )}
+              </div>
+              <div className='space-y-2'>
+                {day.entries.map((entry, i) => (
+                  <div
+                    key={i}
+                    className='flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500'
+                  >
+                    <span className='font-medium text-sm text-gray-700'>
+                      {entry.userLabel}
+                    </span>
+                    <span className='text-blue-700 font-semibold text-sm'>
+                      {entry.start}–{entry.end}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Componente Modal para mostrar servicios del día
+const DayServicesModal = (props: {
+  isOpen: boolean;
+  onClose: () => void;
+  date: Date;
+  services: Array<{
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+  }>;
+}): React.JSX.Element => {
+  const { isOpen, onClose, date, services } = props;
+
+  if (!isOpen) return <div />;
+
+  return (
+    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+      <div
+        className='absolute inset-0 bg-black bg-opacity-50'
+        onClick={onClose}
+      />
+      <div className='relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-4 md:p-6 max-h-96 md:max-h-[60vh] overflow-y-auto'>
+        <div className='flex justify-between items-center mb-4'>
+          <h2 className='text-lg font-semibold'>
+            {date.toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </h2>
+          <button
+            onClick={onClose}
+            className='text-gray-500 hover:text-gray-700'
+          >
+            ✕
+          </button>
+        </div>
+        <div className='space-y-2'>
+          {services.length === 0 ? (
+            <p className='text-gray-500'>No hay servicios programados</p>
+          ) : (
+            services.map((service, index) => (
+              <div
+                key={index}
+                className='p-3 bg-blue-50 rounded border-l-4 border-blue-400'
+              >
+                <div className='font-medium'>{service.userLabel}</div>
+                <div className='text-sm text-gray-600'>
+                  {service.start} - {service.end}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WorkerMonthCalendar = (props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getScheduleSlots: (
+    schedule: unknown,
+    assignmentType: string,
+    date: Date
+  ) => Array<{ start: string; end: string }>;
+  monthStart: Date;
+  monthEnd: Date;
+  holidaySet?: ReadonlySet<string>;
+  isMobile?: boolean;
+}): React.JSX.Element => {
+  const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
+    props;
+
+  // Estado para el modal
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedServices, setSelectedServices] = useState<
+    Array<{
+      assignmentId: string;
+      userLabel: string;
+      start: string;
+      end: string;
+    }>
+  >([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -274,6 +520,13 @@ const WorkerMonthCalendar = (props: {
       d.getDate()
     ).padStart(2, '0')}`;
   const todayKey = getDateKeyLocal(new Date());
+  // Función para manejar clic en día
+  const handleDayClick = (date: Date, services: ExpandedEntry[]) => {
+    setSelectedDate(date);
+    setSelectedServices(services);
+    setIsModalOpen(true);
+  };
+
   const firstDayOfMonth = new Date(
     monthStart.getFullYear(),
     monthStart.getMonth(),
@@ -290,39 +543,62 @@ const WorkerMonthCalendar = (props: {
     0,
     0
   );
-  // Construir solo los días del mes actual (no arrastrar semanas completas)
-  const daysInMonth = lastDayOfMonth.getDate();
-  const monthGrid = Array.from({ length: daysInMonth }, (_, idx) => {
-    const date = new Date(firstDayOfMonth);
-    date.setDate(firstDayOfMonth.getDate() + idx);
+
+  // Para calendario convencional, necesitamos incluir días de semanas anteriores y posteriores
+  const startOfCalendar = new Date(firstDayOfMonth);
+  const dayOfWeek = firstDayOfMonth.getDay();
+  // Ajustar para que lunes sea 0 (lunes = 1 en getDay())
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfCalendar.setDate(firstDayOfMonth.getDate() - daysToSubtract);
+
+  const endOfCalendar = new Date(lastDayOfMonth);
+  const lastDayOfWeek = lastDayOfMonth.getDay();
+  const daysToAdd = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
+  endOfCalendar.setDate(lastDayOfMonth.getDate() + daysToAdd);
+
+  // Crear grid de 6 semanas (42 días)
+  const calendarDays = [];
+  const totalDays =
+    Math.ceil(
+      (endOfCalendar.getTime() - startOfCalendar.getTime()) /
+        (1000 * 60 * 60 * 24)
+    ) + 1;
+
+  for (let i = 0; i < totalDays; i++) {
+    const date = new Date(startOfCalendar);
+    date.setDate(startOfCalendar.getDate() + i);
     const key = getDateKeyLocal(date);
-    const isCurrentMonth = true;
+    const isCurrentMonth = date.getMonth() === monthStart.getMonth();
     const isToday = key === todayKey;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+
     const entries: ExpandedEntry[] = [];
-    for (const a of assignments) {
-      const aStart = new Date(a.start_date);
-      const aEnd =
-        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
-      if (date < aStart || date > aEnd) continue;
-      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
-      const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
-      if (slots.length > 0) {
-        const userLabel =
-          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-          'Servicio';
-        slots.forEach((s) => {
-          entries.push({
-            assignmentId: a.id,
-            userLabel,
-            start: s.start,
-            end: s.end,
+    if (isCurrentMonth) {
+      for (const a of assignments) {
+        const aStart = new Date(a.start_date);
+        const aEnd =
+          a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+        if (date < aStart || date > aEnd) continue;
+        if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+        const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
+        if (slots.length > 0) {
+          const userLabel =
+            `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
+            'Servicio';
+          slots.forEach((s) => {
+            entries.push({
+              assignmentId: a.id,
+              userLabel,
+              start: s.start,
+              end: s.end,
+            });
           });
-        });
+        }
       }
     }
-    return {
+
+    calendarDays.push({
       date,
       key,
       isCurrentMonth,
@@ -330,8 +606,116 @@ const WorkerMonthCalendar = (props: {
       isWeekend,
       isHoliday,
       entries,
-    };
-  });
+    });
+  }
+
+  // Dividir en semanas
+  const weeks = [];
+  for (let i = 0; i < calendarDays.length; i += 7) {
+    weeks.push(calendarDays.slice(i, i + 7));
+  }
+  // Si es móvil o tablet y está en modo calendario, mostrar calendario convencional
+  if (
+    props.isMobile ??
+    (typeof window !== 'undefined' && window.innerWidth <= 1024)
+  ) {
+    return (
+      <div>
+        <div className='mb-4 md:mb-6'>
+          <h3 className='text-lg md:text-xl font-semibold text-gray-900 mb-2'>
+            📅{' '}
+            {firstDayOfMonth.toLocaleDateString('es-ES', {
+              month: 'long',
+              year: 'numeric',
+            })}
+          </h3>
+          <p className='text-sm md:text-base text-gray-600'>
+            Toca un día para ver los servicios
+          </p>
+        </div>
+
+        {/* Encabezados de días de la semana */}
+        <div className='grid grid-cols-7 gap-1 md:gap-2 mb-2 md:mb-4'>
+          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, index) => (
+            <div key={index} className='text-center py-2 md:py-3'>
+              <span className='text-xs md:text-sm font-semibold text-gray-600'>
+                {day}
+              </span>
+            </div>
+          ))}
+        </div>
+
+        {/* Grid del calendario */}
+        <div className='space-y-1 md:space-y-2'>
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className='grid grid-cols-7 gap-1 md:gap-2'>
+              {week.map((day, dayIndex) => {
+                const dayClasses = [
+                  'h-16 md:h-20 flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-colors relative',
+                  day.isCurrentMonth
+                    ? 'bg-white border-gray-200'
+                    : 'bg-gray-50 border-gray-100',
+                  day.isToday ? 'ring-2 ring-blue-500 bg-blue-50' : '',
+                  day.isHoliday || day.isWeekend ? 'border-red-200' : '',
+                  day.entries.length > 0
+                    ? 'cursor-pointer hover:bg-blue-50'
+                    : 'cursor-pointer hover:bg-gray-50',
+                ]
+                  .filter(Boolean)
+                  .join(' ');
+
+                return (
+                  <button
+                    key={dayIndex}
+                    className={dayClasses}
+                    onClick={() => handleDayClick(day.date, day.entries)}
+                    disabled={!day.isCurrentMonth}
+                  >
+                    <span
+                      className={`text-sm md:text-base font-medium ${
+                        day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                      } ${day.isToday ? 'text-blue-600' : ''}`}
+                    >
+                      {day.date.getDate()}
+                    </span>
+
+                    {/* Indicador de servicios */}
+                    {day.entries.length > 0 && (
+                      <div className='flex items-center justify-center mt-1'>
+                        <div className='w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full'></div>
+                        {day.entries.length > 1 && (
+                          <span className='text-[10px] md:text-xs text-blue-600 font-medium ml-1'>
+                            {day.entries.length}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Indicador de festivo */}
+                    {day.isHoliday && (
+                      <div className='absolute top-1 right-1'>
+                        <span className='text-[8px] md:text-xs'>🎉</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Modal */}
+        <DayServicesModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          date={selectedDate ?? new Date()}
+          services={selectedServices}
+        />
+      </div>
+    );
+  }
+
+  // Vista original para desktop
   return (
     <div>
       <div className='mb-4 sm:mb-6'>
@@ -343,69 +727,78 @@ const WorkerMonthCalendar = (props: {
           {lastDayOfMonth.toLocaleDateString('es-ES')}
         </p>
       </div>
-      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
-        {monthGrid.map((cell, idx) => {
-          const headerClasses = cell.isCurrentMonth
-            ? 'text-gray-900'
-            : 'text-gray-400';
-          const borderHighlight =
-            cell.isHoliday || cell.isWeekend
-              ? 'border-red-300'
-              : 'border-gray-200';
-          const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
-          const weekdayShort = cell.date
-            .toLocaleDateString('es-ES', { weekday: 'short' })
-            .replace('.', '')
-            .slice(0, 3);
-          return (
-            <div
-              key={idx}
-              className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 rounded-lg ${todayRing}`}
-            >
-              <div className='flex items-center justify-between mb-1'>
-                <div className='flex items-center gap-2'>
-                  <span className='inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
-                    {weekdayShort}
-                  </span>
-                  <span
-                    className={`text-xs sm:text-sm font-medium ${headerClasses}`}
-                  >
-                    {cell.date.getDate()}
-                  </span>
+      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
+        {calendarDays
+          .filter((day) => day.isCurrentMonth)
+          .map((cell, idx) => {
+            const headerClasses = cell.isCurrentMonth
+              ? 'text-gray-900'
+              : 'text-gray-400';
+            const borderHighlight =
+              cell.isHoliday || cell.isWeekend
+                ? 'border-red-300'
+                : 'border-gray-200';
+            const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
+            const weekdayShort = cell.date
+              .toLocaleDateString('es-ES', { weekday: 'short' })
+              .replace('.', '')
+              .slice(0, 3);
+            return (
+              <div
+                key={idx}
+                className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-[100px] sm:min-h-[120px] md:min-h-[80px] rounded-lg ${todayRing}`}
+              >
+                <div className='flex items-center justify-between mb-1'>
+                  <div className='flex items-center gap-2'>
+                    <span className='inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
+                      {weekdayShort}
+                    </span>
+                    <span
+                      className={`text-xs sm:text-sm font-medium ${headerClasses}`}
+                    >
+                      {cell.date.getDate()}
+                    </span>
+                  </div>
+                  {cell.isHoliday && (
+                    <span className='text-[10px] sm:text-xs text-red-600 font-medium'>
+                      🎉
+                    </span>
+                  )}
                 </div>
-                {cell.isHoliday && (
-                  <span className='text-[10px] sm:text-xs text-red-600 font-medium'>
-                    🎉
-                  </span>
-                )}
-              </div>
-              <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
-                {cell.entries.slice(0, 4).map((e, i) => (
-                  <div
-                    key={`${cell.key}-${e.assignmentId}-${i}`}
-                    className='rounded px-1.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50'
-                  >
-                    <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
-                      {e.userLabel}
+                <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
+                  {cell.entries.slice(0, 4).map((e, i) => (
+                    <div
+                      key={`${cell.key}-${e.assignmentId}-${i}`}
+                      className='rounded px-1.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50'
+                    >
+                      <div className='text-[11px] sm:text-xs font-medium text-gray-700 truncate'>
+                        {e.userLabel}
+                      </div>
+                      <div className='flex items-center gap-1 text-[11px] sm:text-xs text-blue-700 font-semibold'>
+                        <span>
+                          {e.start}–{e.end}
+                        </span>
+                      </div>
                     </div>
-                    <div className='flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
-                      <span>
-                        {e.start}–{e.end}
+                  ))}
+                  {cell.entries.length > 4 && (
+                    <div className='text-center'>
+                      <span className='text-[10px] text-blue-600 font-medium'>
+                        +{cell.entries.length - 4} más
                       </span>
                     </div>
-                  </div>
-                ))}
-                {cell.entries.length === 0 && (
-                  <div className='text-center py-2'>
-                    <p className='text-[10px] text-gray-400 italic'>
-                      Sin servicios
-                    </p>
-                  </div>
-                )}
+                  )}
+                  {cell.entries.length === 0 && (
+                    <div className='text-center py-2'>
+                      <p className='text-[10px] text-gray-400 italic'>
+                        Sin servicios
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
       </div>
     </div>
   );
@@ -607,14 +1000,17 @@ const WorkerMonthCalendar = (props: {
     </div>
   );
 }; */
+// Calendario mensual estilo Planning para la trabajadora logueada (declaración superior para evitar no-use-before-define)
 export default function SchedulePage(): React.JSX.Element {
   const { user } = useAuth();
   const currentUser = user;
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>(
     'week'
   );
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [isMobile, setIsMobile] = useState(false);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   type TimeSlotRange = { start: string; end: string };
   const getScheduleSlots = useCallback(
@@ -813,6 +1209,7 @@ export default function SchedulePage(): React.JSX.Element {
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
   }, [
+    user?.email,
     currentUser?.email,
     weekRange.start,
     weekRange.end,
@@ -821,6 +1218,16 @@ export default function SchedulePage(): React.JSX.Element {
     monthRange.start,
     monthRange.end,
   ]);
+
+  // Detectar dispositivo móvil y tablet
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // Incluir tablets hasta 1024px
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
       weekday: 'long',
@@ -878,25 +1285,55 @@ export default function SchedulePage(): React.JSX.Element {
                   </p>
                 </div>
                 {/* Selector de período */}
-                <div className='flex space-x-2'>
-                  <Button
-                    variant={selectedPeriod === 'week' ? 'primary' : 'outline'}
-                    size='sm'
-                    onClick={() => setSelectedPeriod('week')}
-                    className='flex-1 sm:flex-none'
-                  >
-                    <span className='hidden sm:inline'>Esta Semana</span>
-                    <span className='sm:hidden'>Semana</span>
-                  </Button>
-                  <Button
-                    variant={selectedPeriod === 'month' ? 'primary' : 'outline'}
-                    size='sm'
-                    onClick={() => setSelectedPeriod('month')}
-                    className='flex-1 sm:flex-none'
-                  >
-                    <span className='hidden sm:inline'>Este Mes</span>
-                    <span className='sm:hidden'>Mes</span>
-                  </Button>
+                <div className='flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-2'>
+                  <div className='flex space-x-2'>
+                    <Button
+                      variant={
+                        selectedPeriod === 'week' ? 'primary' : 'outline'
+                      }
+                      size='sm'
+                      onClick={() => setSelectedPeriod('week')}
+                      className='flex-1 sm:flex-none'
+                    >
+                      <span className='hidden sm:inline'>Esta Semana</span>
+                      <span className='sm:hidden'>Semana</span>
+                    </Button>
+                    <Button
+                      variant={
+                        selectedPeriod === 'month' ? 'primary' : 'outline'
+                      }
+                      size='sm'
+                      onClick={() => setSelectedPeriod('month')}
+                      className='flex-1 sm:flex-none'
+                    >
+                      <span className='hidden sm:inline'>Este Mes</span>
+                      <span className='sm:hidden'>Mes</span>
+                    </Button>
+                  </div>
+
+                  {/* Toggle de vista para móvil en vista de mes */}
+                  {selectedPeriod === 'month' && (
+                    <div className='flex space-x-2 md:hidden'>
+                      <Button
+                        variant={
+                          viewMode === 'calendar' ? 'primary' : 'outline'
+                        }
+                        size='sm'
+                        onClick={() => setViewMode('calendar')}
+                        className='flex-1'
+                      >
+                        📅 Calendario
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'primary' : 'outline'}
+                        size='sm'
+                        onClick={() => setViewMode('list')}
+                        className='flex-1'
+                      >
+                        📋 Lista
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -964,13 +1401,26 @@ export default function SchedulePage(): React.JSX.Element {
                       </div>
                     </div>
                   ) : (
-                    <WorkerMonthCalendar
-                      assignments={assignments}
-                      getScheduleSlots={getScheduleSlots}
-                      monthStart={monthStartLocal}
-                      monthEnd={monthEndLocal}
-                      holidaySet={holidaySet}
-                    />
+                    <div>
+                      {viewMode === 'list' && isMobile ? (
+                        <MobileMonthList
+                          assignments={assignments}
+                          getScheduleSlots={getScheduleSlots}
+                          monthStart={monthStartLocal}
+                          monthEnd={monthEndLocal}
+                          holidaySet={holidaySet}
+                        />
+                      ) : (
+                        <WorkerMonthCalendar
+                          assignments={assignments}
+                          getScheduleSlots={getScheduleSlots}
+                          monthStart={monthStartLocal}
+                          monthEnd={monthEndLocal}
+                          holidaySet={holidaySet}
+                          isMobile={isMobile}
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
               )}
