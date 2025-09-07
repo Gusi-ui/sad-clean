@@ -171,7 +171,7 @@ export default function ResetPasswordPage() {
                 setError(
                   `Error al procesar token de recuperación: ${exchangeError.message}. Solicita un nuevo enlace.`
                 );
-                // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+                // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
               } else if (data?.session) {
                 // eslint-disable-next-line no-console
                 console.log(
