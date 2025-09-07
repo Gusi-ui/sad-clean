@@ -31,7 +31,12 @@ export function middleware(request: NextRequest) {
   const finalType = hashType || type;
 
   // Si hay tokens de recuperación y no estamos ya en la página de reset
-  if (finalAccessToken && finalRefreshToken && finalType === 'recovery' && pathname !== '/auth/reset-password') {
+  if (
+    finalAccessToken &&
+    finalRefreshToken &&
+    finalType === 'recovery' &&
+    pathname !== '/auth/reset-password'
+  ) {
     console.log('Middleware: Token de recuperación detectado, redirigiendo...');
 
     // Redirigir a la página de reset con los parámetros

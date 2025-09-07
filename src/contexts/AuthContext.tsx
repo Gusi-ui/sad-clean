@@ -122,7 +122,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           urlParams.get('refresh_token') ?? hashParams.get('refresh_token');
         const type = urlParams.get('type') ?? hashParams.get('type');
 
-        if (accessToken && refreshToken && type === 'recovery') {
+        if (
+          accessToken !== null &&
+          accessToken !== undefined &&
+          refreshToken !== null &&
+          refreshToken !== undefined &&
+          type !== null &&
+          type !== undefined &&
+          type === 'recovery'
+        ) {
           // eslint-disable-next-line no-console
           console.log('Token de recuperación detectado, redirigiendo...');
 

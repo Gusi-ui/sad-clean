@@ -42,7 +42,7 @@ export type {
   UserUpdate,
   Worker,
   WorkerInsert,
-  WorkerUpdate
+  WorkerUpdate,
 };
 
 // Funciones helper para SAD LAS
