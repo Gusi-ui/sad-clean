@@ -118,12 +118,14 @@ export default function ResetPasswordPage() {
 
         if (verifyTokenMatch && verifyTypeMatch && supabaseUrlMatch) {
           // Es un token de verificación de Supabase
+          // eslint-disable-next-line no-console
           console.log('Token de verificación de Supabase detectado');
           setError(
-            'Este es un token de verificación de Supabase. Usa la URL directamente en tu navegador:\n\n' +
-              trimmedToken +
-              '\n\n' +
-              'O configura la redirección en Supabase para que apunte a: http://localhost:3001'
+            `Este es un token de verificación de Supabase. Usa la URL directamente en tu navegador:
+
+${trimmedToken}
+
+O configura la redirección en Supabase para que apunte a: http://localhost:3001`
           );
           setLoading(false);
           return;
