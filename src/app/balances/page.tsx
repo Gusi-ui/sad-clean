@@ -27,29 +27,29 @@ export default function BalancesPage() {
   ); // 1-12
   const [workerQuery, setWorkerQuery] = useState<string>('');
   const [workers, setWorkers] = useState<
-    Array<{ id: string; name: string; surname: string }>
+    Array<{ id: string; name: string | null; surname: string | null }>
   >([]);
   const [filteredWorkers, setFilteredWorkers] = useState<
-    Array<{ id: string; name: string; surname: string }>
+    Array<{ id: string; name: string | null; surname: string | null }>
   >([]);
   const [showWorkerDropdown, setShowWorkerDropdown] = useState<boolean>(false);
   const [selectedWorker, setSelectedWorker] = useState<{
     id: string;
-    name: string;
-    surname: string;
+    name: string | null;
+    surname: string | null;
   } | null>(null);
   const [userQuery, setUserQuery] = useState<string>('');
   const [users, setUsers] = useState<
-    Array<{ id: string; name: string; surname: string }>
+    Array<{ id: string; name: string | null; surname: string | null }>
   >([]);
   const [filteredUsers, setFilteredUsers] = useState<
-    Array<{ id: string; name: string; surname: string }>
+    Array<{ id: string; name: string | null; surname: string | null }>
   >([]);
   const [showUserDropdown, setShowUserDropdown] = useState<boolean>(false);
   const [selectedUser, setSelectedUser] = useState<{
     id: string;
-    name: string;
-    surname: string;
+    name: string | null;
+    surname: string | null;
   } | null>(null);
   const [balance, setBalance] = useState<UserMonthlyBalance | null>(null);
   const [workerRows, setWorkerRows] = useState<WorkerUserMonthlyBalanceRow[]>(
@@ -93,11 +93,13 @@ export default function BalancesPage() {
         .eq('is_active', true)
         .order('name');
       if (usersError === null) {
-        const list = (data ?? []).map((u) => ({
-          id: u.id,
-          name: u.name,
-          surname: u.surname,
-        }));
+        const list = (data ?? []).map(
+          (u: { id: string; name: string | null; surname: string | null }) => ({
+            id: u.id,
+            name: u.name,
+            surname: u.surname,
+          })
+        );
         setUsers(list);
         setFilteredUsers(list);
       }
@@ -107,11 +109,13 @@ export default function BalancesPage() {
         .eq('is_active', true)
         .order('name');
       if (workersError === null) {
-        const wlist = (wdata ?? []).map((w) => ({
-          id: w.id,
-          name: w.name,
-          surname: w.surname,
-        }));
+        const wlist = (wdata ?? []).map(
+          (w: { id: string; name: string; surname: string }) => ({
+            id: w.id,
+            name: w.name,
+            surname: w.surname,
+          })
+        );
         setWorkers(wlist);
         setFilteredWorkers(wlist);
       }

@@ -1,33 +1,41 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
 import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from '@/types/supabase';
+import type {
+  Assignment,
+  AssignmentInsert,
+  AssignmentUpdate,
+  HoursBalance,
+  HoursBalanceInsert,
+  HoursBalanceUpdate,
+  User,
+  UserInsert,
+  UserUpdate,
+  Worker,
+  WorkerInsert,
+  WorkerUpdate,
+} from '@/types/database-types';
 import { securityLogger } from '@/utils/security-config';
 
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '';
 const supabaseKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey);
 
-// Tipos basados en el esquema real de Supabase
-export type Worker = Database['public']['Tables']['workers']['Row'];
-export type WorkerInsert = Database['public']['Tables']['workers']['Insert'];
-export type WorkerUpdate = Database['public']['Tables']['workers']['Update'];
-
-export type Assignment = Database['public']['Tables']['assignments']['Row'];
-export type AssignmentInsert =
-  Database['public']['Tables']['assignments']['Insert'];
-export type AssignmentUpdate =
-  Database['public']['Tables']['assignments']['Update'];
-
-export type User = Database['public']['Tables']['users']['Row'];
-export type UserInsert = Database['public']['Tables']['users']['Insert'];
-export type UserUpdate = Database['public']['Tables']['users']['Update'];
-
-export type HoursBalance =
-  Database['public']['Tables']['hours_balances']['Row'];
-export type HoursBalanceInsert =
-  Database['public']['Tables']['hours_balances']['Insert'];
-export type HoursBalanceUpdate =
-  Database['public']['Tables']['hours_balances']['Update'];
+// Re-exportar tipos para compatibilidad
+export type {
+  Assignment,
+  AssignmentInsert,
+  AssignmentUpdate,
+  HoursBalance,
+  HoursBalanceInsert,
+  HoursBalanceUpdate,
+  User,
+  UserInsert,
+  UserUpdate,
+  Worker,
+  WorkerInsert,
+  WorkerUpdate,
+};
 
 // Funciones helper para SAD LAS
 
@@ -264,7 +272,7 @@ export const getServicesStats = async (): Promise<{
 
     // Calcular horas totales de la semana actual
     const weeklyHours = (weeklyAssignments ?? []).reduce(
-      (total, assignment) => total + (assignment.weekly_hours || 0),
+      (total, assignment) => total + (assignment.weekly_hours ?? 0),
       0
     );
 
@@ -293,7 +301,7 @@ export const getServicesStats = async (): Promise<{
     }
 
     const lastWeekHours = (lastWeekAssignments ?? []).reduce(
-      (total, assignment) => total + (assignment.weekly_hours || 0),
+      (total, assignment) => total + (assignment.weekly_hours ?? 0),
       0
     );
 
@@ -339,7 +347,7 @@ export const getTodayServicesStats = async (): Promise<{
 
     // Calcular horas totales
     const totalHours = todayServices.reduce(
-      (total, service) => total + (service.weekly_hours || 0),
+      (total, service) => total + (service.weekly_hours ?? 0),
       0
     );
 

@@ -1146,7 +1146,7 @@ export default function SchedulePage(): React.JSX.Element {
           setLoading(false);
           return;
         }
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
         // Cargar festivos para el rango que abarca semana actual, próxima semana y mes restante
         const holidayStart = new Date(
           Math.min(
@@ -1188,17 +1188,19 @@ export default function SchedulePage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
           .eq('status', 'active');
         if (err === null && rows !== null) {
           const filtered = rows.filter((a) => {
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             return t === 'laborables' || t === 'flexible' || t === 'festivos';
           });
-          setAssignments(filtered);
+          setAssignments(filtered as unknown as AssignmentRow[]);
         } else {
           setAssignments([]);
         }

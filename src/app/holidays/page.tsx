@@ -182,7 +182,10 @@ export default function HolidaysPage(): React.JSX.Element {
 
   // Cargar festivos al cambiar el año
   useEffect(() => {
-    void loadHolidays(selectedYear);
+    loadHolidays(selectedYear).catch(() => {
+      // Error loading month holidays
+      setToastMessage({ type: 'error', message: 'Error cargando festivos' });
+    });
   }, [selectedYear]);
 
   // Limpiar mensaje de toast después de 5 segundos
@@ -723,9 +726,21 @@ export default function HolidaysPage(): React.JSX.Element {
               <Button
                 onClick={() => {
                   if (editingHoliday !== null) {
-                    void updateHoliday();
+                    updateHoliday().catch(() => {
+                      // Error updating holiday
+                      setToastMessage({
+                        type: 'error',
+                        message: 'Error actualizando festivo',
+                      });
+                    });
                   } else {
-                    void createHoliday();
+                    createHoliday().catch(() => {
+                      // Error creating holiday
+                      setToastMessage({
+                        type: 'error',
+                        message: 'Error creando festivo',
+                      });
+                    });
                   }
                 }}
                 className='bg-blue-600 hover:bg-blue-700 text-white'
@@ -755,7 +770,15 @@ export default function HolidaysPage(): React.JSX.Element {
                 Cancelar
               </Button>
               <Button
-                onClick={() => void deleteHoliday()}
+                onClick={() => {
+                  deleteHoliday().catch(() => {
+                    // Error deleting holiday
+                    setToastMessage({
+                      type: 'error',
+                      message: 'Error eliminando festivo',
+                    });
+                  });
+                }}
                 variant='danger'
                 className='bg-red-600 hover:bg-red-700 text-white'
               >

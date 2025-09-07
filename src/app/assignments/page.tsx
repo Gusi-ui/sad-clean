@@ -37,8 +37,8 @@ interface Assignment {
   priority: number;
   notes: string;
   created_at: string;
-  user?: { name: string; surname: string };
-  worker?: { name: string; surname: string };
+  user?: { name: string | null; surname: string | null };
+  worker?: { name: string | null; surname: string | null };
 }
 
 export default function AssignmentsPage() {
@@ -184,8 +184,8 @@ export default function AssignmentsPage() {
             .select(
               `
             *,
-            user:users(name, surname),
-            worker:workers(name, surname)
+            user:users!inner(name, surname),
+            worker:workers!inner(name, surname)
           `
             )
             .order('created_at', { ascending: false });
@@ -194,10 +194,18 @@ export default function AssignmentsPage() {
           logger.error('Error cargando asignaciones:', assignmentsError);
         } else {
           // Transformar los datos para incluir monthly_hours
-          const transformedData = (assignmentsData ?? []).map((assignment) => ({
-            ...assignment,
-            monthly_hours: assignment.weekly_hours || 0, // Usar weekly_hours como monthly_hours temporalmente
-          })) as Assignment[];
+          const transformedData = (assignmentsData as unknown[]).map(
+            (assignment: unknown) => {
+              const assign = assignment as Record<string, unknown>;
+              return {
+                ...assign,
+                monthly_hours:
+                  typeof assign.weekly_hours === 'number'
+                    ? assign.weekly_hours
+                    : 0, // Usar weekly_hours como monthly_hours temporalmente
+              };
+            }
+          ) as Assignment[];
 
           setAssignments(transformedData);
         }
@@ -886,18 +894,24 @@ export default function AssignmentsPage() {
                     .select(
                       `
                         *,
-                        user:users(name, surname),
-                        worker:workers(name, surname)
+                        user:users!inner(name, surname),
+                        worker:workers!inner(name, surname)
                       `
                     )
                     .order('created_at', { ascending: false });
 
                   // Transformar datos para incluir monthly_hours
-                  const transformedData = (newAssignments ?? []).map(
-                    (assignment) => ({
-                      ...assignment,
-                      monthly_hours: assignment.weekly_hours ?? 0,
-                    })
+                  const transformedData = (newAssignments as unknown[]).map(
+                    (assignment: unknown) => {
+                      const assign = assignment as Record<string, unknown>;
+                      return {
+                        ...assign,
+                        monthly_hours:
+                          typeof assign.weekly_hours === 'number'
+                            ? assign.weekly_hours
+                            : 0,
+                      };
+                    }
                   ) as Assignment[];
 
                   setAssignments(transformedData);
@@ -960,7 +974,10 @@ export default function AssignmentsPage() {
                 setError(`Error creando asignación: ${message}`);
               }
             };
-            void handleSubmit();
+            handleSubmit().catch((err) => {
+              logger.error('Error in handleSubmit:', err);
+              setError('Error procesando la solicitud');
+            });
           }}
           mode='create'
         />
@@ -1045,18 +1062,24 @@ export default function AssignmentsPage() {
                     .select(
                       `
                         *,
-                        user:users(name, surname),
-                        worker:workers(name, surname)
+                        user:users!inner(name, surname),
+                        worker:workers!inner(name, surname)
                       `
                     )
                     .order('created_at', { ascending: false });
 
                   // Transformar datos para incluir monthly_hours
-                  const transformedData = (updatedAssignments ?? []).map(
-                    (assignment) => ({
-                      ...assignment,
-                      monthly_hours: assignment.weekly_hours ?? 0,
-                    })
+                  const transformedData = (updatedAssignments as unknown[]).map(
+                    (assignment: unknown) => {
+                      const assign = assignment as Record<string, unknown>;
+                      return {
+                        ...assign,
+                        monthly_hours:
+                          typeof assign.weekly_hours === 'number'
+                            ? assign.weekly_hours
+                            : 0,
+                      };
+                    }
                   ) as Assignment[];
 
                   setAssignments(transformedData);
@@ -1121,7 +1144,10 @@ export default function AssignmentsPage() {
                 setError(`Error actualizando asignación: ${message}`);
               }
             };
-            void handleSubmit();
+            handleSubmit().catch((err) => {
+              logger.error('Error in handleSubmit:', err);
+              setError('Error procesando la solicitud');
+            });
           }}
           initialData={
             editingAssignment
@@ -1244,7 +1270,13 @@ export default function AssignmentsPage() {
               <Button
                 className='w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white'
                 onClick={() => {
-                  void handleDeleteAssignmentConfirm();
+                  handleDeleteAssignmentConfirm().catch((err) => {
+                    logger.error(
+                      'Error in handleDeleteAssignmentConfirm:',
+                      err
+                    );
+                    setError('Error eliminando la asignación');
+                  });
                 }}
                 disabled={deletingAssignment}
               >

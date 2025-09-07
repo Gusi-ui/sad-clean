@@ -720,7 +720,7 @@ export default function RoutePage(): React.JSX.Element {
           return;
         }
 
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
 
         // Verificar si hoy es festivo
         const { data: holidayData } = await supabase
@@ -744,7 +744,7 @@ export default function RoutePage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname, address, postal_code, city)
+            users!inner(name, surname, address, postal_code, city)
           `
           )
           .eq('worker_id', workerId)
@@ -766,11 +766,13 @@ export default function RoutePage(): React.JSX.Element {
               useHoliday
             );
             if (slots.length === 0) return false;
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             if (useHoliday) return t === 'festivos' || t === 'flexible';
             return t === 'laborables' || t === 'flexible';
           });
-          setTodayAssignments(filtered);
+          setTodayAssignments(filtered as unknown as AssignmentRow[]);
         } else {
           setTodayAssignments([]);
         }

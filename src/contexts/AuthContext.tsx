@@ -165,6 +165,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           (metadata?.monthly_contracted_hours as number) ?? 0,
         weekly_contracted_hours:
           (metadata?.weekly_contracted_hours as number) ?? 0,
+        address: (metadata?.address as string) ?? null,
+        postal_code: (metadata?.postal_code as string) ?? null,
+        city: (metadata?.city as string) ?? null,
         created_at: authData.user.created_at,
         updated_at: authData.user.updated_at ?? authData.user.created_at,
       };
