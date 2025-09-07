@@ -92,9 +92,9 @@ function analyzeToken(token) {
     }
   }
 
-  // Método 3: Direct parsing
+  // Método 3: Direct parsing (access_token/refresh_token)
   if (!accessToken || !refreshToken) {
-    console.log('\n📋 MÉTODO 3 - Direct parsing:');
+    console.log('\n📋 MÉTODO 3 - Direct parsing (access_token/refresh_token):');
     const accessMatch = trimmedToken.match(/access_token=([^&]+)/);
     const refreshMatch = trimmedToken.match(/refresh_token=([^&]+)/);
     const typeMatch = trimmedToken.match(/type=([^&]+)/);
@@ -108,7 +108,49 @@ function analyzeToken(token) {
       console.log(`• Direct refresh token: ${refreshMatch ? '✅' : '❌'}`);
       console.log(`• Direct type: ${typeMatch ? typeMatch[1] : 'N/A'}`);
     } else {
-      console.log('• No se encontraron tokens con direct parsing');
+      console.log('• No se encontraron tokens access_token/refresh_token');
+    }
+  }
+
+  // Método 4: Supabase verify token (TU FORMATO)
+  if (!accessToken && !refreshToken) {
+    console.log('\n📋 MÉTODO 4 - Supabase verify token:');
+    const tokenMatch = trimmedToken.match(/token=([^&]+)/);
+    const typeMatch = trimmedToken.match(/type=([^&]+)/);
+    const supabaseUrlMatch = trimmedToken.match(
+      /https:\/\/([^.]+)\.supabase\.co/
+    );
+
+    if (tokenMatch && typeMatch) {
+      const verifyToken = tokenMatch[1];
+      const tokenTypeFound = typeMatch[1];
+      const projectId = supabaseUrlMatch ? supabaseUrlMatch[1] : 'unknown';
+
+      console.log(
+        `• Token de verificación: ✅ ENCONTRADO (${verifyToken.substring(0, 20)}...)`
+      );
+      console.log(`• Tipo: ${tokenTypeFound}`);
+      console.log(`• Proyecto Supabase: ${projectId}`);
+      console.log(`• URL completa: ✅ VÁLIDA`);
+
+      console.log('\n🎉 ¡FORMATO DE SUPABASE RECONOCIDO!');
+      console.log('Este es un token de verificación estándar de Supabase.');
+      console.log('Necesitas usar la URL directa de verificación.');
+      console.log('\n📋 INSTRUCCIONES:');
+      console.log('1. Usa esta URL directamente en tu navegador:');
+      console.log(`   ${trimmedToken}`);
+      console.log('2. O configura tu aplicación para redirigir correctamente');
+      console.log('3. El token se procesará automáticamente por Supabase');
+
+      return {
+        accessToken: null,
+        refreshToken: null,
+        tokenType: tokenTypeFound,
+        supabaseVerifyToken: verifyToken,
+        isSupabaseVerifyFormat: true,
+      };
+    } else {
+      console.log('• No es un token de verificación de Supabase');
     }
   }
 

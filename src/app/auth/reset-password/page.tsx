@@ -108,6 +108,28 @@ export default function ResetPasswordPage() {
         if (typeMatch) tokenType = typeMatch[1];
       }
 
+      // Método 4: Supabase verify token (formato del usuario)
+      if (accessToken === null && refreshToken === null) {
+        const verifyTokenMatch = trimmedToken.match(/token=([^&]+)/);
+        const verifyTypeMatch = trimmedToken.match(/type=([^&]+)/);
+        const supabaseUrlMatch = trimmedToken.match(
+          /https:\/\/[^.]+\.supabase\.co/
+        );
+
+        if (verifyTokenMatch && verifyTypeMatch && supabaseUrlMatch) {
+          // Es un token de verificación de Supabase
+          console.log('Token de verificación de Supabase detectado');
+          setError(
+            'Este es un token de verificación de Supabase. Usa la URL directamente en tu navegador:\n\n' +
+              trimmedToken +
+              '\n\n' +
+              'O configura la redirección en Supabase para que apunte a: http://localhost:3001'
+          );
+          setLoading(false);
+          return;
+        }
+      }
+
       // Validar que tenemos los tokens necesarios
       if (accessToken === null || refreshToken === null) {
         // eslint-disable-next-line no-console
