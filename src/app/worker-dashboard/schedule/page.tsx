@@ -419,7 +419,7 @@ const DayServicesModal = (props: {
       />
       <div className='relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-4 md:p-6 max-h-96 md:max-h-[60vh] overflow-y-auto'>
         <div className='flex justify-between items-center mb-4'>
-          <h2 className='text-lg font-semibold'>
+          <h2 className='text-lg font-semibold bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm'>
             {date.toLocaleDateString('es-ES', {
               weekday: 'long',
               year: 'numeric',
@@ -429,22 +429,29 @@ const DayServicesModal = (props: {
           </h2>
           <button
             onClick={onClose}
-            className='text-gray-500 hover:text-gray-700'
+            className='text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-full transition-colors'
           >
             ✕
           </button>
         </div>
         <div className='space-y-2'>
           {services.length === 0 ? (
-            <p className='text-gray-500'>No hay servicios programados</p>
+            <div className='p-4 bg-gray-50 rounded-lg border border-gray-200 text-center'>
+              <p className='text-gray-600 font-medium'>
+                No hay servicios programados
+              </p>
+              <p className='text-sm text-gray-500 mt-1'>Este día está libre</p>
+            </div>
           ) : (
             services.map((service, index) => (
               <div
                 key={index}
                 className='p-3 bg-blue-50 rounded border-l-4 border-blue-400'
               >
-                <div className='font-medium'>{service.userLabel}</div>
-                <div className='text-sm text-gray-600'>
+                <div className='font-semibold text-gray-900 bg-white px-2 py-1 rounded shadow-sm inline-block mb-1'>
+                  {service.userLabel}
+                </div>
+                <div className='text-sm text-gray-700 font-medium'>
                   {service.start} - {service.end}
                 </div>
               </div>
