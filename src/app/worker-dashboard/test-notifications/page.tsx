@@ -97,13 +97,12 @@ export default function TestNotificationsPage() {
         throw new Error('Notification service not available');
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result =
-        await // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-        (tester.notificationService as any).createAndSendNotification(
-          user.id,
-          notification
-        );
+      // Type assertion necesaria para Supabase - servicio dinámicamente cargado
+      /* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-type-assertion */
+      const result = await (
+        tester.notificationService as any
+      ).createAndSendNotification(user.id, notification);
+      /* eslint-enable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access, @typescript-eslint/no-unnecessary-type-assertion */
 
       const success = result !== null && result !== undefined;
       setTestResults((prev) => ({ ...prev, [type]: success }));

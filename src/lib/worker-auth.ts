@@ -90,14 +90,14 @@ export const ensureWorkerAuthAccount = async (
   }
 
   // 3) Asegurar registro en auth_users (upsert simple por id)
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  // Type assertion necesaria para tabla auth_users de Supabase
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const { error: upsertErr } = await supabaseAdmin
     .from('auth_users')
-    .upsert(
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      { id: authUserId, email, role: 'worker' } as any,
-      { onConflict: 'id' }
-    );
+    .upsert({ id: authUserId, email, role: 'worker' } as any, {
+      onConflict: 'id',
+    });
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (upsertErr !== null) {
     return {

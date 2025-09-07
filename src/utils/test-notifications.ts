@@ -1,6 +1,6 @@
 import type { NotificationType } from '@/types';
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// Type assertion necesaria para servicio dinámicamente cargado
 export default class NotificationTester {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   public notificationService: any = null;
@@ -11,6 +11,7 @@ export default class NotificationTester {
       .then((module) => {
         this.notificationService = module.NotificationService.getInstance();
       })
+      // eslint-disable-next-line no-console
       .catch(console.error);
   }
 
@@ -49,70 +50,75 @@ export default class NotificationTester {
     console.log('🔊 Probando sonidos de notificación...');
 
     types.forEach((type, index) => {
-      setTimeout(() => void (async () => {
-        const soundFile = soundFileMap[type] || 'notification-default_new.wav';
+      setTimeout(
+        () =>
+          void (async () => {
+            const soundFile =
+              soundFileMap[type] || 'notification-default_new.wav';
 
-        try {
-          // eslint-disable-next-line no-console
-          console.log(`🔊 Intentando reproducir: ${type} -> ${soundFile}`);
-
-          const audio = new Audio();
-          audio.volume = 0.8; // Volumen alto para pruebas (80%)
-          audio.src = `/sounds/${soundFile}`;
-
-          // Esperar a que el audio esté listo
-          await new Promise<void>((resolve, reject) => {
-            audio.oncanplaythrough = () => {
+            try {
               // eslint-disable-next-line no-console
-              console.log(
-                `📁 Archivo ${soundFile} cargado correctamente (${audio.duration.toFixed(1)}s)`
-              );
-              resolve();
-            };
-            audio.onerror = () =>
-              reject(new Error(`Error al cargar ${soundFile}`));
-            audio.load();
-          });
+              console.log(`🔊 Intentando reproducir: ${type} -> ${soundFile}`);
 
-          // Intentar reproducir con manejo de políticas de autoplay
-          try {
-            // eslint-disable-next-line no-console
-            console.log(`▶️ Reproduciendo sonido ${type}...`);
-            await audio.play();
-            // eslint-disable-next-line no-console
-            console.log(
-              `✅ Sonido ${type} (${soundFile}): Reproducción exitosa - Volumen: ${(audio.volume * 100).toFixed(0)}%`
-            );
+              const audio = new Audio();
+              audio.volume = 0.8; // Volumen alto para pruebas (80%)
+              audio.src = `/sounds/${soundFile}`;
 
-            // Agregar listener para confirmar que el audio terminó
-            audio.onended = () => {
+              // Esperar a que el audio esté listo
+              await new Promise<void>((resolve, reject) => {
+                audio.oncanplaythrough = () => {
+                  // eslint-disable-next-line no-console
+                  console.log(
+                    `📁 Archivo ${soundFile} cargado correctamente (${audio.duration.toFixed(1)}s)`
+                  );
+                  resolve();
+                };
+                audio.onerror = () =>
+                  reject(new Error(`Error al cargar ${soundFile}`));
+                audio.load();
+              });
+
+              // Intentar reproducir con manejo de políticas de autoplay
+              try {
+                // eslint-disable-next-line no-console
+                console.log(`▶️ Reproduciendo sonido ${type}...`);
+                await audio.play();
+                // eslint-disable-next-line no-console
+                console.log(
+                  `✅ Sonido ${type} (${soundFile}): Reproducción exitosa - Volumen: ${(audio.volume * 100).toFixed(0)}%`
+                );
+
+                // Agregar listener para confirmar que el audio terminó
+                audio.onended = () => {
+                  // eslint-disable-next-line no-console
+                  console.log(`🔊 Sonido ${type} finalizado`);
+                };
+              } catch {
+                // Manejar error de autoplay - común en navegadores modernos
+                // eslint-disable-next-line no-console
+                console.log(
+                  `⚠️ Sonido ${type} (${soundFile}): Bloqueado por política de autoplay`
+                );
+                // eslint-disable-next-line no-console
+                console.log(
+                  "💡 Para activar sonidos: Usa el botón 'Activar Sonidos' o haz clic en cualquier lugar de la página"
+                );
+              }
+            } catch (error) {
+              const errorMessage = String(error);
               // eslint-disable-next-line no-console
-              console.log(`🔊 Sonido ${type} finalizado`);
-            };
-          } catch {
-            // Manejar error de autoplay - común en navegadores modernos
-            // eslint-disable-next-line no-console
-            console.log(
-              `⚠️ Sonido ${type} (${soundFile}): Bloqueado por política de autoplay`
-            );
-            // eslint-disable-next-line no-console
-            console.log(
-              "💡 Para activar sonidos: Usa el botón 'Activar Sonidos' o haz clic en cualquier lugar de la página"
-            );
-          }
-        } catch (error) {
-          const errorMessage = String(error);
-          // eslint-disable-next-line no-console
-          console.log(`❌ Sonido ${type} (${soundFile}): ${errorMessage}`);
+              console.log(`❌ Sonido ${type} (${soundFile}): ${errorMessage}`);
 
-          if (errorMessage.includes('Error al cargar')) {
-            // eslint-disable-next-line no-console
-            console.log(
-              `🔍 Verifica que el archivo ${soundFile} existe en /public/sounds/`
-            );
-          }
-        }
-      })(), index * 2000); // Espaciar los sonidos 2 segundos para mejor separación
+              if (errorMessage.includes('Error al cargar')) {
+                // eslint-disable-next-line no-console
+                console.log(
+                  `🔍 Verifica que el archivo ${soundFile} existe en /public/sounds/`
+                );
+              }
+            }
+          })(),
+        index * 2000
+      ); // Espaciar los sonidos 2 segundos para mejor separación
     });
 
     // eslint-disable-next-line no-console
@@ -128,9 +134,12 @@ export default class NotificationTester {
     console.log('🔊 PRUEBA SINTÉTICA: Generando tono audible...');
 
     // Crear contexto de audio
-    const audioContext = new (window.AudioContext ||
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    const AudioContextClass =
+      window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext)();
+        .webkitAudioContext;
+    const audioContext = new AudioContextClass();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
@@ -273,9 +282,12 @@ export default class NotificationTester {
     console.log('🎵 PRUEBA SINTÉTICA: Generando tono audible...');
 
     // Crear contexto de audio
-    const audioContext = new (window.AudioContext ||
+    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+    const AudioContextClass =
+      window.AudioContext ||
       (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext)();
+        .webkitAudioContext;
+    const audioContext = new AudioContextClass();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
 
