@@ -2,13 +2,25 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Verificar si hay parámetros de recuperación en la URL
-  const searchParams = request.nextUrl.searchParams;
+  const { pathname, searchParams } = request.nextUrl;
   const hash = request.nextUrl.hash;
 
-  // Buscar tokens en parámetros de búsqueda
+  // 1. Verificar si es un enlace de verificación de Supabase
+  const verifyToken = searchParams.get('token');
+  const verifyType = searchParams.get('type');
+
+  if (verifyToken && verifyType === 'recovery' && pathname === '/auth/v1/verify') {
+    console.log('Middleware: Enlace de verificación de Supabase detectado, procesando...');
+
+    // Crear una respuesta que procese el token de verificación
+    const verifyUrl = new URL('/auth/reset-password', request.url);
+    verifyUrl.searchParams.set('verify_token', verifyToken);
+    verifyUrl.searchParams.set('type', verifyType);
+
+    return NextResponse.redirect(verifyUrl);
+  }
+
+  // 2. Verificar si hay parámetros de recuperación directos
   const accessToken = searchParams.get('access_token');
   const refreshToken = searchParams.get('refresh_token');
   const type = searchParams.get('type');

@@ -25,9 +25,13 @@ export default function ResetPasswordPage() {
     // Verificar si hay un token de recuperación en la URL
     const accessToken = searchParams.get('access_token');
     const refreshToken = searchParams.get('refresh_token');
+    const verifyToken = searchParams.get('verify_token');
     const type = searchParams.get('type');
 
+    // Método 1: Tokens directos de recuperación
     if (accessToken !== null && refreshToken !== null && type === 'recovery') {
+      // eslint-disable-next-line no-console
+      console.log('Tokens directos de recuperación detectados');
       // Configurar la sesión con el token de recuperación
       void supabase.auth
         .setSession({
@@ -38,6 +42,28 @@ export default function ResetPasswordPage() {
           if (sessionError) {
             setError(
               'Token de recuperación inválido o expirado. Intenta con el método manual.'
+            );
+            setShowManualInput(true);
+          } else {
+            setTokenValid(true);
+            setError(null);
+          }
+        });
+    }
+    // Método 2: Token de verificación de Supabase
+    else if (verifyToken !== null && type === 'recovery') {
+      // eslint-disable-next-line no-console
+      console.log('Token de verificación de Supabase detectado');
+      // Procesar token de verificación de Supabase
+      void supabase.auth
+        .verifyOtp({
+          token_hash: verifyToken,
+          type: 'recovery',
+        })
+        .then(({ error: verifyError }) => {
+          if (verifyError) {
+            setError(
+              `Error al verificar token: ${verifyError.message}. Intenta con el método manual.`
             );
             setShowManualInput(true);
           } else {
