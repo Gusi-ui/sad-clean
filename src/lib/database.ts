@@ -19,7 +19,15 @@ import { securityLogger } from '@/utils/security-config';
 
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '';
 const supabaseKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
-export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Configurar cliente de Supabase con manejo de auth
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true, // Importante para tokens de recuperación
+  },
+});
 
 // Re-exportar tipos para compatibilidad
 export type {
@@ -34,7 +42,7 @@ export type {
   UserUpdate,
   Worker,
   WorkerInsert,
-  WorkerUpdate,
+  WorkerUpdate
 };
 
 // Funciones helper para SAD LAS
