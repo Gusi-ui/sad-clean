@@ -26,6 +26,19 @@ export default function WorkerBottomNav(): React.JSX.Element {
     return pathname?.startsWith(href) ?? false;
   };
 
+  const getItemStyles = (href: string, active: boolean) => {
+    if (href === '/worker-dashboard/schedule') {
+      // Planilla - Verde para organización y eficiencia
+      return active
+        ? 'text-green-600 bg-green-50 shadow-md'
+        : 'text-gray-600 hover:text-green-600 hover:bg-green-50';
+    }
+    // Resto de elementos - Azul por defecto
+    return active
+      ? 'text-blue-600 bg-blue-50 shadow-md'
+      : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50';
+  };
+
   return (
     <>
       {/* Mobile: solo iconos, estilo como en panel administrativo */}
@@ -41,11 +54,10 @@ export default function WorkerBottomNav(): React.JSX.Element {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 py-2 rounded-xl ${
+                className={`flex flex-col items-center justify-center flex-1 h-full transition-all duration-200 py-2 rounded-xl ${getItemStyles(
+                  item.href,
                   active
-                    ? 'text-blue-600 bg-blue-50 shadow-md'
-                    : 'text-gray-600 hover:text-blue-600 hover:bg-blue-50'
-                }`}
+                )}`}
                 aria-current={active ? 'page' : undefined}
               >
                 <span className='text-3xl'>{item.icon}</span>
@@ -68,11 +80,12 @@ export default function WorkerBottomNav(): React.JSX.Element {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex h-16 w-20 flex-col items-center justify-center rounded-xl transition-all ${
+                className={`flex h-16 w-20 flex-col items-center justify-center rounded-xl transition-all ${getItemStyles(
+                  item.href,
                   active
-                    ? 'text-blue-700 bg-blue-50 border border-blue-200 shadow-md'
-                    : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50'
-                }`}
+                )
+                  .replace('text-blue-600', 'text-blue-700')
+                  .replace('bg-blue-50', 'bg-blue-50 border border-blue-200')}`}
                 aria-current={active ? 'page' : undefined}
               >
                 <span className='text-2xl leading-none'>{item.icon}</span>
@@ -98,11 +111,12 @@ export default function WorkerBottomNav(): React.JSX.Element {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${getItemStyles(
+                  item.href,
                   active
-                    ? 'text-blue-700 bg-blue-50 border border-blue-200'
-                    : 'text-gray-700 hover:text-blue-700 hover:bg-blue-50'
-                }`}
+                )
+                  .replace('text-blue-600', 'text-blue-700')
+                  .replace('bg-blue-50', 'bg-blue-50 border border-blue-200')}`}
                 aria-current={active ? 'page' : undefined}
               >
                 <span className='text-xl'>{item.icon}</span>
