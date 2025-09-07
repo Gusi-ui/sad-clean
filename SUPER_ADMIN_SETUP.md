@@ -94,7 +94,55 @@ node reset-super-admin-password.js
 
 ### Cambiar Contraseña
 
-#### Método 1: Desde Supabase Dashboard (Recomendado)
+#### 🚨 Problema Identificado: Token de Recuperación
+
+Si al intentar resetear desde Supabase te redirige a `localhost:3000` en lugar de `localhost:3001`,
+sigue estas soluciones:
+
+#### ✅ Solución 1: Página Dedicada (Recomendada)
+
+1. **Inicia la aplicación:**
+
+   ```bash
+   npm run dev
+   ```
+
+2. **Ve a la página de reset:**
+
+   ```
+   http://localhost:3001/auth/reset-password
+   ```
+
+3. **O usa la URL completa con tu token:**
+   ```
+   http://localhost:3001/auth/reset-password?access_token=[TU_TOKEN]&refresh_token=[TU_REFRESH_TOKEN]&expires_at=[EXPIRATION]&expires_in=3600&type=recovery
+   ```
+
+#### ✅ Solución 2: Script Automático
+
+```bash
+node process-recovery-token.js
+```
+
+Este script procesa automáticamente tu token de recuperación.
+
+#### ✅ Solución 3: Corregir Configuración de Supabase
+
+**Para Supabase Local:**
+
+- Archivo actualizado: `supabase/config.toml`
+- URLs corregidas a puerto 3001
+
+**Para Supabase Cloud:**
+
+1. Ve a https://supabase.com/dashboard
+2. Selecciona tu proyecto SAD gusi
+3. Ve a **Settings > Authentication**
+4. Actualiza **Site URL:** `http://localhost:3001`
+5. Actualiza **Redirect URLs:** `http://localhost:3001`
+6. Guarda los cambios
+
+#### Método 4: Desde Supabase Dashboard (Original)
 
 1. Ve a https://supabase.com/dashboard
 2. Selecciona tu proyecto
@@ -103,13 +151,13 @@ node reset-super-admin-password.js
 5. Haz clic en **Reset password**
 6. Establece una nueva contraseña segura
 
-#### Método 2: Usando el Script
+#### Método 5: Script Interactivo (Alternativo)
 
 ```bash
 node reset-super-admin-password.js
 ```
 
-Sigue las instrucciones en pantalla para cambiar la contraseña.
+Requiere que configures las variables de entorno primero.
 
 ## 🧪 Verificación
 
