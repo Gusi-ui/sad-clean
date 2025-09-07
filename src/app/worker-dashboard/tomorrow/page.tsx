@@ -246,7 +246,7 @@ export default function TomorrowPage(): React.JSX.Element {
           return;
         }
 
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
 
         // Verificar si mañana es festivo
         const tomorrow = new Date();
@@ -271,7 +271,7 @@ export default function TomorrowPage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
@@ -303,11 +303,13 @@ export default function TomorrowPage(): React.JSX.Element {
             );
             if (slots.length === 0) return false;
 
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             if (useHoliday) return t === 'festivos' || t === 'flexible';
             return t === 'laborables' || t === 'flexible';
           });
-          setTomorrowAssignments(filtered);
+          setTomorrowAssignments(filtered as unknown as AssignmentRow[]);
         } else {
           setTomorrowAssignments([]);
         }

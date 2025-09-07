@@ -201,7 +201,7 @@ export default function NotesPage(): React.JSX.Element {
           return;
         }
 
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
 
         // Obtener todas las asignaciones activas de la trabajadora con notas
         const { data: assignmentRows, error: assignmentErr } = await supabase
@@ -214,7 +214,7 @@ export default function NotesPage(): React.JSX.Element {
             start_date,
             end_date,
             notes,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
@@ -222,10 +222,12 @@ export default function NotesPage(): React.JSX.Element {
 
         if (assignmentErr === null && assignmentRows !== null) {
           const filtered = assignmentRows.filter((a) => {
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             return t === 'laborables' || t === 'flexible' || t === 'festivos';
           });
-          setAssignments(filtered);
+          setAssignments(filtered as unknown as AssignmentRow[]);
         }
       } catch (error) {
         // eslint-disable-next-line no-console

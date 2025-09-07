@@ -44,11 +44,12 @@ export const createAdmin = async (
     throw new Error('Email es requerido para crear un administrador');
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: userError } = await supabaseAdmin.from('auth_users').insert({
     id: newUserId,
     email: adminEmail,
     role: 'admin',
-  });
+  } as any);
 
   if (userError) {
     // Si la inserción en `auth_users` falla, eliminar el usuario de `auth.users`
@@ -226,11 +227,12 @@ export const deleteAdmin = async (
     if (authError) {
       // Si falla el borrado en Auth, intentar restaurar en auth_users
       // (Este es un caso edge, pero es buena práctica)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       await supabaseAdmin.from('auth_users').insert({
         id: userId,
         email: userEmail,
         role: 'admin',
-      });
+      } as any);
 
       throw new Error(
         `Error al eliminar de Supabase Auth: ${authError.message}`
@@ -272,7 +274,7 @@ export const getUsersStats = async (): Promise<{
 
     // Como no tenemos columna is_active, consideramos activos a todos los usuarios
     // excepto los que tengan role 'worker' (que son trabajadoras, no usuarios del sistema)
-    const users = (data ?? []).filter((u) => u.role !== 'worker');
+    const users = (data ?? []).filter((u: any) => u.role !== 'worker');
 
     const stats = {
       total: users.length,

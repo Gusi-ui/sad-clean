@@ -69,6 +69,7 @@ export const logActivity = async (
     };
 
     // Usar solo la función RPC (más confiable)
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const { data, error } = await supabase.rpc('log_system_activity', params);
 
     if (error !== null) {
@@ -77,8 +78,8 @@ export const logActivity = async (
       return 'temp-activity-id';
     }
 
-    if (data) {
-      return data;
+    if (data !== null && data !== undefined) {
+      return data as string;
     }
 
     // Si no hay data, retornar ID temporal
@@ -117,16 +118,26 @@ export const getActivities = async (): Promise<Activity[]> => {
     }
 
     // Agregar time_ago a cada actividad
-    const activitiesWithTimeAgo = (data ?? []).map((activity) => ({
-      id: activity.id,
-      user_name: activity.user_name,
-      activity_type: activity.activity_type,
-      entity_type: activity.entity_type,
-      entity_name: activity.entity_name,
-      description: activity.description,
-      created_at: activity.created_at,
-      time_ago: toTimeAgo(activity.created_at),
-    }));
+    const activitiesWithTimeAgo = (data ?? []).map(
+      (activity: {
+        id: string;
+        user_name: string;
+        activity_type: string;
+        entity_type: string;
+        entity_name: string;
+        description: string;
+        created_at: string;
+      }) => ({
+        id: activity.id,
+        user_name: activity.user_name,
+        activity_type: activity.activity_type,
+        entity_type: activity.entity_type,
+        entity_name: activity.entity_name,
+        description: activity.description,
+        created_at: activity.created_at,
+        time_ago: toTimeAgo(activity.created_at),
+      })
+    );
 
     return activitiesWithTimeAgo as Activity[];
   } catch (error) {

@@ -15,9 +15,9 @@ export interface Worker {
   is_active: boolean | null;
   monthly_contracted_hours: number;
   weekly_contracted_hours: number;
-  address?: string;
-  postal_code?: string;
-  city?: string;
+  address: string | null;
+  postal_code: string | null;
+  city: string | null;
   created_at: string | null;
   updated_at: string | null;
   user_metadata?: Record<string, unknown>;
@@ -34,9 +34,9 @@ export interface WorkerInsert {
   is_active?: boolean | null;
   monthly_contracted_hours?: number;
   weekly_contracted_hours?: number;
-  address?: string;
-  postal_code?: string;
-  city?: string;
+  address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
 }
 
 export interface WorkerUpdate {
@@ -50,9 +50,9 @@ export interface WorkerUpdate {
   is_active?: boolean | null;
   monthly_contracted_hours?: number;
   weekly_contracted_hours?: number;
-  address?: string;
-  postal_code?: string;
-  city?: string;
+  address?: string | null;
+  postal_code?: string | null;
+  city?: string | null;
 }
 
 // User Types (basado en el esquema de Supabase)
@@ -66,11 +66,120 @@ export interface User {
   postal_code: string;
   city: string;
   client_code: string;
-  monthly_assigned_hours?: number;
+  monthly_assigned_hours: number | null;
   is_active: boolean | null;
   created_at: string | null;
   updated_at: string | null;
-  medical_conditions?: string[];
+  medical_conditions: string[] | null;
+}
+
+// Assignment Types (basado en el esquema de Supabase)
+export interface Assignment {
+  id: string;
+  user_id: string;
+  worker_id: string;
+  assignment_type: string;
+  start_date: string;
+  end_date: string | null;
+  status: string;
+  weekly_hours: number;
+  priority: number;
+  schedule: Record<string, unknown>;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  user?: { name: string | null; surname: string | null };
+  worker?: { name: string | null; surname: string | null };
+}
+
+export interface AssignmentInsert {
+  id?: string;
+  user_id: string;
+  worker_id: string;
+  assignment_type: string;
+  start_date: string;
+  end_date?: string | null;
+  status?: string;
+  weekly_hours?: number;
+  priority?: number;
+  schedule?: Record<string, unknown>;
+  notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+export interface AssignmentUpdate {
+  id?: string;
+  user_id?: string;
+  worker_id?: string;
+  assignment_type?: string;
+  start_date?: string;
+  end_date?: string | null;
+  status?: string;
+  weekly_hours?: number;
+  priority?: number;
+  schedule?: Record<string, unknown>;
+  notes?: string | null;
+  created_at?: string | null;
+  updated_at?: string | null;
+}
+
+// Assignment Row Types for queries with joined data
+export interface AssignmentRow {
+  id: string;
+  user_id: string;
+  worker_id: string;
+  assignment_type: string;
+  start_date: string;
+  end_date: string | null;
+  status: string;
+  weekly_hours: number;
+  priority: number;
+  schedule: Record<string, unknown>;
+  notes: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+  users: {
+    name: string | null;
+    surname: string | null;
+    address?: string | null;
+    postal_code?: string | null;
+    city?: string | null;
+  };
+  workers: {
+    name: string | null;
+    surname: string | null;
+    address?: string | null;
+    postal_code?: string | null;
+    city?: string | null;
+  };
+}
+
+// Assignment Detail Row for detailed queries
+export interface AssignmentDetailRow {
+  id: string;
+  assignment_type: string;
+  schedule: Record<string, unknown>;
+  start_date: string;
+  end_date: string | null;
+  notes: string | null;
+  users: UserDetail[];
+}
+
+// User Detail for assignment details
+export interface UserDetail {
+  id: string;
+  name: string | null;
+  surname: string | null;
+  email: string;
+  phone: string;
+  address: string | null;
+  postal_code: string | null;
+  city: string | null;
+  client_code: string;
+  medical_conditions: string[] | null;
+  emergency_contact: string | null;
+  is_active: boolean | null;
 }
 
 export interface UserInsert {
@@ -82,9 +191,9 @@ export interface UserInsert {
   postal_code: string;
   city: string;
   client_code: string;
-  monthly_assigned_hours?: number;
+  monthly_assigned_hours?: number | null;
   is_active?: boolean | null;
-  medical_conditions?: string[];
+  medical_conditions?: string[] | null;
 }
 
 export interface UserUpdate {
@@ -96,9 +205,9 @@ export interface UserUpdate {
   postal_code?: string;
   city?: string;
   client_code?: string;
-  monthly_assigned_hours?: number;
+  monthly_assigned_hours?: number | null;
   is_active?: boolean | null;
-  medical_conditions?: string[];
+  medical_conditions?: string[] | null;
 }
 
 // Admin Types
@@ -190,3 +299,89 @@ export type RootStackParamList = {
   Profile: undefined;
   Settings: undefined;
 };
+
+// Notification Types
+export type NotificationType =
+  | 'new_user' // Nuevo usuario asignado
+  | 'user_removed' // Usuario eliminado
+  | 'schedule_change' // Cambio de horario
+  | 'assignment_change' // Cambio en asignación
+  | 'route_update' // Actualización de ruta
+  | 'system_message' // Mensaje del sistema
+  | 'reminder' // Recordatorio
+  | 'urgent' // Notificación urgente
+  | 'holiday_update'; // Actualización de festivos
+
+export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+
+export interface WorkerNotification {
+  id: string;
+  worker_id: string;
+  title: string;
+  body: string;
+  type: NotificationType;
+  data?: Record<string, unknown>;
+  read_at?: string | null;
+  sent_at: string;
+  expires_at?: string | null;
+  priority: NotificationPriority;
+  created_at: string;
+}
+
+export interface WorkerNotificationInsert {
+  worker_id: string;
+  title: string;
+  body: string;
+  type: NotificationType;
+  data?: Record<string, unknown>;
+  expires_at?: string | null;
+  priority?: NotificationPriority;
+}
+
+export interface NotificationSettings {
+  id: string;
+  worker_id: string;
+  push_enabled: boolean;
+  sound_enabled: boolean;
+  vibration_enabled: boolean;
+  new_user_notifications: boolean;
+  schedule_change_notifications: boolean;
+  assignment_change_notifications: boolean;
+  route_update_notifications: boolean;
+  reminder_notifications: boolean;
+  urgent_notifications: boolean;
+  holiday_update_notifications: boolean;
+  system_notifications: boolean;
+  quiet_hours_start?: string | null;
+  quiet_hours_end?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface PushNotificationPayload {
+  title: string;
+  body: string;
+  icon?: string;
+  badge?: number;
+  sound?: string;
+  vibrate?: number[];
+  data?: Record<string, unknown>;
+  actions?: NotificationAction[];
+}
+
+export interface NotificationAction {
+  action: string;
+  title: string;
+  icon?: string;
+}
+
+// WebSocket Types para notificaciones en tiempo real
+export interface WebSocketMessage {
+  type: 'notification' | 'ping' | 'pong' | 'error';
+  data?: unknown;
+}
+
+export interface NotificationWebSocketMessage extends WebSocketMessage {
+  type: 'notification';
+  data: WorkerNotification;
+}

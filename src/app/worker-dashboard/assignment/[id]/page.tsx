@@ -86,7 +86,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
             start_date,
             end_date,
             notes,
-            users (
+            users!inner(
               id,
               name,
               surname,
@@ -105,7 +105,7 @@ export default function WorkerAssignmentDetail(): React.JSX.Element {
           .eq('id', id)
           .eq('worker_id', w.id)
           .single();
-        if (error === null) setRow(data as AssignmentDetailRow);
+        if (error === null) setRow(data as unknown as AssignmentDetailRow);
       } finally {
         setLoading(false);
       }

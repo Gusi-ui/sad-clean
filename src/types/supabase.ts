@@ -6,411 +6,399 @@ export type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
-export type Database = {
-  // Allows to automatically instanciate createClient with right options
-  // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
-  __InternalSupabase: {
-    PostgrestVersion: '12.2.12 (cd3cf9e)';
-  };
+export interface Database {
   public: {
     Tables: {
       assignments: {
         Row: {
-          assignment_type: string;
-          created_at: string | null;
-          end_date: string | null;
           id: string;
-          notes: string | null;
+          user_id: string;
+          worker_id: string;
+          assignment_type: string;
+          start_date: string;
+          end_date: string | null;
+          status: string;
+          weekly_hours: number;
           priority: number;
           schedule: Json;
-          start_date: string;
-          status: string;
+          notes: string | null;
+          created_at: string | null;
           updated_at: string | null;
-          user_id: string;
-          weekly_hours: number;
-          worker_id: string;
         };
         Insert: {
+          id?: string;
+          user_id: string;
+          worker_id: string;
           assignment_type: string;
-          created_at?: string | null;
-          end_date?: string | null;
-          id?: string;
-          notes?: string | null;
-          priority?: number;
-          schedule?: Json;
           start_date: string;
-          status?: string;
-          updated_at?: string | null;
-          user_id: string;
-          weekly_hours: number;
-          worker_id: string;
-        };
-        Update: {
-          assignment_type?: string;
-          created_at?: string | null;
           end_date?: string | null;
-          id?: string;
-          notes?: string | null;
+          status?: string;
+          weekly_hours?: number;
           priority?: number;
           schedule?: Json;
-          start_date?: string;
-          status?: string;
+          notes?: string | null;
+          created_at?: string | null;
           updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
           user_id?: string;
+          worker_id?: string;
+          assignment_type?: string;
+          start_date?: string;
+          end_date?: string | null;
+          status?: string;
           weekly_hours?: number;
-          worker_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'assignments_user_id_fkey';
-            columns: ['user_id'];
-            isOneToOne: false;
-            referencedRelation: 'users';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'assignments_worker_id_fkey';
-            columns: ['worker_id'];
-            isOneToOne: false;
-            referencedRelation: 'workers';
-            referencedColumns: ['id'];
-          },
-        ];
-      };
-      auth_users: {
-        Row: {
-          created_at: string | null;
-          email: string;
-          id: string;
-          role: string;
-          updated_at: string | null;
-        };
-        Insert: {
+          priority?: number;
+          schedule?: Json;
+          notes?: string | null;
           created_at?: string | null;
-          email: string;
-          id?: string;
-          role?: string;
           updated_at?: string | null;
         };
-        Update: {
-          created_at?: string | null;
-          email?: string;
-          id?: string;
-          role?: string;
-          updated_at?: string | null;
-        };
-        Relationships: [];
-      };
-      holidays: {
-        Row: {
-          created_at: string | null;
-          day: number;
-          id: string;
-          month: number;
-          name: string;
-          type: string;
-          updated_at: string | null;
-          year: number;
-        };
-        Insert: {
-          created_at?: string | null;
-          day: number;
-          id?: string;
-          month: number;
-          name: string;
-          type: string;
-          updated_at?: string | null;
-          year: number;
-        };
-        Update: {
-          created_at?: string | null;
-          day?: number;
-          id?: string;
-          month?: number;
-          name?: string;
-          type?: string;
-          updated_at?: string | null;
-          year?: number;
-        };
-        Relationships: [];
-      };
-      hours_balances: {
-        Row: {
-          balance: number | null;
-          created_at: string | null;
-          holiday_hours: number;
-          id: string;
-          month: number;
-          total_hours: number;
-          updated_at: string | null;
-          worked_hours: number;
-          worker_id: string;
-          year: number;
-        };
-        Insert: {
-          balance?: number | null;
-          created_at?: string | null;
-          holiday_hours?: number;
-          id?: string;
-          month: number;
-          total_hours?: number;
-          updated_at?: string | null;
-          worked_hours?: number;
-          worker_id: string;
-          year: number;
-        };
-        Update: {
-          balance?: number | null;
-          created_at?: string | null;
-          holiday_hours?: number;
-          id?: string;
-          month?: number;
-          total_hours?: number;
-          updated_at?: string | null;
-          worked_hours?: number;
-          worker_id?: string;
-          year?: number;
-        };
-        Relationships: [
-          {
-            foreignKeyName: 'hours_balances_worker_id_fkey';
-            columns: ['worker_id'];
-            isOneToOne: false;
-            referencedRelation: 'workers';
-            referencedColumns: ['id'];
-          },
-        ];
       };
       users: {
         Row: {
+          id: string;
+          email: string;
+          name: string;
+          surname: string;
+          phone: string;
           address: string;
+          postal_code: string;
           city: string;
           client_code: string;
-          created_at: string | null;
-          email: string | null;
-          emergency_contact: Json;
-          id: string;
+          monthly_assigned_hours: number | null;
           is_active: boolean | null;
           medical_conditions: string[] | null;
-          name: string;
-          phone: string;
-          postal_code: string;
-          surname: string;
+          created_at: string | null;
           updated_at: string | null;
         };
         Insert: {
+          id?: string;
+          email: string;
+          name: string;
+          surname: string;
+          phone: string;
           address: string;
+          postal_code: string;
           city: string;
           client_code: string;
-          created_at?: string | null;
-          email?: string | null;
-          emergency_contact?: Json;
-          id?: string;
+          monthly_assigned_hours?: number | null;
           is_active?: boolean | null;
           medical_conditions?: string[] | null;
-          name: string;
-          phone: string;
-          postal_code: string;
-          surname: string;
+          created_at?: string | null;
           updated_at?: string | null;
         };
         Update: {
+          id?: string;
+          email?: string;
+          name?: string;
+          surname?: string;
+          phone?: string;
           address?: string;
+          postal_code?: string;
           city?: string;
           client_code?: string;
-          created_at?: string | null;
-          email?: string | null;
-          emergency_contact?: Json;
-          id?: string;
+          monthly_assigned_hours?: number | null;
           is_active?: boolean | null;
           medical_conditions?: string[] | null;
-          name?: string;
-          phone?: string;
-          postal_code?: string;
-          surname?: string;
+          created_at?: string | null;
           updated_at?: string | null;
         };
-        Relationships: [];
       };
       workers: {
         Row: {
-          created_at: string | null;
-          dni: string;
-          email: string;
           id: string;
+          email: string;
+          name: string;
+          surname: string;
+          phone: string;
+          dni: string;
+          worker_type: string;
+          role: string;
           is_active: boolean | null;
           monthly_contracted_hours: number;
           weekly_contracted_hours: number;
-          name: string;
-          phone: string;
-          surname: string;
+          address: string | null;
+          postal_code: string | null;
+          city: string | null;
+          created_at: string | null;
           updated_at: string | null;
-          worker_type: string;
         };
         Insert: {
-          created_at?: string | null;
-          dni: string;
+          id?: string;
           email: string;
-          id?: string;
+          name: string;
+          surname: string;
+          phone: string;
+          dni: string;
+          worker_type: string;
+          role?: string;
           is_active?: boolean | null;
           monthly_contracted_hours?: number;
           weekly_contracted_hours?: number;
-          name: string;
-          phone: string;
-          surname: string;
+          address?: string | null;
+          postal_code?: string | null;
+          city?: string | null;
+          created_at?: string | null;
           updated_at?: string | null;
-          worker_type: string;
         };
         Update: {
-          created_at?: string | null;
-          dni?: string;
-          email?: string;
           id?: string;
+          email?: string;
+          name?: string;
+          surname?: string;
+          phone?: string;
+          dni?: string;
+          worker_type?: string;
+          role?: string;
           is_active?: boolean | null;
           monthly_contracted_hours?: number;
           weekly_contracted_hours?: number;
-          name?: string;
-          phone?: string;
-          surname?: string;
+          address?: string | null;
+          postal_code?: string | null;
+          city?: string | null;
+          created_at?: string | null;
           updated_at?: string | null;
-          worker_type?: string;
         };
-        Relationships: [];
       };
-      system_activities: {
+      worker_notifications: {
         Row: {
           id: string;
-          user_id: string | null;
-          user_email: string | null;
-          user_name: string | null;
-          activity_type: string;
-          entity_type: string;
-          entity_id: string | null;
-          entity_name: string | null;
-          description: string;
-          details: Json;
-          ip_address: string | null;
-          user_agent: string | null;
-          created_at: string | null;
+          worker_id: string;
+          title: string;
+          body: string;
+          type: string;
+          data: Json | null;
+          read_at: string | null;
+          sent_at: string;
+          expires_at: string | null;
+          priority: string;
+          created_at: string;
         };
         Insert: {
           id?: string;
-          user_id?: string | null;
-          user_email?: string | null;
-          user_name?: string | null;
-          activity_type: string;
-          entity_type: string;
-          entity_id?: string | null;
-          entity_name?: string | null;
-          description: string;
-          details?: Json;
-          ip_address?: string | null;
-          user_agent?: string | null;
-          created_at?: string | null;
+          worker_id: string;
+          title: string;
+          body: string;
+          type: string;
+          data?: Json | null;
+          read_at?: string | null;
+          sent_at?: string;
+          expires_at?: string | null;
+          priority?: string;
+          created_at?: string;
         };
         Update: {
           id?: string;
-          user_id?: string | null;
-          user_email?: string | null;
-          user_name?: string | null;
-          activity_type?: string;
-          entity_type?: string;
-          entity_id?: string | null;
-          entity_name?: string | null;
-          description?: string;
-          details?: Json;
-          ip_address?: string | null;
-          user_agent?: string | null;
-          created_at?: string | null;
+          worker_id?: string;
+          title?: string;
+          body?: string;
+          type?: string;
+          data?: Json | null;
+          read_at?: string | null;
+          sent_at?: string;
+          expires_at?: string | null;
+          priority?: string;
+          created_at?: string;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'system_activities_user_id_fkey';
-            columns: ['user_id'];
-            isOneToOne: false;
-            referencedRelation: 'auth_users';
-            referencedColumns: ['id'];
-          },
-        ];
       };
-      worker_notes: {
+      worker_devices: {
         Row: {
           id: string;
-          assignment_id: string;
           worker_id: string;
-          content: string;
+          device_id: string;
+          device_name: string | null;
+          platform: string;
+          app_version: string | null;
+          os_version: string | null;
+          push_token: string | null;
+          authorized: boolean;
+          last_used: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          worker_id: string;
+          device_id: string;
+          device_name?: string | null;
+          platform: string;
+          app_version?: string | null;
+          os_version?: string | null;
+          push_token?: string | null;
+          authorized?: boolean;
+          last_used?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          worker_id?: string;
+          device_id?: string;
+          device_name?: string | null;
+          platform?: string;
+          app_version?: string | null;
+          os_version?: string | null;
+          push_token?: string | null;
+          authorized?: boolean;
+          last_used?: string;
+          created_at?: string;
+        };
+      };
+      worker_notification_settings: {
+        Row: {
+          id: string;
+          worker_id: string;
+          push_enabled: boolean;
+          sound_enabled: boolean;
+          vibration_enabled: boolean;
+          new_user_notifications: boolean;
+          schedule_change_notifications: boolean;
+          assignment_change_notifications: boolean;
+          route_update_notifications: boolean;
+          reminder_notifications: boolean;
+          urgent_notifications: boolean;
+          holiday_update_notifications: boolean;
+          system_notifications: boolean;
+          quiet_hours_start: string | null;
+          quiet_hours_end: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          worker_id: string;
+          push_enabled?: boolean;
+          sound_enabled?: boolean;
+          vibration_enabled?: boolean;
+          new_user_notifications?: boolean;
+          schedule_change_notifications?: boolean;
+          assignment_change_notifications?: boolean;
+          route_update_notifications?: boolean;
+          reminder_notifications?: boolean;
+          urgent_notifications?: boolean;
+          holiday_update_notifications?: boolean;
+          system_notifications?: boolean;
+          quiet_hours_start?: string | null;
+          quiet_hours_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          worker_id?: string;
+          push_enabled?: boolean;
+          sound_enabled?: boolean;
+          vibration_enabled?: boolean;
+          new_user_notifications?: boolean;
+          schedule_change_notifications?: boolean;
+          assignment_change_notifications?: boolean;
+          route_update_notifications?: boolean;
+          reminder_notifications?: boolean;
+          urgent_notifications?: boolean;
+          holiday_update_notifications?: boolean;
+          system_notifications?: boolean;
+          quiet_hours_start?: string | null;
+          quiet_hours_end?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      hours_balances: {
+        Row: {
+          id: string;
+          worker_id: string;
+          month: string;
+          year: number;
+          contracted_hours: number;
+          worked_hours: number;
+          balance: number;
           created_at: string | null;
           updated_at: string | null;
         };
         Insert: {
           id?: string;
-          assignment_id: string;
           worker_id: string;
-          content: string;
+          month: string;
+          year?: number;
+          contracted_hours?: number;
+          worked_hours?: number;
+          balance?: number;
           created_at?: string | null;
           updated_at?: string | null;
         };
         Update: {
           id?: string;
-          assignment_id?: string;
           worker_id?: string;
-          content?: string;
+          month?: string;
+          year?: number;
+          contracted_hours?: number;
+          worked_hours?: number;
+          balance?: number;
           created_at?: string | null;
           updated_at?: string | null;
         };
-        Relationships: [
-          {
-            foreignKeyName: 'worker_notes_assignment_id_fkey';
-            columns: ['assignment_id'];
-            isOneToOne: false;
-            referencedRelation: 'assignments';
-            referencedColumns: ['id'];
-          },
-          {
-            foreignKeyName: 'worker_notes_worker_id_fkey';
-            columns: ['worker_id'];
-            isOneToOne: false;
-            referencedRelation: 'workers';
-            referencedColumns: ['id'];
-          },
-        ];
+      };
+      holidays: {
+        Row: {
+          id: string;
+          date: string;
+          name: string;
+          type: string;
+          is_active: boolean;
+          created_at: string | null;
+          updated_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          date: string;
+          name: string;
+          type?: string;
+          is_active?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          date?: string;
+          name?: string;
+          type?: string;
+          is_active?: boolean;
+          created_at?: string | null;
+          updated_at?: string | null;
+        };
+      };
+      auth_users: {
+        Row: {
+          id: string;
+          email: string;
+          name: string;
+          role: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          name?: string;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          name?: string;
+          role?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
       };
     };
     Views: {
       [_ in never]: never;
     };
     Functions: {
-      get_recent_activities: {
-        Args: {
-          limit_count: number;
-        };
-        Returns: {
-          id: string;
-          user_name: string | null;
-          activity_type: string;
-          entity_type: string;
-          entity_name: string | null;
-          description: string;
-          created_at: string | null;
-          time_ago: string;
-        }[];
-      };
-      log_system_activity: {
-        Args: {
-          p_activity_type: string;
-          p_entity_type: string;
-          p_description: string;
-          p_user_id?: string;
-          p_user_email?: string;
-          p_user_name?: string;
-          p_entity_id?: string;
-          p_entity_name?: string;
-          p_details?: Json;
-          p_ip_address?: string;
-          p_user_agent?: string;
-        };
-        Returns: string;
-      };
+      [_ in never]: never;
     };
     Enums: {
       [_ in never]: never;
@@ -419,130 +407,52 @@ export type Database = {
       [_ in never]: never;
     };
   };
-};
-
-type DatabaseWithoutInternals = Omit<Database, '__InternalSupabase'>;
-
-type DefaultSchema = DatabaseWithoutInternals[Extract<
-  keyof Database,
-  'public'
->];
-
-export type Tables<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof (DefaultSchema['Tables'] & DefaultSchema['Views'])
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-        DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
 }
-  ? (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'] &
-      DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Views'])[TableName] extends {
-      Row: infer R;
-    }
-    ? R
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof (DefaultSchema['Tables'] &
-        DefaultSchema['Views'])
-    ? (DefaultSchema['Tables'] &
-        DefaultSchema['Views'])[DefaultSchemaTableNameOrOptions] extends {
-        Row: infer R;
-      }
-      ? R
-      : never
-    : never;
 
-export type TablesInsert<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
-      Insert: infer I;
-    }
-    ? I
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
-        Insert: infer I;
-      }
-      ? I
-      : never
-    : never;
+// Tipos helper para compatibilidad
+export type WorkerNotification =
+  Database['public']['Tables']['worker_notifications']['Row'];
+export type WorkerNotificationInsert =
+  Database['public']['Tables']['worker_notifications']['Insert'];
+export type WorkerNotificationUpdate =
+  Database['public']['Tables']['worker_notifications']['Update'];
 
-export type TablesUpdate<
-  DefaultSchemaTableNameOrOptions extends
-    | keyof DefaultSchema['Tables']
-    | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables']
-    : never = never,
-> = DefaultSchemaTableNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions['schema']]['Tables'][TableName] extends {
-      Update: infer U;
-    }
-    ? U
-    : never
-  : DefaultSchemaTableNameOrOptions extends keyof DefaultSchema['Tables']
-    ? DefaultSchema['Tables'][DefaultSchemaTableNameOrOptions] extends {
-        Update: infer U;
-      }
-      ? U
-      : never
-    : never;
+export type WorkerNotificationSettings =
+  Database['public']['Tables']['worker_notification_settings']['Row'];
+export type WorkerNotificationSettingsInsert =
+  Database['public']['Tables']['worker_notification_settings']['Insert'];
+export type WorkerNotificationSettingsUpdate =
+  Database['public']['Tables']['worker_notification_settings']['Update'];
 
-export type Enums<
-  DefaultSchemaEnumNameOrOptions extends
-    | keyof DefaultSchema['Enums']
-    | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums']
-    : never = never,
-> = DefaultSchemaEnumNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions['schema']]['Enums'][EnumName]
-  : DefaultSchemaEnumNameOrOptions extends keyof DefaultSchema['Enums']
-    ? DefaultSchema['Enums'][DefaultSchemaEnumNameOrOptions]
-    : never;
+export type WorkerDevice =
+  Database['public']['Tables']['worker_devices']['Row'];
+export type WorkerDeviceInsert =
+  Database['public']['Tables']['worker_devices']['Insert'];
+export type WorkerDeviceUpdate =
+  Database['public']['Tables']['worker_devices']['Update'];
 
-export type CompositeTypes<
-  PublicCompositeTypeNameOrOptions extends
-    | keyof DefaultSchema['CompositeTypes']
-    | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
-    schema: keyof DatabaseWithoutInternals;
-  }
-    ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes']
-    : never = never,
-> = PublicCompositeTypeNameOrOptions extends {
-  schema: keyof DatabaseWithoutInternals;
-}
-  ? DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions['schema']]['CompositeTypes'][CompositeTypeName]
-  : PublicCompositeTypeNameOrOptions extends keyof DefaultSchema['CompositeTypes']
-    ? DefaultSchema['CompositeTypes'][PublicCompositeTypeNameOrOptions]
-    : never;
+// Tipos adicionales para compatibilidad
+export type Worker = Database['public']['Tables']['workers']['Row'];
+export type WorkerInsert = Database['public']['Tables']['workers']['Insert'];
+export type WorkerUpdate = Database['public']['Tables']['workers']['Update'];
 
-export const Constants = {
-  public: {
-    Enums: {},
-  },
-} as const;
+export type User = Database['public']['Tables']['users']['Row'];
+export type UserInsert = Database['public']['Tables']['users']['Insert'];
+export type UserUpdate = Database['public']['Tables']['users']['Update'];
+
+export type Assignment = Database['public']['Tables']['assignments']['Row'];
+export type AssignmentInsert =
+  Database['public']['Tables']['assignments']['Insert'];
+export type AssignmentUpdate =
+  Database['public']['Tables']['assignments']['Update'];
+
+export type HoursBalance =
+  Database['public']['Tables']['hours_balances']['Row'];
+export type HoursBalanceInsert =
+  Database['public']['Tables']['hours_balances']['Insert'];
+export type HoursBalanceUpdate =
+  Database['public']['Tables']['hours_balances']['Update'];
+
+export type Holiday = Database['public']['Tables']['holidays']['Row'];
+export type HolidayInsert = Database['public']['Tables']['holidays']['Insert'];
+export type HolidayUpdate = Database['public']['Tables']['holidays']['Update'];

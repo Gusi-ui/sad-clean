@@ -1,0 +1,180 @@
+
+> sad-las-clean@0.1.0 lint
+> next lint
+
+`next lint` is deprecated and will be removed in Next.js 16.
+For new projects, use create-next-app to choose your preferred linter.
+For existing projects, migrate to the ESLint CLI:
+npx @next/codemod@canary next-lint-to-eslint-cli .
+
+
+./src/app/api/workers/[id]/notifications/route.ts
+118:15  Error: This assertion is unnecessary since it does not change the type of the expression.  @typescript-eslint/no-unnecessary-type-assertion
+
+./src/app/assignments/page.tsx
+197:80  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+199:13  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+199:28  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+199:39  Error: Unsafe member access .weekly_hours on an `any` value.  @typescript-eslint/no-unsafe-member-access
+199:52  Error: Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator.  @typescript-eslint/prefer-nullish-coalescing
+897:38  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+899:23  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+899:49  Error: Unsafe member access .weekly_hours on an `any` value.  @typescript-eslint/no-unsafe-member-access
+1059:38  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+1061:23  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+1061:49  Error: Unsafe member access .weekly_hours on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/app/balances/page.tsx
+97:11  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+98:11  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+99:11  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+111:11  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+112:11  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+113:11  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+
+./src/app/worker-dashboard/notes/page.tsx
+204:15  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+225:19  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+225:23  Error: Unsafe call of a(n) `any` typed value.  @typescript-eslint/no-unsafe-call
+225:49  Error: Unsafe member access .toLowerCase on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/app/worker-dashboard/page.tsx
+803:19  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+803:23  Error: Unsafe call of a(n) `any` typed value.  @typescript-eslint/no-unsafe-call
+803:49  Error: Unsafe member access .toLowerCase on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/app/worker-dashboard/route/page.tsx
+723:15  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+769:19  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+769:23  Error: Unsafe call of a(n) `any` typed value.  @typescript-eslint/no-unsafe-call
+769:49  Error: Unsafe member access .toLowerCase on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/app/worker-dashboard/schedule/page.tsx
+1149:15  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+1198:19  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+1198:23  Error: Unsafe call of a(n) `any` typed value.  @typescript-eslint/no-unsafe-call
+1198:49  Error: Unsafe member access .toLowerCase on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/app/worker-dashboard/test-notifications/page.tsx
+76:26  Error: 'getTypeLabel' was used before it was defined.  no-use-before-define
+243:14  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/app/worker-dashboard/tomorrow/page.tsx
+249:15  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+306:19  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+306:23  Error: Unsafe call of a(n) `any` typed value.  @typescript-eslint/no-unsafe-call
+306:49  Error: Unsafe member access .toLowerCase on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/components/notifications/NotificationCenter.tsx
+54:16  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./src/hooks/useNotifications.ts
+200:18  Error: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+200:18  Error: 'error' is already declared in the upper scope on line 42 column 10.  no-shadow
+
+./src/lib/activities-query.ts
+72:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+80:9  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+81:7  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+121:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+122:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+123:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+124:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+125:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+126:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+127:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+
+./src/lib/assignments-query.ts
+213:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+255:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+311:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+
+./src/lib/database.ts
+56:3  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+63:11  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+74:3  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+100:3  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+109:11  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+120:3  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+130:11  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+142:3  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+206:3  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+234:3  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+274:30  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+274:39  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+274:63  Error: Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator.  @typescript-eslint/prefer-nullish-coalescing
+303:30  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+303:39  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+303:63  Error: Prefer using nullish coalescing operator (`??`) instead of a logical or (`||`), as it is a safer operator.  @typescript-eslint/prefer-nullish-coalescing
+
+./src/lib/holidays-query.ts
+40:5  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+40:43  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+42:21  Error: Unsafe member access .type on an `any` value.  @typescript-eslint/no-unsafe-member-access
+43:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+43:27  Error: Unsafe member access .created_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+44:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+44:27  Error: Unsafe member access .updated_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+67:5  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+67:43  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+69:21  Error: Unsafe member access .type on an `any` value.  @typescript-eslint/no-unsafe-member-access
+70:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+70:27  Error: Unsafe member access .created_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+71:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+71:27  Error: Unsafe member access .updated_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+130:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+141:5  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+143:18  Error: Unsafe member access .type on an `any` value.  @typescript-eslint/no-unsafe-member-access
+144:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+144:24  Error: Unsafe member access .created_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+145:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+145:24  Error: Unsafe member access .updated_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+159:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+171:5  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+173:18  Error: Unsafe member access .type on an `any` value.  @typescript-eslint/no-unsafe-member-access
+174:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+174:24  Error: Unsafe member access .created_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+175:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+175:24  Error: Unsafe member access .updated_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+224:5  Error: Unsafe return of a value of type `any[]`.  @typescript-eslint/no-unsafe-return
+224:43  Error: Unsafe return of a value of type `any`.  @typescript-eslint/no-unsafe-return
+226:21  Error: Unsafe member access .type on an `any` value.  @typescript-eslint/no-unsafe-member-access
+227:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+227:27  Error: Unsafe member access .created_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+228:7  Error: Unsafe assignment of an `any` value.  @typescript-eslint/no-unsafe-assignment
+228:27  Error: Unsafe member access .updated_at on an `any` value.  @typescript-eslint/no-unsafe-member-access
+
+./src/lib/notification-service.ts
+87:43  Error: This assertion is unnecessary since it does not change the type of the expression.  @typescript-eslint/no-unnecessary-type-assertion
+
+./src/lib/users-query.ts
+82:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+108:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+158:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+165:11  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+
+./src/lib/workers-query.ts
+153:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+208:10  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+218:13  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+268:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+275:11  Error: Unsafe object destructuring of a property with an `any` value.  @typescript-eslint/no-unsafe-assignment
+
+./src/utils/test-notifications.ts
+231:20  Error: Promise returned in function argument where a void return was expected.  @typescript-eslint/no-misused-promises
+271:22  Error: 'playError' is defined but never used.  @typescript-eslint/no-unused-vars
+279:17  Error: Strings must use singlequote.  quotes
+336:29  Error: 'playError' is defined but never used.  @typescript-eslint/no-unused-vars
+342:23  Error: Strings must use singlequote.  quotes
+404:29  Error: 'playError' is defined but never used.  @typescript-eslint/no-unused-vars
+410:23  Error: Strings must use singlequote.  quotes
+507:33  Warning: Unexpected object value in conditional. The condition is always true.  @typescript-eslint/strict-boolean-expressions
+508:20  Error: Unexpected any. Specify a different type.  @typescript-eslint/no-explicit-any
+508:25  Error: Unsafe member access .webkitAudioContext on an `any` value.  @typescript-eslint/no-unsafe-member-access
+708:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+717:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+726:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+765:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+812:8  Warning: Unexpected any value in conditional. An explicit comparison or type conversion is required.  @typescript-eslint/strict-boolean-expressions
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules

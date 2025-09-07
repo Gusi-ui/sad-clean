@@ -11,6 +11,7 @@ import React, {
 import Link from 'next/link';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
+import NotificationCenter from '@/components/notifications/NotificationCenter';
 import { Button } from '@/components/ui';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
@@ -784,7 +785,7 @@ export default function WorkerDashboard(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
@@ -800,11 +801,13 @@ export default function WorkerDashboard(): React.JSX.Element {
               useHoliday
             );
             if (slots.length === 0) return false;
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             if (useHoliday) return t === 'festivos' || t === 'flexible';
             return t === 'laborables' || t === 'flexible';
           });
-          setTodayAssignments(filtered);
+          setTodayAssignments(filtered as unknown as AssignmentRow[]);
 
           // Calcular automáticamente los servicios completados basándose en el tiempo
           const now = new Date();
@@ -1239,12 +1242,16 @@ export default function WorkerDashboard(): React.JSX.Element {
 
   // Cargar días festivos del mes actual
   useEffect(() => {
-    void loadMonthHolidays();
+    loadMonthHolidays().catch(() => {
+      // Error loading month holidays
+    });
   }, [loadMonthHolidays]);
 
   // Cargar control de horas contratadas vs trabajadas
   useEffect(() => {
-    void loadHoursControl();
+    loadHoursControl().catch(() => {
+      // Error loading hours control
+    });
   }, [loadHoursControl]);
 
   const displayName = useMemo(() => {
@@ -1394,10 +1401,20 @@ export default function WorkerDashboard(): React.JSX.Element {
           {/* 1. Horarios de Hoy - Primera sección */}
           <div className='bg-white rounded-2xl shadow-sm mb-8' ref={todayRef}>
             <div className='p-6 border-b border-gray-200'>
-              <h2 className='text-xl font-bold text-gray-900'>
-                🕐 Horarios de Hoy
-              </h2>
-              <p className='text-gray-600'>{formatLongDate(new Date())}</p>
+              <div className='flex items-center justify-between'>
+                <div className='flex-1'>
+                  <h2 className='text-xl font-bold text-gray-900'>
+                    🕐 Horarios de Hoy
+                  </h2>
+                  <p className='text-gray-600 text-sm'>
+                    {formatLongDate(new Date())}
+                  </p>
+                </div>
+                {/* Botón de notificaciones integrado en la sección de horarios */}
+                <div className='ml-4'>
+                  <NotificationCenter />
+                </div>
+              </div>
             </div>
             <div className='p-6'>
               {loading ? (
