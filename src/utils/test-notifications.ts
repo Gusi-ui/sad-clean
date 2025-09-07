@@ -134,11 +134,11 @@ export default class NotificationTester {
     console.log('🔊 PRUEBA SINTÉTICA: Generando tono audible...');
 
     // Crear contexto de audio
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext ??
+      AudioContext;
     const audioContext = new AudioContextClass();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
@@ -282,11 +282,11 @@ export default class NotificationTester {
     console.log('🎵 PRUEBA SINTÉTICA: Generando tono audible...');
 
     // Crear contexto de audio
-    // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
     const AudioContextClass =
-      window.AudioContext ||
-      (window as unknown as { webkitAudioContext: typeof AudioContext })
-        .webkitAudioContext;
+      window.AudioContext ??
+      (window as unknown as { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext ??
+      AudioContext;
     const audioContext = new AudioContextClass();
     const oscillator = audioContext.createOscillator();
     const gainNode = audioContext.createGain();
