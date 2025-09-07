@@ -13,6 +13,7 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { label: 'Inicio', href: '/worker-dashboard', icon: '🏠' },
+  { label: 'Rutas', href: '/worker-dashboard/route', icon: '🗺️' },
   { label: 'Planilla', href: '/worker-dashboard/schedule', icon: '📋' },
   { label: 'Balance', href: '/worker-dashboard/balances', icon: '⏱️' },
 ];
