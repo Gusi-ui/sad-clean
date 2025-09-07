@@ -1,5 +1,5 @@
 /**
- * Tipos TypeScript para la aplicación SAD LAS
+ * Tipos TypeScript para la aplicación SAD gusi
  */
 
 // Worker Types (basado en el esquema de Supabase)

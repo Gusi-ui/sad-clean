@@ -1,8 +1,8 @@
-# 🏗️ Guía de Desarrollo - SAD LAS
+# 🏗️ Guía de Desarrollo - SAD gusi
 
 ## 📋 Información General
 
-**Proyecto**: Sistema de Asistencia Domiciliaria LAS **Versión Actual**: 2.0.0 **Última
+**Proyecto**: Sistema de Asistencia Domiciliaria SAD gusi **Versión Actual**: 2.0.0 **Última
 Actualización**: $(date) **Estado**: 🟢 Producción
 
 ## 🚀 Estrategia de Desarrollo
@@ -747,8 +747,8 @@ Descripción de lo que debería pasar
 
 ## 🎯 Conclusión
 
-Esta guía establece los **estándares profesionales** para el desarrollo del proyecto SAD LAS. Seguir
-estos procesos garantiza:
+Esta guía establece los **estándares profesionales** para el desarrollo del proyecto SAD gusi.
+Seguir estos procesos garantiza:
 
 - ✅ **Calidad consistente** del código
 - ✅ **Experiencia excepcional** para usuarios
@@ -756,8 +756,8 @@ estos procesos garantiza:
 - ✅ **Escalabilidad** del proyecto
 - ✅ **Colaboración eficiente** del equipo
 
-**¡Sigamos construyendo SAD LAS con los más altos estándares!** 🚀
+**¡Sigamos construyendo SAD gusi con los más altos estándares!** 🚀
 
 ---
 
-_Última actualización: $(date)_ _Versión: 2.0.0_ _Autor: Equipo de Desarrollo SAD LAS_
+_Última actualización: $(date)_ _Versión: 2.0.0_ _Autor: Equipo de Desarrollo SAD gusi_

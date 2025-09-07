@@ -1,9 +1,9 @@
-# 🤝 Guía para Contribuidores - SAD LAS
+# 🤝 Guía para Contribuidores - SAD gusi
 
 ## 📋 Información General
 
-¡Bienvenido/a! Este documento explica cómo contribuir al proyecto **SAD LAS**. Apreciamos tu interés
-en mejorar nuestra aplicación de asistencia domiciliaria.
+¡Bienvenido/a! Este documento explica cómo contribuir al proyecto **SAD gusi**. Apreciamos tu
+interés en mejorar nuestra aplicación de asistencia domiciliaria.
 
 ---
 
@@ -612,7 +612,7 @@ import Button from '@/components/Button';
 
 ## 🎉 ¡Gracias por Contribuir!
 
-Tu contribución ayuda a mejorar **SAD LAS** para miles de usuarios. Cada mejora, por pequeña que sea, marca una diferencia real en la experiencia de nuestros usuarios.
+Tu contribución ayuda a mejorar **SAD gusi** para miles de usuarios. Cada mejora, por pequeña que sea, marca una diferencia real en la experiencia de nuestros usuarios.
 
 ### 🚀 Próximos Pasos:
 1. **Elige un issue** interesante
@@ -620,11 +620,11 @@ Tu contribución ayuda a mejorar **SAD LAS** para miles de usuarios. Cada mejora
 3. **¡Empieza a contribuir!**
 4. **Únete a nuestra comunidad**
 
-**¡Bienvenido al equipo de contribuidores de SAD LAS!** 🤝✨
+**¡Bienvenido al equipo de contribuidores de SAD gusi!** 🤝✨
 
 ---
 
 *Última actualización: $(date)*
 *Versión: 1.0.0*
-*Equipo: SAD LAS Development Team*
+*Equipo: SAD gusi Development Team*
 ```

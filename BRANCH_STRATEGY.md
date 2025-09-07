@@ -1,8 +1,8 @@
-# 🌿 Estrategia de Ramas - SAD LAS
+# 🌿 Estrategia de Ramas - SAD gusi
 
 ## 📋 Información General
 
-Esta estrategia define cómo manejamos las **ramas de desarrollo** en el proyecto SAD LAS para
+Esta estrategia define cómo manejamos las **ramas de desarrollo** en el proyecto SAD gusi para
 mantener un flujo de trabajo profesional, organizado y seguro.
 
 ---
@@ -622,4 +622,4 @@ Esta estrategia de ramas asegura:
 
 ---
 
-_Última actualización: $(date)_ _Versión: 1.0.0_ _Autor: Equipo de Desarrollo SAD LAS_
+_Última actualización: $(date)_ _Versión: 1.0.0_ _Autor: Equipo de Desarrollo SAD gusi_

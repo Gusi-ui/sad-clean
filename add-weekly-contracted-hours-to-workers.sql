@@ -1,5 +1,5 @@
 -- ============================================================================
--- SAD LAS - AÑADIR HORAS CONTRATADAS SEMANALES A TRABAJADORAS
+-- SAD gusi - AÑADIR HORAS CONTRATADAS SEMANALES A TRABAJADORAS
 -- ============================================================================
 -- Script para añadir el campo de horas contratadas semanales a la tabla workers
 -- Ejecutar en el SQL Editor de Supabase
@@ -32,12 +32,12 @@ WHERE table_name = 'workers'
 AND column_name = 'weekly_contracted_hours';
 
 -- 6. Mostrar trabajadoras existentes con la nueva columna
-SELECT 
+SELECT
     name,
     surname,
     weekly_contracted_hours,
-    CASE 
-        WHEN weekly_contracted_hours > 0 THEN 
+    CASE
+        WHEN weekly_contracted_hours > 0 THEN
             CONCAT('Configurado: ', weekly_contracted_hours, 'h/semana')
         ELSE 'Pendiente de configurar'
     END as status

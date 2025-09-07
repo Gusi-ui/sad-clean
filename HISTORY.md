@@ -1,8 +1,8 @@
-# 📚 Historial de Versiones - SAD LAS
+# 📚 Historial de Versiones - SAD gusi
 
 ## 🏷️ Puntos Históricos Importantes
 
-Este documento mantiene un registro de los **puntos históricos críticos** del proyecto SAD LAS.
+Este documento mantiene un registro de los **puntos históricos críticos** del proyecto SAD gusi.
 Estos puntos sirven como referencias seguras para reversiones y restauraciones en caso de
 emergencias.
 
@@ -258,7 +258,7 @@ v{MAJOR}.{MINOR}.{PATCH}[-{PRE-RELEASE}][+{BUILD-METADATA}]
 
 ## 🎯 CONCLUSIÓN
 
-Este historial mantiene la **evolución completa** del proyecto SAD LAS, asegurando que siempre
+Este historial mantiene la **evolución completa** del proyecto SAD gusi, asegurando que siempre
 tengamos **puntos de restauración seguros** disponibles.
 
 ### 🛡️ Beneficios del Sistema:
@@ -277,5 +277,5 @@ tengamos **puntos de restauración seguros** disponibles.
 
 ---
 
-_Historial mantenido por: Equipo de Desarrollo SAD LAS_ _Última actualización: $(date)_ _Versión del
-documento: 1.0.0_
+_Historial mantenido por: Equipo de Desarrollo SAD gusi_ _Última actualización: $(date)_ _Versión
+del documento: 1.0.0_
