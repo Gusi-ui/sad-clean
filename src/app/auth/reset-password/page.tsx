@@ -63,15 +63,71 @@ export default function ResetPasswordPage() {
     setError(null);
 
     try {
-      // El token manual debería contener access_token y refresh_token
-      const urlParams = new URLSearchParams(manualToken);
-      const accessToken = urlParams.get('access_token');
-      const refreshToken = urlParams.get('refresh_token');
+      let accessToken: string | null = null;
+      let refreshToken: string | null = null;
+      let tokenType: string | null = null;
 
+      // Intentar diferentes formatos de URL
+      const trimmedToken = manualToken.trim();
+
+      // Método 1: URL con hash (formato típico de Supabase)
+      if (trimmedToken.includes('#')) {
+        const hashPart = trimmedToken.split('#')[1];
+        if (hashPart) {
+          const hashParams = new URLSearchParams(hashPart);
+          accessToken = hashParams.get('access_token');
+          refreshToken = hashParams.get('refresh_token');
+          tokenType = hashParams.get('type');
+        }
+      }
+
+      // Método 2: URL con parámetros query (por si acaso)
       if (accessToken === null || refreshToken === null) {
+        try {
+          const urlObj = new URL(trimmedToken);
+          accessToken = urlObj.searchParams.get('access_token');
+          refreshToken = urlObj.searchParams.get('refresh_token');
+          tokenType = urlObj.searchParams.get('type');
+        } catch {
+          // No es una URL válida, intentar parsear como parámetros directamente
+          const directParams = new URLSearchParams(trimmedToken);
+          accessToken = directParams.get('access_token');
+          refreshToken = directParams.get('refresh_token');
+          tokenType = directParams.get('type');
+        }
+      }
+
+      // Método 3: Extraer tokens directamente del texto (último recurso)
+      if (accessToken === null || refreshToken === null) {
+        const accessMatch = trimmedToken.match(/access_token=([^&]+)/);
+        const refreshMatch = trimmedToken.match(/refresh_token=([^&]+)/);
+        const typeMatch = trimmedToken.match(/type=([^&]+)/);
+
+        if (accessMatch) accessToken = accessMatch[1];
+        if (refreshMatch) refreshToken = refreshMatch[1];
+        if (typeMatch) tokenType = typeMatch[1];
+      }
+
+      // Validar que tenemos los tokens necesarios
+      if (accessToken === null || refreshToken === null) {
+        // eslint-disable-next-line no-console
+        console.log('Debug - Token parsing:', {
+          original: trimmedToken,
+          accessToken,
+          refreshToken,
+          tokenType,
+        });
+
         setError(
-          'Token inválido. Asegúrate de copiar la URL completa de recuperación.'
+          'Token inválido. Asegúrate de copiar la URL completa que recibiste en el email. Debe contener "access_token" y "refresh_token".'
         );
+        setLoading(false);
+        return;
+      }
+
+      // Verificar que sea un token de recuperación
+      if (tokenType !== null && tokenType !== 'recovery') {
+        setError('Este no es un token de recuperación de contraseña válido.');
         setLoading(false);
         return;
       }
@@ -83,8 +139,10 @@ export default function ResetPasswordPage() {
         })
         .then(({ error: sessionError }) => {
           if (sessionError) {
+            // eslint-disable-next-line no-console
+            console.error('Session error:', sessionError);
             setError(
-              'Token inválido o expirado. Solicita un nuevo enlace de recuperación.'
+              `Token inválido o expirado: ${sessionError.message}. Solicita un nuevo enlace de recuperación.`
             );
           } else {
             setTokenValid(true);
@@ -93,8 +151,12 @@ export default function ResetPasswordPage() {
           }
           setLoading(false);
         });
-    } catch {
-      setError('Error al procesar el token. Verifica que la URL sea correcta.');
+    } catch (parseError) {
+      // eslint-disable-next-line no-console
+      console.error('Parse error:', parseError);
+      setError(
+        'Error al procesar el token. Verifica que hayas copiado la URL completa del email.'
+      );
       setLoading(false);
     }
   };
@@ -228,7 +290,7 @@ export default function ResetPasswordPage() {
                 <textarea
                   className='w-full p-3 border border-blue-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 resize-none'
                   rows={4}
-                  placeholder='Pega aquí la URL completa, por ejemplo: http://localhost:3001/auth/reset-password?access_token=...&refresh_token=...'
+                  placeholder='Pega aquí la URL completa del email. Ejemplo: http://localhost:3000/#access_token=...&refresh_token=...&type=recovery'
                   value={manualToken}
                   onChange={(e) => setManualToken(e.target.value)}
                 />
@@ -278,6 +340,27 @@ export default function ResetPasswordPage() {
                     <code className='bg-blue-100 px-1 rounded'>
                       node process-recovery-token.js
                     </code>
+                  </p>
+                </div>
+              </details>
+
+              <details className='text-sm mt-3'>
+                <summary className='cursor-pointer text-orange-700 hover:text-orange-800 font-medium'>
+                  🔍 ¿Qué formato debe tener la URL?
+                </summary>
+                <div className='mt-2 text-orange-600 space-y-2'>
+                  <p>
+                    <strong>Ejemplo de URL correcta:</strong>
+                  </p>
+                  <code className='block bg-orange-50 p-2 rounded text-xs break-all'>
+                    http://localhost:3000/#access_token=eyJ...&refresh_token=abc...&type=recovery
+                  </code>
+                  <p className='text-xs mt-2'>
+                    • Debe contener: <code>access_token=</code>,{' '}
+                    <code>refresh_token=</code>
+                    <br />• Puede tener <code>#</code> o <code>?</code> al
+                    inicio de los parámetros
+                    <br />• Copia la URL completa tal como aparece en el email
                   </p>
                 </div>
               </details>
