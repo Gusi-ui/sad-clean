@@ -54,21 +54,30 @@ export default function ResetPasswordPage() {
     else if (verifyToken !== null && type === 'recovery') {
       // eslint-disable-next-line no-console
       console.log('Token de verificación de Supabase detectado');
-      // Procesar token de verificación de Supabase
+      // Procesar token de verificación de Supabase usando exchangeCodeForSession
       void supabase.auth
-        .verifyOtp({
-          token_hash: verifyToken,
-          type: 'recovery',
-        })
-        .then(({ error: verifyError }) => {
-          if (verifyError) {
+        .exchangeCodeForSession(verifyToken)
+        .then(({ data, error: exchangeError }) => {
+          if (exchangeError) {
+            // eslint-disable-next-line no-console
+            console.error('Error al intercambiar código:', exchangeError);
             setError(
-              `Error al verificar token: ${verifyError.message}. Intenta con el método manual.`
+              `Error al procesar token de recuperación: ${exchangeError.message}. Intenta con el método manual.`
             );
             setShowManualInput(true);
-          } else {
+            // eslint-disable-next-line @typescript-eslint/strict-boolean-expressions
+          } else if (data?.session) {
+            // eslint-disable-next-line no-console
+            console.log(
+              'Sesión establecida correctamente con token de verificación'
+            );
             setTokenValid(true);
             setError(null);
+          } else {
+            setError(
+              'No se pudo establecer la sesión. Intenta con el método manual.'
+            );
+            setShowManualInput(true);
           }
         });
     } else {
@@ -143,17 +152,41 @@ export default function ResetPasswordPage() {
         );
 
         if (verifyTokenMatch && verifyTypeMatch && supabaseUrlMatch) {
-          // Es un token de verificación de Supabase
+          // Es un token de verificación de Supabase - procesarlo directamente
           // eslint-disable-next-line no-console
-          console.log('Token de verificación de Supabase detectado');
-          setError(
-            `Este es un token de verificación de Supabase. Usa la URL directamente en tu navegador:
-
-${trimmedToken}
-
-O configura la redirección en Supabase para que apunte a: http://localhost:3001`
+          console.log(
+            'Token de verificación de Supabase detectado - procesando'
           );
-          setLoading(false);
+          const verifyToken = verifyTokenMatch[1];
+
+          void supabase.auth
+            .exchangeCodeForSession(verifyToken)
+            .then(({ data, error: exchangeError }) => {
+              if (exchangeError) {
+                // eslint-disable-next-line no-console
+                console.error(
+                  'Error al procesar token de verificación:',
+                  exchangeError
+                );
+                setError(
+                  `Error al procesar token de recuperación: ${exchangeError.message}. Solicita un nuevo enlace.`
+                );
+                // eslint-disable-next-line @typescript-eslint/prefer-optional-chain
+              } else if (data?.session) {
+                // eslint-disable-next-line no-console
+                console.log(
+                  'Sesión establecida correctamente con token de verificación manual'
+                );
+                setTokenValid(true);
+                setError(null);
+                setShowManualInput(false);
+              } else {
+                setError(
+                  'No se pudo establecer la sesión con el token proporcionado.'
+                );
+              }
+              setLoading(false);
+            });
           return;
         }
       }

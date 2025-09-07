@@ -9,8 +9,14 @@ export function middleware(request: NextRequest) {
   const verifyToken = searchParams.get('token');
   const verifyType = searchParams.get('type');
 
-  if (verifyToken && verifyType === 'recovery' && pathname === '/auth/v1/verify') {
-    console.log('Middleware: Enlace de verificación de Supabase detectado, procesando...');
+  if (
+    verifyToken &&
+    verifyType === 'recovery' &&
+    pathname === '/auth/v1/verify'
+  ) {
+    console.log(
+      'Middleware: Enlace de verificación de Supabase detectado, procesando...'
+    );
 
     // Crear una respuesta que procese el token de verificación
     const verifyUrl = new URL('/auth/reset-password', request.url);
