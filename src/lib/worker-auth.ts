@@ -93,7 +93,11 @@ export const ensureWorkerAuthAccount = async (
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const { error: upsertErr } = await supabaseAdmin
     .from('auth_users')
-    .upsert({ id: authUserId, email, role: 'worker' } as any, { onConflict: 'id' });
+    .upsert(
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      { id: authUserId, email, role: 'worker' } as any,
+      { onConflict: 'id' }
+    );
 
   if (upsertErr !== null) {
     return {

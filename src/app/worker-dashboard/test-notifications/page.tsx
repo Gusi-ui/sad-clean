@@ -97,9 +97,13 @@ export default function TestNotificationsPage() {
         throw new Error('Notification service not available');
       }
 
-      const result = await (
-        tester.notificationService as any
-      ).createAndSendNotification(user.id, notification);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const result =
+        await // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+        (tester.notificationService as any).createAndSendNotification(
+          user.id,
+          notification
+        );
 
       const success = result !== null && result !== undefined;
       setTestResults((prev) => ({ ...prev, [type]: success }));

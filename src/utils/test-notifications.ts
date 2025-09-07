@@ -89,8 +89,7 @@ export default class NotificationTester {
               // eslint-disable-next-line no-console
               console.log(`🔊 Sonido ${type} finalizado`);
             };
-          } catch (playError) {
-            // eslint-disable-next-line @typescript-eslint/no-unused-vars
+          } catch {
             // Manejar error de autoplay - común en navegadores modernos
             // eslint-disable-next-line no-console
             console.log(
@@ -98,7 +97,7 @@ export default class NotificationTester {
             );
             // eslint-disable-next-line no-console
             console.log(
-              `💡 Para activar sonidos: Usa el botón "Activar Sonidos" o haz clic en cualquier lugar de la página`
+              "💡 Para activar sonidos: Usa el botón 'Activar Sonidos' o haz clic en cualquier lugar de la página"
             );
           }
         } catch (error) {
