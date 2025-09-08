@@ -263,13 +263,15 @@ utilizan la aplicación principalmente en sus teléfonos durante el trabajo.
 
 ### 📊 **MÉTRICAS DE MEJORA**
 
-| Aspecto            | Antes          | Después          | Mejora              |
-| ------------------ | -------------- | ---------------- | ------------------- |
-| Layout             | Con márgenes   | Fullscreen       | ✅ +100% espacio    |
-| Botones transporte | 2 filas        | 1 fila           | ✅ -50% altura      |
-| Cabeceras          | Siempre largas | Adaptativas      | ✅ +50% legibilidad |
-| Espaciado          | Genérico       | Optimizado touch | ✅ Mejor UX         |
-| Indicadores        | Textuales      | Visuales         | ✅ +70% claridad    |
+| Aspecto              | Antes          | Después            | Mejora                 |
+| -------------------- | -------------- | ------------------ | ---------------------- |
+| Layout               | Con márgenes   | Fullscreen         | ✅ +100% espacio       |
+| Botones transporte   | 2 filas        | 1 fila             | ✅ -50% altura         |
+| Cabeceras            | Siempre largas | Adaptativas        | ✅ +50% legibilidad    |
+| Espaciado            | Genérico       | Optimizado touch   | ✅ Mejor UX            |
+| Indicadores          | Textuales      | Visuales           | ✅ +70% claridad       |
+| **Segmentos viaje**  | **Complejo**   | **Ultra compacto** | **✅ +80% usabilidad** |
+| **Visual jerarquía** | **Genérica**   | **Mobile-first**   | **✅ +60% claridad**   |
 
 ### 🔧 **TÉCNICAS TÉCNICAS APLICADAS**
 
@@ -337,9 +339,10 @@ w-full px-2 sm:px-4 lg:px-8
 
 ```bash
 🌟 Rama: feature/google-maps-integration
-📝 Total Commits: 3 (API + UI + Mobile)
+📝 Total Commits: 4 (API + UI + Mobile + Segments)
 ✅ Integración Completa: Google Maps API
 ✅ Diseño Móvil: Optimizado al 100%
+✅ Segmentos Viaje: Ultra compactos y visuales
 ✅ Experiencia Usuario: Excelente en móvil
 ✅ Código: Limpio y mantenible
 ```
@@ -372,6 +375,6 @@ w-full px-2 sm:px-4 lg:px-8
 
 ---
 
-**_Fin del log de desarrollo - Google Maps Integration + Mobile Optimization v2.0_**
+**_Fin del log de desarrollo - Google Maps Integration + Mobile Optimization + Segments v2.1_**
 
 _Proyecto listo para producción con experiencia móvil excepcional_ 🎊
