@@ -21,6 +21,8 @@ import {
   logAssignmentUpdateActivityDetailed,
 } from '@/lib/activities-query';
 import { supabase } from '@/lib/database';
+import { notificationService } from '@/lib/notification-service';
+import type { NotificationType } from '@/types';
 import type { Json } from '@/types/supabase';
 import { logger } from '@/utils/logger';
 
@@ -47,7 +49,7 @@ async function sendAssignmentChangeNotification(
   userId: string,
   oldHours: number,
   newHours: number
-): Promise<void> {
+): Promise<boolean> {
   try {
     // Obtener información del usuario y trabajadora
     const { data: userData, error: userError } = await supabase
@@ -57,8 +59,8 @@ async function sendAssignmentChangeNotification(
       .single();
 
     if (userError) {
-      logger.warn('Error obteniendo datos del usuario:', userError);
-      return;
+      console.warn('⚠️ Error obteniendo datos del usuario:', userError);
+      return false;
     }
 
     const { data: workerData, error: workerError } = await supabase
@@ -68,13 +70,13 @@ async function sendAssignmentChangeNotification(
       .single();
 
     if (workerError) {
-      logger.warn('Error obteniendo datos de la trabajadora:', workerError);
-      return;
+      console.warn('⚠️ Error obteniendo datos de la trabajadora:', workerError);
+      return false;
     }
 
     if (userData === null || workerData === null) {
-      logger.warn('Datos incompletos para enviar notificación');
-      return;
+      console.warn('⚠️ Datos incompletos para enviar notificación');
+      return false;
     }
 
     const userName = `${userData.name ?? ''} ${userData.surname ?? ''}`.trim();
@@ -85,27 +87,76 @@ async function sendAssignmentChangeNotification(
     const hoursChange = newHours > oldHours ? 'aumentado' : 'reducido';
     const changeAmount = Math.abs(newHours - oldHours);
 
-    // Preparar notificación (implementación pendiente)
-    const notificationMessage = `Preparando notificación para ${workerName}: horas ${hoursChange} de ${oldHours}h a ${newHours}h (+${changeAmount}h)`;
-    console.log('[NOTIFICATION]', notificationMessage);
+    // Verificar que las tablas existan antes de enviar notificación
+    try {
+      await supabase.from('worker_notifications').select('id').limit(1);
+    } catch {
+      console.warn(
+        '⚠️ Tabla worker_notifications no encontrada, creando notificación básica'
+      );
+      // Crear notificación básica sin usar el servicio completo
+      const { error: basicError } = await supabase
+        .from('worker_notifications')
+        .insert({
+          worker_id: workerId,
+          title: '📋 Asignación modificada',
+          body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+          type: 'assignment_change',
+          priority: 'high',
+          data: {
+            userName,
+            oldHours,
+            newHours,
+            difference: changeAmount,
+            changeType: hoursChange,
+          },
+        });
 
-    // Simulamos que la notificación se envió correctamente
-    const notificationResult = { id: 'simulated', sent: true };
+      if (basicError) {
+        console.error('❌ Error creando notificación básica:', basicError);
+        return false;
+      }
+
+      console.log(`✅ Notificación básica creada para ${workerName}`);
+      return true;
+    }
+
+    // Enviar notificación completa usando el servicio
+    const notificationResult =
+      await notificationService.createAndSendNotification(workerId, {
+        title: '📋 Asignación modificada',
+        body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+        type: 'assignment_change' as NotificationType,
+        priority: 'high',
+        data: {
+          userName,
+          oldHours,
+          newHours,
+          difference: changeAmount,
+          changeType: hoursChange,
+          assignmentType: 'trabajo semanal',
+        },
+      });
 
     if (notificationResult !== null) {
-      const successMessage = `Notificación de cambio de asignación enviada a ${workerName} para usuario ${userName}`;
-      console.log('[NOTIFICATION SUCCESS]', successMessage);
-    } else {
-      const errorMessage = `No se pudo enviar notificación de cambio de asignación a ${workerName}`;
-      console.warn('[NOTIFICATION ERROR]', errorMessage);
+      console.log(
+        `✅ Notificación de cambio de asignación enviada a ${workerName} para usuario ${userName}`
+      );
+      return true;
     }
+
+    console.error(
+      `❌ Error enviando notificación de cambio de asignación a ${workerName}`
+    );
+    return false;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    logger.error(
-      'Error enviando notificación de cambio de asignación:',
+    console.error(
+      '❌ Error enviando notificación de cambio de asignación:',
       errorMessage
     );
     // No relanzar el error para no interrumpir el flujo principal
+    return false;
   }
 }
 
@@ -1125,19 +1176,18 @@ export default function AssignmentsPage() {
                   setError(`Error actualizando asignación: ${message}`);
                 } else {
                   // Enviar notificación a la trabajadora sobre el cambio de asignación
-                  try {
+                  const notificationSent =
                     await sendAssignmentChangeNotification(
                       editingAssignment.worker_id,
                       editingAssignment.user_id,
                       editingAssignment.monthly_hours ?? 0,
                       updatedWeeklyHours
                     );
-                  } catch (notificationError) {
-                    logger.warn(
-                      'Error enviando notificación de cambio de asignación:',
-                      notificationError
+
+                  if (!notificationSent) {
+                    console.warn(
+                      '⚠️ No se pudo enviar notificación de cambio de asignación, pero la actualización continúa'
                     );
-                    // No fallar la actualización por error en notificación
                   }
 
                   // Recargar datos
