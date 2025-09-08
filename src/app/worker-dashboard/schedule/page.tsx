@@ -412,8 +412,9 @@ const DayServicesModal = (props: {
     start: string;
     end: string;
   }>;
+  dayStatus?: 'pending' | 'inprogress' | 'completed';
 }): React.JSX.Element => {
-  const { isOpen, onClose, date, services } = props;
+  const { isOpen, onClose, date, services, dayStatus = 'pending' } = props;
 
   if (!isOpen) return <div />;
 
@@ -449,19 +450,30 @@ const DayServicesModal = (props: {
               <p className='text-sm text-gray-500 mt-1'>Este día está libre</p>
             </div>
           ) : (
-            services.map((service, index) => (
-              <div
-                key={index}
-                className='p-3 bg-blue-50 rounded border-l-4 border-blue-400'
-              >
-                <div className='font-semibold text-gray-900 bg-white px-2 py-1 rounded shadow-sm inline-block mb-1'>
-                  {service.userLabel}
+            services.map((service, index) => {
+              // Aplicar colores tenues si el día está completado
+              const isCompletedDay = dayStatus === 'completed';
+              const serviceClasses = isCompletedDay
+                ? 'p-3 bg-gray-50/70 rounded border-l-4 border-gray-300 opacity-75'
+                : 'p-3 bg-blue-50 rounded border-l-4 border-blue-400';
+
+              const userLabelClasses = isCompletedDay
+                ? 'font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded shadow-sm inline-block mb-1'
+                : 'font-semibold text-gray-900 bg-white px-2 py-1 rounded shadow-sm inline-block mb-1';
+
+              const timeClasses = isCompletedDay
+                ? 'text-sm text-gray-600 font-medium'
+                : 'text-sm text-gray-700 font-medium';
+
+              return (
+                <div key={index} className={serviceClasses}>
+                  <div className={userLabelClasses}>{service.userLabel}</div>
+                  <div className={timeClasses}>
+                    {service.start} - {service.end}
+                  </div>
                 </div>
-                <div className='text-sm text-gray-700 font-medium'>
-                  {service.start} - {service.end}
-                </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>
@@ -533,6 +545,93 @@ const WorkerMonthCalendar = (props: {
       d.getDate()
     ).padStart(2, '0')}`;
   const todayKey = getDateKeyLocal(new Date());
+
+  // Función auxiliar para convertir hora a minutos
+  const toMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Función para determinar el estado de un día basado en sus servicios
+  const getDayStatus = (
+    services: ExpandedEntry[],
+    date: Date
+  ): 'pending' | 'inprogress' | 'completed' => {
+    if (services.length === 0) return 'pending';
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    // Si es un día futuro, está pendiente
+    if (targetDate > today) return 'pending';
+
+    // Si es un día pasado, verificar si todos los servicios están completados
+    if (targetDate < today) {
+      const allCompleted = services.every((service) => {
+        const endMinutes = toMinutes(service.end);
+        // Considerar completado si la hora actual es mayor que la hora de fin del servicio
+        return now.getHours() * 60 + now.getMinutes() > endMinutes;
+      });
+      return allCompleted ? 'completed' : 'pending';
+    }
+
+    // Es hoy, determinar el estado basado en los servicios actuales
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let hasInProgress = false;
+    let hasPending = false;
+
+    for (const service of services) {
+      const startMinutes = toMinutes(service.start);
+      const endMinutes = toMinutes(service.end);
+
+      if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+        hasInProgress = true;
+      } else if (nowMinutes < startMinutes) {
+        hasPending = true;
+      }
+    }
+
+    if (hasInProgress) return 'inprogress';
+    if (hasPending) return 'pending';
+
+    // Todos los servicios de hoy han terminado
+    return 'completed';
+  };
+
+  // Función para obtener clases CSS basadas en el estado del día
+  const getDayClasses = (day: (typeof calendarDays)[0]): string => {
+    const baseClasses = [
+      'h-16 md:h-20 flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-colors relative',
+      day.isCurrentMonth
+        ? 'bg-white border-gray-200'
+        : 'bg-gray-50 border-gray-100',
+      day.isToday ? 'ring-2 ring-blue-500 bg-blue-50' : '',
+      day.isHoliday || day.isWeekend ? 'border-red-200' : '',
+      day.entries.length > 0
+        ? 'cursor-pointer hover:bg-blue-50'
+        : 'cursor-pointer hover:bg-gray-50',
+    ];
+
+    // Aplicar colores basados en el estado del día
+    if (day.status === 'completed') {
+      // Días completados: color más tenue
+      baseClasses.push('opacity-60 bg-gray-50 border-gray-300');
+    } else if (day.status === 'inprogress') {
+      // Días en progreso: verde sutil
+      baseClasses.push('bg-green-50/50 border-green-200');
+    } else if (day.status === 'pending' && day.entries.length > 0) {
+      // Días pendientes con servicios: amarillo sutil
+      baseClasses.push('bg-amber-50/50 border-amber-200');
+    }
+
+    return baseClasses.filter(Boolean).join(' ');
+  };
+
   // Función para manejar clic en día
   const handleDayClick = (date: Date, services: ExpandedEntry[]) => {
     // Ordenar servicios por hora antes de mostrar el modal
@@ -576,7 +675,16 @@ const WorkerMonthCalendar = (props: {
   endOfCalendar.setDate(lastDayOfMonth.getDate() + daysToAdd);
 
   // Crear grid de 6 semanas (42 días)
-  const calendarDays = [];
+  const calendarDays: Array<{
+    date: Date;
+    key: string;
+    isCurrentMonth: boolean;
+    isToday: boolean;
+    isWeekend: boolean;
+    isHoliday: boolean;
+    entries: ExpandedEntry[];
+    status: 'pending' | 'inprogress' | 'completed';
+  }> = [];
   const totalDays =
     Math.ceil(
       (endOfCalendar.getTime() - startOfCalendar.getTime()) /
@@ -624,6 +732,9 @@ const WorkerMonthCalendar = (props: {
       return timeA.localeCompare(timeB);
     });
 
+    // Determinar el estado del día
+    const dayStatus = getDayStatus(entries, date);
+
     calendarDays.push({
       date,
       key,
@@ -632,6 +743,7 @@ const WorkerMonthCalendar = (props: {
       isWeekend,
       isHoliday,
       entries,
+      status: dayStatus,
     });
   }
 
@@ -673,19 +785,7 @@ const WorkerMonthCalendar = (props: {
           {weeks.map((week, weekIndex) => (
             <div key={weekIndex} className='grid grid-cols-7 gap-1 md:gap-2'>
               {week.map((day, dayIndex) => {
-                const dayClasses = [
-                  'h-16 md:h-20 flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-colors relative',
-                  day.isCurrentMonth
-                    ? 'bg-white border-gray-200'
-                    : 'bg-gray-50 border-gray-100',
-                  day.isToday ? 'ring-2 ring-blue-500 bg-blue-50' : '',
-                  day.isHoliday || day.isWeekend ? 'border-red-200' : '',
-                  day.entries.length > 0
-                    ? 'cursor-pointer hover:bg-blue-50'
-                    : 'cursor-pointer hover:bg-gray-50',
-                ]
-                  .filter(Boolean)
-                  .join(' ');
+                const dayClasses = getDayClasses(day);
 
                 return (
                   <button
@@ -733,6 +833,11 @@ const WorkerMonthCalendar = (props: {
           onClose={() => setIsModalOpen(false)}
           date={selectedDate ?? new Date()}
           services={selectedServices}
+          dayStatus={
+            selectedDate
+              ? getDayStatus(selectedServices, selectedDate)
+              : 'pending'
+          }
         />
       </div>
     );
