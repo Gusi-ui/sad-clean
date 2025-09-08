@@ -330,6 +330,12 @@ const MobileMonthList = (props: {
     }
 
     if (entries.length > 0) {
+      // Ordenar entradas por hora de inicio
+      entries.sort((a, b) => {
+        const timeA = a.start.replace(':', '');
+        const timeB = b.start.replace(':', '');
+        return timeA.localeCompare(timeB);
+      });
       daysWithServices.push({ date, key, isHoliday, entries });
     }
   }
@@ -529,8 +535,14 @@ const WorkerMonthCalendar = (props: {
   const todayKey = getDateKeyLocal(new Date());
   // Función para manejar clic en día
   const handleDayClick = (date: Date, services: ExpandedEntry[]) => {
+    // Ordenar servicios por hora antes de mostrar el modal
+    const sortedServices = [...services].sort((a, b) => {
+      const timeA = a.start.replace(':', '');
+      const timeB = b.start.replace(':', '');
+      return timeA.localeCompare(timeB);
+    });
     setSelectedDate(date);
-    setSelectedServices(services);
+    setSelectedServices(sortedServices);
     setIsModalOpen(true);
   };
 
@@ -604,6 +616,13 @@ const WorkerMonthCalendar = (props: {
         }
       }
     }
+
+    // Ordenar entradas por hora de inicio
+    entries.sort((a, b) => {
+      const timeA = a.start.replace(':', '');
+      const timeB = b.start.replace(':', '');
+      return timeA.localeCompare(timeB);
+    });
 
     calendarDays.push({
       date,
@@ -1320,16 +1339,16 @@ export default function SchedulePage(): React.JSX.Element {
                     </Button>
                   </div>
 
-                  {/* Toggle de vista para móvil en vista de mes */}
+                  {/* Toggle de vista para todas las pantallas en vista de mes */}
                   {selectedPeriod === 'month' && (
-                    <div className='flex space-x-2 md:hidden'>
+                    <div className='flex space-x-2'>
                       <Button
                         variant={
                           viewMode === 'calendar' ? 'primary' : 'outline'
                         }
                         size='sm'
                         onClick={() => setViewMode('calendar')}
-                        className='flex-1'
+                        className='flex-1 sm:flex-none'
                       >
                         📅 Calendario
                       </Button>
@@ -1337,7 +1356,7 @@ export default function SchedulePage(): React.JSX.Element {
                         variant={viewMode === 'list' ? 'primary' : 'outline'}
                         size='sm'
                         onClick={() => setViewMode('list')}
-                        className='flex-1'
+                        className='flex-1 sm:flex-none'
                       >
                         📋 Lista
                       </Button>
@@ -1411,7 +1430,7 @@ export default function SchedulePage(): React.JSX.Element {
                     </div>
                   ) : (
                     <div>
-                      {viewMode === 'list' && isMobile ? (
+                      {viewMode === 'list' ? (
                         <MobileMonthList
                           assignments={assignments}
                           getScheduleSlots={getScheduleSlots}
