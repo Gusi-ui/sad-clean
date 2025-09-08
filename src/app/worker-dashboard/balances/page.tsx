@@ -221,7 +221,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
               variant='outline'
               size='sm'
               onClick={goPrevMonth}
-              className='absolute left-0 z-10 px-2 sm:px-3 sm:static sm:relative'
+              className='absolute left-0 z-10 px-2 sm:px-3 sm:static'
             >
               <span className='hidden sm:inline'>← Mes anterior</span>
               <span className='sm:hidden'>⬅️</span>
@@ -237,7 +237,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
               variant='outline'
               size='sm'
               onClick={goNextMonth}
-              className='absolute right-0 z-10 px-2 sm:px-3 sm:static sm:relative'
+              className='absolute right-0 z-10 px-2 sm:px-3 sm:static'
             >
               <span className='hidden sm:inline'>Mes siguiente →</span>
               <span className='sm:hidden'>➡️</span>
