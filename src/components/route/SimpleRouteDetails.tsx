@@ -165,86 +165,201 @@ const SimpleRouteDetails: React.FC<SimpleRouteDetailsProps> = ({
 
       {/* Mostrar datos exitosos */}
       <div className='bg-white rounded-lg shadow-sm border'>
-        {/* Encabezado con resumen */}
-        <div className='p-6 border-b bg-gray-50'>
-          <div className='flex items-center justify-between mb-4'>
-            <h3 className='text-lg font-semibold text-gray-900'>
-              Detalles de Ruta
-            </h3>
+        {/* Encabezado con resumen - Optimizado para Móvil */}
+        <div className='p-3 sm:p-6 border-b bg-gradient-to-r from-blue-50 to-indigo-50 sm:bg-gray-50'>
+          {/* Header principal */}
+          <div className='flex items-center justify-between mb-3 sm:mb-4'>
+            <div className='flex items-center space-x-2'>
+              <div className='w-6 h-6 sm:w-7 sm:h-7 bg-blue-100 rounded-full flex items-center justify-center'>
+                <MapPin className='w-4 h-4 sm:w-5 sm:h-5 text-blue-600' />
+              </div>
+              <h3 className='text-sm sm:text-lg font-semibold text-gray-900'>
+                <span className='sm:hidden'>Detalles</span>
+                <span className='hidden sm:inline'>Detalles de Ruta</span>
+              </h3>
+            </div>
+            {/* Indicador de confianza - Compacto en móvil */}
             <div
               className={`flex items-center space-x-1 ${getConfidenceColor(confidence)}`}
             >
               {getConfidenceIcon(confidence)}
-              <span className='text-sm font-medium'>
-                {getConfidenceText(confidence)}
+              <span className='text-xs sm:text-sm font-medium'>
+                <span className='sm:hidden'>
+                  {confidence === 'high' && 'Preciso'}
+                  {confidence === 'medium' && 'Aprox.'}
+                  {confidence === 'low' && 'Básico'}
+                </span>
+                <span className='hidden sm:inline'>
+                  {getConfidenceText(confidence)}
+                </span>
               </span>
             </div>
           </div>
 
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-blue-600'>
-                {formatDuration(totalBillableTime * 60)}
+          {/* Versión Móvil - Tarjetas apiladas */}
+          <div className='sm:hidden space-y-3'>
+            <div className='bg-white rounded-lg p-3 border border-blue-200'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center space-x-2'>
+                  <Clock className='w-4 h-4 text-blue-500' />
+                  <span className='text-xs text-gray-600 font-medium'>
+                    Tiempo total
+                  </span>
+                </div>
+                <span className='text-lg font-bold text-blue-600'>
+                  {formatDuration(totalBillableTime * 60)}
+                </span>
               </div>
-              <div className='text-sm text-gray-600'>Tiempo total</div>
             </div>
-            <div className='text-center'>
-              <div className='text-2xl font-bold text-green-600'>
-                {formatDistance(totalDistance)}
+
+            <div className='bg-white rounded-lg p-3 border border-green-200'>
+              <div className='flex items-center justify-between'>
+                <div className='flex items-center space-x-2'>
+                  <MapPin className='w-4 h-4 text-green-500' />
+                  <span className='text-xs text-gray-600 font-medium'>
+                    Distancia total
+                  </span>
+                </div>
+                <span className='text-lg font-bold text-green-600'>
+                  {formatDistance(totalDistance)}
+                </span>
               </div>
-              <div className='text-sm text-gray-600'>Distancia total</div>
+            </div>
+          </div>
+
+          {/* Versión Desktop/Tablet - Grid original */}
+          <div className='hidden sm:block'>
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div className='text-center'>
+                <div className='text-2xl font-bold text-blue-600'>
+                  {formatDuration(totalBillableTime * 60)}
+                </div>
+                <div className='text-sm text-gray-600'>Tiempo total</div>
+              </div>
+              <div className='text-center'>
+                <div className='text-2xl font-bold text-green-600'>
+                  {formatDistance(totalDistance)}
+                </div>
+                <div className='text-sm text-gray-600'>Distancia total</div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Lista de segmentos */}
-        <div className='p-6'>
-          <h4 className='text-md font-medium text-gray-900 mb-4'>
-            Segmentos de viaje
-          </h4>
-          <div className='space-y-4'>
+        {/* Lista de segmentos - Optimizada para Móvil */}
+        <div className='p-3 sm:p-6'>
+          <div className='flex items-center justify-between mb-3 sm:mb-4'>
+            <h4 className='text-sm sm:text-md font-medium text-gray-900 flex items-center'>
+              <span className='sm:hidden'>Viajes</span>
+              <span className='hidden sm:inline'>Segmentos de viaje</span>
+            </h4>
+            <div className='sm:hidden bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full font-medium'>
+              {successfulSegments.length} viajes
+            </div>
+          </div>
+
+          <div className='space-y-2 sm:space-y-4'>
             {successfulSegments.map((segment, index) => (
-              <div
-                key={segment.id}
-                className='flex items-center space-x-4 p-4 bg-gray-50 rounded-lg'
-              >
-                <div className='flex-shrink-0'>
-                  <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
-                    {index + 1}
+              <div key={segment.id}>
+                {/* Versión Móvil - Compacta */}
+                <div className='sm:hidden bg-gray-50 rounded-lg p-3 border border-gray-200'>
+                  <div className='flex items-start justify-between mb-2'>
+                    <div className='flex items-center space-x-2 flex-1 min-w-0'>
+                      <div className='w-5 h-5 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-medium'>
+                        {index + 1}
+                      </div>
+                      <div className='flex-1 min-w-0'>
+                        <div className='text-sm font-medium text-gray-900 truncate'>
+                          {segment.from}
+                        </div>
+                        <div className='flex items-center space-x-1 text-xs text-gray-500'>
+                          <span>→</span>
+                          <span className='truncate'>{segment.to}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className='text-right ml-2'>
+                      <div className='text-sm font-bold text-blue-600'>
+                        {formatDuration(segment.duration)}
+                      </div>
+                      <div className='text-xs text-gray-500'>
+                        {formatDistance(segment.distance)}
+                      </div>
+                    </div>
                   </div>
-                </div>
 
-                <div className='flex-1 min-w-0'>
-                  <div className='flex items-center space-x-2 mb-1'>
-                    <MapPin className='w-4 h-4 text-gray-400' />
-                    <span className='text-sm font-medium text-gray-900'>
-                      {segment.from} → {segment.to}
-                    </span>
-                  </div>
-
+                  {/* Direcciones en móvil - Solo si son relevantes */}
                   {(Boolean(segment.fromAddress) ||
                     Boolean(segment.toAddress)) && (
-                    <div className='text-xs text-gray-500 ml-6'>
-                      {Boolean(segment.fromAddress) && (
-                        <div>Desde: {segment.fromAddress}</div>
-                      )}
-                      {Boolean(segment.toAddress) && (
-                        <div>Hasta: {segment.toAddress}</div>
-                      )}
+                    <div className='mt-2 pt-2 border-t border-gray-200'>
+                      <div className='text-xs text-gray-500 space-y-1'>
+                        {Boolean(segment.fromAddress) && (
+                          <div className='flex items-start space-x-1'>
+                            <span className='font-medium w-10 flex-shrink-0'>
+                              Desde:
+                            </span>
+                            <span className='flex-1 break-words'>
+                              {segment.fromAddress}
+                            </span>
+                          </div>
+                        )}
+                        {Boolean(segment.toAddress) && (
+                          <div className='flex items-start space-x-1'>
+                            <span className='font-medium w-10 flex-shrink-0'>
+                              Hasta:
+                            </span>
+                            <span className='flex-1 break-words'>
+                              {segment.toAddress}
+                            </span>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
 
-                <div className='flex items-center space-x-4 text-sm'>
-                  <div className='flex items-center space-x-1'>
-                    <Clock className='w-4 h-4 text-gray-400' />
-                    <span className='text-gray-700'>
-                      {formatDuration(segment.duration)}
-                    </span>
-                  </div>
+                {/* Versión Desktop/Tablet - Original mejorada */}
+                <div className='hidden sm:block'>
+                  <div className='flex items-center space-x-4 p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors'>
+                    <div className='flex-shrink-0'>
+                      <div className='w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-sm font-medium'>
+                        {index + 1}
+                      </div>
+                    </div>
 
-                  <div className='text-gray-700'>
-                    {formatDistance(segment.distance)}
+                    <div className='flex-1 min-w-0'>
+                      <div className='flex items-center space-x-2 mb-1'>
+                        <MapPin className='w-4 h-4 text-gray-400' />
+                        <span className='text-sm font-medium text-gray-900'>
+                          {segment.from} → {segment.to}
+                        </span>
+                      </div>
+
+                      {(Boolean(segment.fromAddress) ||
+                        Boolean(segment.toAddress)) && (
+                        <div className='text-xs text-gray-500 ml-6'>
+                          {Boolean(segment.fromAddress) && (
+                            <div>Desde: {segment.fromAddress}</div>
+                          )}
+                          {Boolean(segment.toAddress) && (
+                            <div>Hasta: {segment.toAddress}</div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className='flex items-center space-x-4 text-sm'>
+                      <div className='flex items-center space-x-1'>
+                        <Clock className='w-4 h-4 text-gray-400' />
+                        <span className='text-gray-700'>
+                          {formatDuration(segment.duration)}
+                        </span>
+                      </div>
+
+                      <div className='text-gray-700'>
+                        {formatDistance(segment.distance)}
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

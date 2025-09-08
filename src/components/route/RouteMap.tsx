@@ -96,12 +96,9 @@ const RouteMap = ({
 
   return (
     <div className='w-full space-y-4'>
-      {/* Controles de modo de viaje */}
+      {/* Controles de modo de viaje - Sin label para mejor legibilidad */}
       <div className='flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg'>
         <div className='flex items-center gap-2'>
-          <span className='text-sm font-medium text-gray-700'>
-            Modo de viaje:
-          </span>
           <div className='flex gap-1'>
             <Button
               variant={travelMode === 'DRIVING' ? 'primary' : 'outline'}
@@ -147,13 +144,23 @@ const RouteMap = ({
         onRefresh={refreshSegments}
       />
 
-      {/* Controles adicionales */}
-      <div className='flex flex-wrap gap-2'>
-        <Button variant='outline' onClick={handleToggleSegmentDetails}>
-          {showSegmentDetails ? 'Ocultar' : 'Mostrar'} detalles de segmentos
+      {/* Controles adicionales - Optimizados para móvil */}
+      <div className='flex gap-2 flex-wrap sm:flex-nowrap'>
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={handleToggleSegmentDetails}
+          className='flex-1 sm:flex-none text-xs sm:text-sm'
+        >
+          {showSegmentDetails ? '👁️ Ocultar' : '👁️ Mostrar'} detalles
         </Button>
-        <Button variant='outline' onClick={handleToggleExportSummary}>
-          {showExportSummary ? 'Ocultar' : 'Mostrar'} resumen de exportación
+        <Button
+          variant='outline'
+          size='sm'
+          onClick={handleToggleExportSummary}
+          className='flex-1 sm:flex-none text-xs sm:text-sm'
+        >
+          {showExportSummary ? '📊 Ocultar' : '📊 Mostrar'} exportar
         </Button>
       </div>
 
