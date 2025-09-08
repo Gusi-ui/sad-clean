@@ -309,7 +309,9 @@ export type NotificationType =
   | 'system_message' // Mensaje del sistema
   | 'reminder' // Recordatorio
   | 'urgent' // Notificación urgente
-  | 'holiday_update'; // Actualización de festivos
+  | 'holiday_update' // Actualización de festivos
+  | 'service_start' // Inicio de servicio
+  | 'service_end'; // Fin de servicio
 
 export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
 
@@ -351,6 +353,8 @@ export interface NotificationSettings {
   urgent_notifications: boolean;
   holiday_update_notifications: boolean;
   system_notifications: boolean;
+  service_start_notifications: boolean;
+  service_end_notifications: boolean;
   quiet_hours_start?: string | null;
   quiet_hours_end?: string | null;
   created_at: string;

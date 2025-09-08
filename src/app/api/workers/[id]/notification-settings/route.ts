@@ -11,6 +11,8 @@ interface NotificationSettingsRequest {
     schedule_change_notifications?: boolean;
     assignment_change_notifications?: boolean;
     route_update_notifications?: boolean;
+    service_start_notifications?: boolean;
+    service_end_notifications?: boolean;
     reminder_notifications?: boolean;
     urgent_notifications?: boolean;
     holiday_update_notifications?: boolean;
@@ -63,6 +65,8 @@ export async function GET(
         schedule_change_notifications: true,
         assignment_change_notifications: true,
         route_update_notifications: true,
+        service_start_notifications: true,
+        service_end_notifications: true,
         reminder_notifications: true,
         urgent_notifications: true,
         holiday_update_notifications: true,
@@ -136,6 +140,12 @@ export async function POST(
       ),
       route_update_notifications: Boolean(
         settings.route_update_notifications ?? true
+      ),
+      service_start_notifications: Boolean(
+        settings.service_start_notifications ?? true
+      ),
+      service_end_notifications: Boolean(
+        settings.service_end_notifications ?? true
       ),
       reminder_notifications: Boolean(settings.reminder_notifications ?? true),
       urgent_notifications: Boolean(settings.urgent_notifications ?? true),

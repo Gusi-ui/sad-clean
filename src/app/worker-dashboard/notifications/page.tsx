@@ -2,7 +2,7 @@
 
 import { Bell, Monitor, Settings, Smartphone, Volume2 } from 'lucide-react';
 
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { useAuth } from '@/contexts/AuthContext';
 import type { NotificationType } from '@/types';
@@ -33,6 +33,16 @@ const NOTIFICATION_TYPES: {
     description: 'Cuando se modifica tu asignación de usuarios',
   },
   {
+    type: 'service_start',
+    label: 'Inicio de Servicio',
+    description: 'Cuando comienza un servicio programado',
+  },
+  {
+    type: 'service_end',
+    label: 'Fin de Servicio',
+    description: 'Cuando finaliza un servicio programado',
+  },
+  {
     type: 'system_message',
     label: 'Sistema',
     description: 'Notificaciones importantes del sistema',
@@ -53,6 +63,8 @@ export default function NotificationsSettingsPage() {
     new_user_notifications: true,
     schedule_change_notifications: true,
     assignment_notifications: true,
+    service_start_notifications: true,
+    service_end_notifications: true,
     system_notifications: true,
     quiet_hours_start: undefined as string | undefined,
     quiet_hours_end: undefined as string | undefined,
@@ -77,6 +89,10 @@ export default function NotificationsSettingsPage() {
         return settings.assignment_notifications;
       case 'route_update':
         return settings.assignment_notifications; // Usar la misma configuración que assignment_change
+      case 'service_start':
+        return settings.service_start_notifications;
+      case 'service_end':
+        return settings.service_end_notifications;
       case 'system_message':
         return settings.system_notifications;
       case 'reminder':
@@ -109,6 +125,18 @@ export default function NotificationsSettingsPage() {
       case 'route_update':
         setSettings((prev) => ({ ...prev, assignment_notifications: enabled }));
         break;
+      case 'service_start':
+        setSettings((prev) => ({
+          ...prev,
+          service_start_notifications: enabled,
+        }));
+        break;
+      case 'service_end':
+        setSettings((prev) => ({
+          ...prev,
+          service_end_notifications: enabled,
+        }));
+        break;
       case 'system_message':
       case 'reminder':
       case 'urgent':
@@ -136,6 +164,8 @@ export default function NotificationsSettingsPage() {
               new_user_notifications?: boolean;
               schedule_change_notifications?: boolean;
               assignment_notifications?: boolean;
+              service_start_notifications?: boolean;
+              service_end_notifications?: boolean;
               system_notifications?: boolean;
               quiet_hours_start?: string;
               quiet_hours_end?: string;
@@ -193,11 +223,26 @@ export default function NotificationsSettingsPage() {
   // Probar sonido de notificación
   const testNotificationSound = (type: NotificationType) => {
     try {
-      const audio = new Audio(`/sounds/notification-${type}.mp3`);
-      audio.volume = 0.5;
+      const soundFileMap: Record<NotificationType, string> = {
+        new_user: 'notification-user_added_new.wav',
+        user_removed: 'notification-user_removed_new.wav',
+        schedule_change: 'notification-schedule_changed_new.wav',
+        assignment_change: 'notification-assignment_changed_new.wav',
+        route_update: 'notification-route_update_new.wav',
+        service_start: 'notification-service_start_new.wav',
+        service_end: 'notification-service_end_new.wav',
+        system_message: 'notification-system_new.wav',
+        reminder: 'notification-reminder_new.wav',
+        urgent: 'notification-urgent_new.wav',
+        holiday_update: 'notification-holiday_update_new.wav',
+      };
+
+      const soundFile = soundFileMap[type] || 'notification-default_new.wav';
+      const audio = new Audio(`/sounds/${soundFile}`);
+      audio.volume = 0.8;
       void audio.play().catch(() => {
-        const defaultAudio = new Audio('/sounds/notification-default.mp3');
-        defaultAudio.volume = 0.5;
+        const defaultAudio = new Audio('/sounds/notification-default_new.wav');
+        defaultAudio.volume = 0.8;
         void defaultAudio.play().catch(() => {
           // Silently fail if audio cannot be played
         });
@@ -426,7 +471,7 @@ export default function NotificationsSettingsPage() {
                     {Boolean(settings.sound_enabled) && (
                       <button
                         onClick={() => testNotificationSound(notifType.type)}
-                        className='text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded flex items-center gap-1'
+                        className='text-xs bg-blue-600 text-white hover:bg-blue-700 active:bg-blue-800 px-3 py-1.5 rounded-md flex items-center gap-1 transition-colors duration-200 font-medium shadow-sm'
                         title='Probar sonido'
                       >
                         <Volume2 className='h-3 w-3' />
