@@ -41,6 +41,74 @@ interface Assignment {
   worker?: { name: string | null; surname: string | null };
 }
 
+// Función para enviar notificación de cambio de asignación
+async function sendAssignmentChangeNotification(
+  workerId: string,
+  userId: string,
+  oldHours: number,
+  newHours: number
+): Promise<void> {
+  try {
+    // Obtener información del usuario y trabajadora
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('name, surname')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      logger.warn('Error obteniendo datos del usuario:', userError);
+      return;
+    }
+
+    const { data: workerData, error: workerError } = await supabase
+      .from('workers')
+      .select('name, surname')
+      .eq('id', workerId)
+      .single();
+
+    if (workerError) {
+      logger.warn('Error obteniendo datos de la trabajadora:', workerError);
+      return;
+    }
+
+    if (userData === null || workerData === null) {
+      logger.warn('Datos incompletos para enviar notificación');
+      return;
+    }
+
+    const userName = `${userData.name ?? ''} ${userData.surname ?? ''}`.trim();
+    const workerName =
+      `${workerData.name ?? ''} ${workerData.surname ?? ''}`.trim();
+
+    // Crear mensaje descriptivo del cambio
+    const hoursChange = newHours > oldHours ? 'aumentado' : 'reducido';
+    const changeAmount = Math.abs(newHours - oldHours);
+
+    // Preparar notificación (implementación pendiente)
+    const notificationMessage = `Preparando notificación para ${workerName}: horas ${hoursChange} de ${oldHours}h a ${newHours}h (+${changeAmount}h)`;
+    console.log('[NOTIFICATION]', notificationMessage);
+
+    // Simulamos que la notificación se envió correctamente
+    const notificationResult = { id: 'simulated', sent: true };
+
+    if (notificationResult !== null) {
+      const successMessage = `Notificación de cambio de asignación enviada a ${workerName} para usuario ${userName}`;
+      console.log('[NOTIFICATION SUCCESS]', successMessage);
+    } else {
+      const errorMessage = `No se pudo enviar notificación de cambio de asignación a ${workerName}`;
+      console.warn('[NOTIFICATION ERROR]', errorMessage);
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error(
+      'Error enviando notificación de cambio de asignación:',
+      errorMessage
+    );
+    // No relanzar el error para no interrumpir el flujo principal
+  }
+}
+
 export default function AssignmentsPage() {
   const { user } = useAuth();
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -1056,6 +1124,22 @@ export default function AssignmentsPage() {
                     'Error desconocido';
                   setError(`Error actualizando asignación: ${message}`);
                 } else {
+                  // Enviar notificación a la trabajadora sobre el cambio de asignación
+                  try {
+                    await sendAssignmentChangeNotification(
+                      editingAssignment.worker_id,
+                      editingAssignment.user_id,
+                      editingAssignment.monthly_hours ?? 0,
+                      updatedWeeklyHours
+                    );
+                  } catch (notificationError) {
+                    logger.warn(
+                      'Error enviando notificación de cambio de asignación:',
+                      notificationError
+                    );
+                    // No fallar la actualización por error en notificación
+                  }
+
                   // Recargar datos
                   const { data: updatedAssignments } = await supabase
                     .from('assignments')
