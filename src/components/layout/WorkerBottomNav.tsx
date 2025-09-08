@@ -16,7 +16,6 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Rutas', href: '/worker-dashboard/route', icon: '🚗' },
   { label: 'Planilla', href: '/worker-dashboard/schedule', icon: '📋' },
   { label: 'Balance', href: '/worker-dashboard/balances', icon: '⏱️' },
-  { label: 'Ajustes', href: '/worker-dashboard/notifications', icon: '⚙️' },
 ];
 
 export default function WorkerBottomNav(): React.JSX.Element {
@@ -33,12 +32,6 @@ export default function WorkerBottomNav(): React.JSX.Element {
       return active
         ? 'text-green-600 bg-green-50 shadow-md'
         : 'text-gray-600 hover:text-green-600 hover:bg-green-50';
-    }
-    if (href === '/worker-dashboard/notifications') {
-      // Ajustes/Notificaciones - Gris para configuraciones
-      return active
-        ? 'text-gray-700 bg-gray-50 shadow-md'
-        : 'text-gray-600 hover:text-gray-700 hover:bg-gray-50';
     }
     // Resto de elementos - Azul por defecto
     return active

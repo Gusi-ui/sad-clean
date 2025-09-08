@@ -248,14 +248,34 @@ export class NotificationService {
       reminder: baseActions,
       holiday_update: baseActions,
       service_start: [
-        { action: 'view_service', title: 'Ver Servicio', icon: '/icons/service.png' },
-        { action: 'start_navigation', title: 'Iniciar Ruta', icon: '/icons/navigation.png' },
+        {
+          action: 'view_service',
+          title: 'Ver Servicio',
+          icon: '/icons/service.png',
+        },
+        {
+          action: 'start_navigation',
+          title: 'Iniciar Ruta',
+          icon: '/icons/navigation.png',
+        },
         ...baseActions,
       ],
       service_end: [
-        { action: 'view_service', title: 'Ver Servicio', icon: '/icons/service.png' },
-        { action: 'complete_service', title: 'Marcar Completado', icon: '/icons/check.png' },
-        { action: 'next_service', title: 'Siguiente Servicio', icon: '/icons/next.png' },
+        {
+          action: 'view_service',
+          title: 'Ver Servicio',
+          icon: '/icons/service.png',
+        },
+        {
+          action: 'complete_service',
+          title: 'Marcar Completado',
+          icon: '/icons/check.png',
+        },
+        {
+          action: 'next_service',
+          title: 'Siguiente Servicio',
+          icon: '/icons/next.png',
+        },
         ...baseActions,
       ],
     };
