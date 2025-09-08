@@ -299,6 +299,12 @@ const MobileMonthList = (props: {
   const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
     props;
 
+  // Función auxiliar para convertir hora a minutos
+  const toMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
   // Función para verificar si una fecha es festivo
   const isKnownHoliday = (date: Date): boolean => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -434,19 +440,73 @@ const MobileMonthList = (props: {
                 )}
               </div>
               <div className='space-y-2'>
-                {day.entries.map((entry, i) => (
-                  <div
-                    key={i}
-                    className='flex items-center justify-between p-3 bg-blue-50 rounded-lg border-l-4 border-blue-500'
-                  >
-                    <span className='font-medium text-sm text-gray-700'>
-                      {entry.userLabel}
-                    </span>
-                    <span className='text-blue-700 font-semibold text-sm'>
-                      {entry.start}–{entry.end}
-                    </span>
-                  </div>
-                ))}
+                {day.entries.map((entry, i) => {
+                  // Determinar colores y textos de estado
+                  const now = new Date();
+                  const today = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate()
+                  );
+                  const serviceDate = new Date(
+                    day.date.getFullYear(),
+                    day.date.getMonth(),
+                    day.date.getDate()
+                  );
+
+                  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                  const startMinutes = toMinutes(entry.start);
+                  const endMinutes = toMinutes(entry.end);
+
+                  const isPastDay = serviceDate < today;
+                  const isFutureDay = serviceDate > today;
+                  const isToday = !isPastDay && !isFutureDay;
+                  const isInProgress =
+                    isToday &&
+                    nowMinutes >= startMinutes &&
+                    nowMinutes < endMinutes;
+                  const isCompleted = isToday && nowMinutes >= endMinutes;
+
+                  const bgColor = isPastDay
+                    ? 'bg-rose-100 border-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-amber-100 border-amber-300'
+                      : isInProgress
+                        ? 'bg-green-100 border-green-300'
+                        : 'bg-rose-100 border-rose-300';
+
+                  const badgeText = isPastDay
+                    ? 'Completado'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'Pendiente'
+                      : isInProgress
+                        ? 'En curso'
+                        : 'Completado';
+
+                  const badgeColor = isPastDay
+                    ? 'bg-white/80 text-rose-800 ring-1 ring-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-white/80 text-amber-800 ring-1 ring-amber-300'
+                      : isInProgress
+                        ? 'bg-white/80 text-green-800 ring-1 ring-green-300'
+                        : 'bg-white/80 text-rose-800 ring-1 ring-rose-300';
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between p-3 rounded-lg border-l-4 shadow-sm ${bgColor}`}
+                    >
+                      <span className='font-medium text-sm text-gray-700'>
+                        {entry.userLabel}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeColor}`}
+                      >
+                        {badgeText}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           ))}
