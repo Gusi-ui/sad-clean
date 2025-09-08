@@ -577,20 +577,20 @@ const DayServicesModal = (props: {
               let timeClasses = 'text-sm font-medium';
 
               if (isCompletedDay) {
-                // Días completados: rojo pastel tenue
-                serviceClasses += ' bg-rose-50/80 border-rose-300 opacity-80';
-                userLabelClasses += ' text-rose-800 bg-rose-100';
-                timeClasses += ' text-rose-700';
+                // Días completados: rojo pastel (igual que tomorrow)
+                serviceClasses += ' bg-rose-100 border-rose-300';
+                userLabelClasses += ' text-rose-800 bg-white/80';
+                timeClasses += ' text-rose-800';
               } else if (isInProgressDay) {
-                // Días en progreso: verde
-                serviceClasses += ' bg-green-100 border-green-400';
-                userLabelClasses += ' text-green-800 bg-green-200';
-                timeClasses += ' text-green-700';
+                // Días en progreso: verde (igual que tomorrow)
+                serviceClasses += ' bg-green-100 border-green-300';
+                userLabelClasses += ' text-green-800 bg-white/80';
+                timeClasses += ' text-green-800';
               } else if (isPendingDay) {
-                // Días pendientes: amarillo
-                serviceClasses += ' bg-amber-100 border-amber-400';
-                userLabelClasses += ' text-amber-800 bg-amber-200';
-                timeClasses += ' text-amber-700';
+                // Días pendientes: amarillo (igual que tomorrow)
+                serviceClasses += ' bg-amber-100 border-amber-300';
+                userLabelClasses += ' text-amber-800 bg-white/80';
+                timeClasses += ' text-amber-800';
               } else {
                 // Estado por defecto
                 serviceClasses += ' bg-blue-50 border-blue-400';
@@ -745,17 +745,17 @@ const WorkerMonthCalendar = (props: {
         : 'cursor-pointer hover:bg-gray-50',
     ];
 
-    // Aplicar colores basados en el estado del día
-    if (day.status === 'completed') {
-      // Días completados: rojo pastel
-      baseClasses.push('bg-rose-50 border-rose-300');
-    } else if (day.status === 'inprogress') {
+    // NO aplicar colores para días completados en la rejilla
+    // (para evitar confusión con festivos que son rojos)
+    // Solo mantener colores para días en progreso y pendientes
+    if (day.status === 'inprogress') {
       // Días en progreso: verde
       baseClasses.push('bg-green-100 border-green-300');
     } else if (day.status === 'pending' && day.entries.length > 0) {
       // Días pendientes con servicios: amarillo
       baseClasses.push('bg-amber-100 border-amber-300');
     }
+    // Días completados no tienen colores especiales en la rejilla
 
     return baseClasses.filter(Boolean).join(' ');
   };
