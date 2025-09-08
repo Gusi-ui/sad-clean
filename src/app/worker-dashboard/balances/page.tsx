@@ -215,30 +215,33 @@ export default function WorkerBalancesPage(): React.JSX.Element {
         </header>
 
         <main className='w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8'>
-          <div className='mb-4 flex items-center justify-between gap-3'>
-            <div className='flex items-center gap-2'>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={goPrevMonth}
-                className='px-2 sm:px-3'
-              >
-                <span className='hidden sm:inline'>← Mes anterior</span>
-                <span className='sm:hidden'>⬅️</span>
-              </Button>
-              <h2 className='text-base sm:text-lg font-semibold text-gray-900 capitalize whitespace-nowrap'>
-                {monthName} {currentYear}
-              </h2>
-              <Button
-                variant='outline'
-                size='sm'
-                onClick={goNextMonth}
-                className='px-2 sm:px-3'
-              >
-                <span className='hidden sm:inline'>Mes siguiente →</span>
-                <span className='sm:hidden'>➡️</span>
-              </Button>
-            </div>
+          <div className='mb-4 relative flex items-center'>
+            {/* Botón anterior - posicionamiento absoluto en móvil */}
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={goPrevMonth}
+              className='absolute left-0 z-10 px-2 sm:px-3 sm:static sm:relative'
+            >
+              <span className='hidden sm:inline'>← Mes anterior</span>
+              <span className='sm:hidden'>⬅️</span>
+            </Button>
+
+            {/* Título centrado */}
+            <h2 className='flex-1 text-center text-base sm:text-lg font-semibold text-gray-900 capitalize whitespace-nowrap sm:flex-none sm:mx-2'>
+              {monthName} {currentYear}
+            </h2>
+
+            {/* Botón siguiente - posicionamiento absoluto en móvil */}
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={goNextMonth}
+              className='absolute right-0 z-10 px-2 sm:px-3 sm:static sm:relative'
+            >
+              <span className='hidden sm:inline'>Mes siguiente →</span>
+              <span className='sm:hidden'>➡️</span>
+            </Button>
           </div>
 
           {/* Resumen agregado */}
