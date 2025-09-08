@@ -177,6 +177,8 @@ export class NotificationService {
       reminder: 'notification-reminder_new.wav',
       urgent: 'notification-urgent_new.wav',
       holiday_update: 'notification-holiday_update_new.wav',
+      service_start: 'notification-service_start_new.wav',
+      service_end: 'notification-service_end_new.wav',
     };
 
     return soundMap[type] || 'notification-default_new.wav';
@@ -245,6 +247,37 @@ export class NotificationService {
       system_message: baseActions,
       reminder: baseActions,
       holiday_update: baseActions,
+      service_start: [
+        {
+          action: 'view_service',
+          title: 'Ver Servicio',
+          icon: '/icons/service.png',
+        },
+        {
+          action: 'start_navigation',
+          title: 'Iniciar Ruta',
+          icon: '/icons/navigation.png',
+        },
+        ...baseActions,
+      ],
+      service_end: [
+        {
+          action: 'view_service',
+          title: 'Ver Servicio',
+          icon: '/icons/service.png',
+        },
+        {
+          action: 'complete_service',
+          title: 'Marcar Completado',
+          icon: '/icons/check.png',
+        },
+        {
+          action: 'next_service',
+          title: 'Siguiente Servicio',
+          icon: '/icons/next.png',
+        },
+        ...baseActions,
+      ],
     };
 
     return typeSpecificActions[type] ?? baseActions;
@@ -299,10 +332,44 @@ export class NotificationService {
       });
     };
 
+    // Notificación de inicio de servicio
+    const createServiceStartNotification = async (
+      workerId: string,
+      userName: string,
+      serviceTime: string,
+      serviceAddress: string
+    ) => {
+      void this.createAndSendNotification(workerId, {
+        title: '▶️ Servicio iniciado',
+        body: `Servicio con ${userName} a las ${serviceTime} en ${serviceAddress} ha comenzado`,
+        type: 'service_start',
+        priority: 'high',
+        data: { userName, serviceTime, serviceAddress },
+      });
+    };
+
+    // Notificación de fin de servicio
+    const createServiceEndNotification = async (
+      workerId: string,
+      userName: string,
+      serviceTime: string,
+      nextServiceInfo?: string
+    ) => {
+      void this.createAndSendNotification(workerId, {
+        title: '⏹️ Servicio finalizado',
+        body: `Servicio con ${userName} a las ${serviceTime} ha terminado${nextServiceInfo != null && nextServiceInfo.length > 0 ? `. ${nextServiceInfo}` : ''}`,
+        type: 'service_end',
+        priority: 'normal',
+        data: { userName, serviceTime, nextServiceInfo },
+      });
+    };
+
     return {
       createNewUserNotification,
       createUserRemovedNotification,
       createScheduleChangeNotification,
+      createServiceStartNotification,
+      createServiceEndNotification,
     };
   }
 }

@@ -21,6 +21,8 @@ import {
   logAssignmentUpdateActivityDetailed,
 } from '@/lib/activities-query';
 import { supabase } from '@/lib/database';
+import { notificationService } from '@/lib/notification-service';
+import type { NotificationType } from '@/types';
 import type { Json } from '@/types/supabase';
 import { logger } from '@/utils/logger';
 
@@ -39,6 +41,144 @@ interface Assignment {
   created_at: string;
   user?: { name: string | null; surname: string | null };
   worker?: { name: string | null; surname: string | null };
+}
+
+// Función para enviar notificación de cambio de asignación
+async function sendAssignmentChangeNotification(
+  workerId: string,
+  userId: string,
+  oldHours: number,
+  newHours: number
+): Promise<boolean> {
+  try {
+    // Obtener información del usuario y trabajadora
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('name, surname')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      logger.warn('Error obteniendo datos del usuario para notificación', {
+        userId,
+        error: userError,
+      });
+      return false;
+    }
+
+    const { data: workerData, error: workerError } = await supabase
+      .from('workers')
+      .select('name, surname')
+      .eq('id', workerId)
+      .single();
+
+    if (workerError) {
+      logger.warn(
+        'Error obteniendo datos de la trabajadora para notificación',
+        { workerId, error: workerError }
+      );
+      return false;
+    }
+
+    if (userData === null || workerData === null) {
+      logger.warn(
+        'Datos incompletos para enviar notificación de cambio de asignación',
+        { userId, workerId }
+      );
+      return false;
+    }
+
+    const userName = `${userData.name ?? ''} ${userData.surname ?? ''}`.trim();
+    const workerName =
+      `${workerData.name ?? ''} ${workerData.surname ?? ''}`.trim();
+
+    // Crear mensaje descriptivo del cambio
+    const hoursChange = newHours > oldHours ? 'aumentado' : 'reducido';
+    const changeAmount = Math.abs(newHours - oldHours);
+
+    // Verificar que las tablas existan antes de enviar notificación
+    try {
+      await supabase.from('worker_notifications').select('id').limit(1);
+    } catch {
+      logger.warn(
+        'Tabla worker_notifications no encontrada, creando notificación básica',
+        { workerId, userId }
+      );
+      // Crear notificación básica sin usar el servicio completo
+      const { error: basicError } = await supabase
+        .from('worker_notifications')
+        .insert({
+          worker_id: workerId,
+          title: '📋 Asignación modificada',
+          body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+          type: 'assignment_change',
+          priority: 'high',
+          data: {
+            userName,
+            oldHours,
+            newHours,
+            difference: changeAmount,
+            changeType: hoursChange,
+          },
+        });
+
+      if (basicError) {
+        logger.error(
+          'Error creando notificación básica de cambio de asignación',
+          { workerId, userId, error: basicError }
+        );
+        return false;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`✅ Notificación básica creada para ${workerName}`);
+      return true;
+    }
+
+    // Enviar notificación completa usando el servicio
+    const notificationResult =
+      await notificationService.createAndSendNotification(workerId, {
+        title: '📋 Asignación modificada',
+        body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+        type: 'assignment_change' as NotificationType,
+        priority: 'high',
+        data: {
+          userName,
+          oldHours,
+          newHours,
+          difference: changeAmount,
+          changeType: hoursChange,
+          assignmentType: 'trabajo semanal',
+        },
+      });
+
+    if (notificationResult !== null) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `✅ Notificación enviada a ${workerName}: ${oldHours}h → ${newHours}h`
+      );
+      return true;
+    }
+
+    logger.error('Error enviando notificación de cambio de asignación', {
+      workerId,
+      userId,
+      workerName,
+      userName,
+      oldHours,
+      newHours,
+    });
+    return false;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error general en notificación de cambio de asignación', {
+      workerId,
+      userId,
+      error: errorMessage,
+    });
+    // No relanzar el error para no interrumpir el flujo principal
+    return false;
+  }
 }
 
 export default function AssignmentsPage() {
@@ -1056,6 +1196,24 @@ export default function AssignmentsPage() {
                     'Error desconocido';
                   setError(`Error actualizando asignación: ${message}`);
                 } else {
+                  // Enviar notificación a la trabajadora sobre el cambio de asignación
+                  const notificationSent =
+                    await sendAssignmentChangeNotification(
+                      editingAssignment.worker_id,
+                      editingAssignment.user_id,
+                      editingAssignment.monthly_hours ?? 0,
+                      updatedWeeklyHours
+                    );
+
+                  if (!notificationSent) {
+                    logger.warn(
+                      'No se pudo enviar notificación de cambio de asignación, pero la actualización continúa',
+                      {
+                        editingAssignment: editingAssignment.id,
+                      }
+                    );
+                  }
+
                   // Recargar datos
                   const { data: updatedAssignments } = await supabase
                     .from('assignments')

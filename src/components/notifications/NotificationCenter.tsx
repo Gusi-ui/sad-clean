@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import Link from 'next/link';
+
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/database';
 import type { NotificationType, WorkerNotification } from '@/types';
@@ -29,6 +31,8 @@ export default function NotificationCenter({
       schedule_change: 'notification-schedule_changed_new.wav',
       assignment_change: 'notification-assignment_changed_new.wav',
       route_update: 'notification-route_update_new.wav',
+      service_start: 'notification-service_start_new.wav',
+      service_end: 'notification-service_end_new.wav',
       system_message: 'notification-system_new.wav',
       reminder: 'notification-reminder_new.wav',
       urgent: 'notification-urgent_new.wav',
@@ -71,15 +75,41 @@ export default function NotificationCenter({
     }
   };
 
-  // Mostrar notificación del navegador
-  const showBrowserNotification = (notification: WorkerNotification) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-      new Notification(notification.title, {
-        body: notification.body,
-        icon: '/favicon.ico',
-      });
-    }
-  };
+  // Mostrar notificación del navegador con mejor presentación
+  const showBrowserNotification = useCallback(
+    (notification: WorkerNotification) => {
+      if ('Notification' in window && Notification.permission === 'granted') {
+        const browserNotification = new Notification(notification.title, {
+          body: notification.body,
+          icon: '/favicon.ico',
+          badge: '/favicon.ico',
+          tag: notification.id,
+          requireInteraction: notification.priority === 'urgent',
+          silent: false,
+          data: {
+            notificationId: notification.id,
+            type: notification.type,
+            url: `${window.location.origin}/worker-dashboard`,
+          },
+        });
+
+        // Auto-cerrar notificación después de tiempo según prioridad
+        if (notification.priority !== 'urgent') {
+          const timeout = notification.priority === 'high' ? 8000 : 6000;
+          setTimeout(() => {
+            browserNotification.close();
+          }, timeout);
+        }
+
+        // Manejar click en la notificación
+        browserNotification.onclick = () => {
+          window.focus();
+          browserNotification.close();
+        };
+      }
+    },
+    []
+  );
 
   // Cargar notificaciones
   const loadNotifications = useCallback(async () => {
@@ -228,7 +258,7 @@ export default function NotificationCenter({
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.id]);
+  }, [user?.id, showBrowserNotification]);
 
   // Cargar datos iniciales
   useEffect(() => {
@@ -255,6 +285,8 @@ export default function NotificationCenter({
       reminder: '🔔',
       urgent: '🚨',
       holiday_update: '📅',
+      service_start: '▶️',
+      service_end: '⏹️',
     };
     return iconMap[type] || '🔔';
   };
@@ -470,19 +502,52 @@ export default function NotificationCenter({
           </div>
 
           {/* Footer */}
-          {filteredNotifications.length > 0 && (
-            <div className='p-3 border-t border-gray-200 text-center'>
-              <button
-                onClick={() => {
-                  setIsOpen(false);
-                  // Navegar a página completa de notificaciones
-                }}
-                className='text-sm text-blue-600 hover:text-blue-800'
+          <div className='p-3 border-t border-gray-200'>
+            <div className='flex justify-between items-center'>
+              {filteredNotifications.length > 0 && (
+                <button
+                  onClick={() => {
+                    setIsOpen(false);
+                    // Navegar a página completa de notificaciones
+                  }}
+                  className='text-sm text-blue-600 hover:text-blue-800'
+                >
+                  Ver todas las notificaciones
+                </button>
+              )}
+              {filteredNotifications.length === 0 && (
+                <span className='text-sm text-gray-500'>
+                  No hay notificaciones
+                </span>
+              )}
+              <Link
+                href='/worker-dashboard/notifications'
+                onClick={() => setIsOpen(false)}
+                className='text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1'
               >
-                Ver todas las notificaciones
-              </button>
+                <svg
+                  className='w-4 h-4'
+                  fill='none'
+                  stroke='currentColor'
+                  viewBox='0 0 24 24'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z'
+                  />
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+                  />
+                </svg>
+                Configurar
+              </Link>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>

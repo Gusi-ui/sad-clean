@@ -178,6 +178,8 @@ export function useNotifications(
         reminder: 'notification-reminder_new.wav',
         urgent: 'notification-urgent_new.wav',
         holiday_update: 'notification-holiday_update_new.wav',
+        service_start: 'notification-service_start_new.wav',
+        service_end: 'notification-service_end_new.wav',
       };
 
       const soundFile = soundFileMap[type] || 'notification-default_new.wav';
@@ -213,7 +215,7 @@ export function useNotifications(
     [enableSound]
   );
 
-  // Mostrar notificación del navegador
+  // Mostrar notificación del navegador con mejor presentación
   const showBrowserNotification = useCallback(
     (notification: WorkerNotification) => {
       if (!enableBrowserNotifications) return;
@@ -226,13 +228,19 @@ export function useNotifications(
           tag: notification.id,
           requireInteraction: notification.priority === 'urgent',
           silent: !enableSound,
+          data: {
+            notificationId: notification.id,
+            type: notification.type,
+            url: `${window.location.origin}/worker-dashboard`,
+          },
         });
 
-        // Auto-cerrar notificación después de 5 segundos (excepto urgentes)
+        // Auto-cerrar notificación después de tiempo según prioridad
         if (notification.priority !== 'urgent') {
+          const timeout = notification.priority === 'high' ? 8000 : 6000;
           setTimeout(() => {
             browserNotification.close();
-          }, 5000);
+          }, timeout);
         }
 
         // Manejar click en la notificación
