@@ -172,14 +172,14 @@ const RouteExportSummary = ({
             <p><strong>Trabajadora:</strong> ${workerName}</p>
             <p><strong>Fecha:</strong> ${date}</p>
           </div>
-          
+
           <div class="summary">
             <h3>Resumen</h3>
             <p><strong>Total de segmentos:</strong> ${segments.length}</p>
             <p><strong>Distancia total:</strong> ${formatDistance(totalDistance)}</p>
             <p><strong>Tiempo facturable total:</strong> ${Math.floor(totalBillableTime / 60)}h ${totalBillableTime % 60}min</p>
           </div>
-          
+
           <div class="segments">
             <h3>Detalles de Segmentos</h3>
             ${segments
@@ -245,74 +245,187 @@ const RouteExportSummary = ({
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className='p-4 bg-gray-50'>
-        <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
-          <div className='flex items-center gap-2'>
-            <Calendar className='w-4 h-4 text-blue-500' />
-            <div>
-              <div className='text-gray-600'>Trabajadora</div>
-              <div className='font-medium'>{workerName}</div>
+      {/* Summary Stats - Optimizado para Móvil */}
+      <div className='p-3 sm:p-4 bg-gray-50'>
+        {/* Versión Móvil - Tarjetas apiladas */}
+        <div className='sm:hidden space-y-3'>
+          <div className='bg-white rounded-lg p-3 border border-gray-200'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-2'>
+                <Calendar className='w-4 h-4 text-blue-500' />
+                <span className='text-xs text-gray-600 font-medium'>
+                  Trabajadora
+                </span>
+              </div>
+              <span className='text-sm font-bold text-blue-600 truncate max-w-32'>
+                {workerName}
+              </span>
             </div>
           </div>
-          <div className='flex items-center gap-2'>
-            <MapPin className='w-4 h-4 text-purple-500' />
-            <div>
-              <div className='text-gray-600'>Segmentos</div>
-              <div className='font-medium'>{segments.length}</div>
+
+          <div className='bg-white rounded-lg p-3 border border-gray-200'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-2'>
+                <MapPin className='w-4 h-4 text-purple-500' />
+                <span className='text-xs text-gray-600 font-medium'>
+                  Segmentos
+                </span>
+              </div>
+              <span className='text-lg font-bold text-purple-600'>
+                {segments.length}
+              </span>
             </div>
           </div>
-          <div className='flex items-center gap-2'>
-            <Clock className='w-4 h-4 text-orange-500' />
-            <div>
-              <div className='text-gray-600'>Tiempo total</div>
-              <div className='font-medium'>
+
+          <div className='bg-white rounded-lg p-3 border border-gray-200'>
+            <div className='flex items-center justify-between'>
+              <div className='flex items-center space-x-2'>
+                <Clock className='w-4 h-4 text-orange-500' />
+                <span className='text-xs text-gray-600 font-medium'>
+                  Tiempo total
+                </span>
+              </div>
+              <span className='text-sm font-bold text-orange-600'>
                 {Math.floor(totalBillableTime / 60)}h {totalBillableTime % 60}
                 min
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Versión Desktop/Tablet - Grid original */}
+        <div className='hidden sm:block'>
+          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
+            <div className='flex items-center gap-2'>
+              <Calendar className='w-4 h-4 text-blue-500' />
+              <div>
+                <div className='text-gray-600'>Trabajadora</div>
+                <div className='font-medium'>{workerName}</div>
+              </div>
+            </div>
+            <div className='flex items-center gap-2'>
+              <MapPin className='w-4 h-4 text-purple-500' />
+              <div>
+                <div className='text-gray-600'>Segmentos</div>
+                <div className='font-medium'>{segments.length}</div>
+              </div>
+            </div>
+            <div className='flex items-center gap-2'>
+              <Clock className='w-4 h-4 text-orange-500' />
+              <div>
+                <div className='text-gray-600'>Tiempo total</div>
+                <div className='font-medium'>
+                  {Math.floor(totalBillableTime / 60)}h {totalBillableTime % 60}
+                  min
+                </div>
               </div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Export Options */}
-      <div className='p-4'>
-        <h4 className='text-sm font-medium text-gray-900 mb-3'>
-          Exportar reporte
-        </h4>
-        <div className='flex flex-wrap gap-2'>
+      {/* Export Options - Optimizado para Móvil */}
+      <div className='p-3 sm:p-4'>
+        <div className='flex items-center justify-between mb-3 sm:mb-4'>
+          <h4 className='text-sm sm:text-base font-medium text-gray-900'>
+            <span className='sm:hidden'>Exportar</span>
+            <span className='hidden sm:inline'>Exportar reporte</span>
+          </h4>
+          <div className='sm:hidden text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded-full'>
+            💡 Reportes
+          </div>
+        </div>
+
+        {/* Versión Móvil - Botones en columna */}
+        <div className='sm:hidden space-y-2'>
           <Button
             variant='outline'
             size='sm'
             onClick={generatePrintableReport}
-            className='flex items-center gap-2'
+            className='w-full flex items-center justify-center gap-2 py-3'
           >
             <FileText className='w-4 h-4' />
-            Imprimir/PDF
+            <span className='font-medium'>Imprimir/PDF</span>
           </Button>
+
           <Button
             variant='outline'
             size='sm'
             onClick={() => handleExport('csv')}
-            className='flex items-center gap-2'
+            className='w-full flex items-center justify-center gap-2 py-3'
           >
             <Download className='w-4 h-4' />
-            Descargar CSV
+            <span className='font-medium'>Descargar CSV</span>
           </Button>
+
           <Button
             variant='outline'
             size='sm'
             onClick={() => handleExport('json')}
-            className='flex items-center gap-2'
+            className='w-full flex items-center justify-center gap-2 py-3'
           >
             <Download className='w-4 h-4' />
-            Descargar JSON
+            <span className='font-medium'>Descargar JSON</span>
           </Button>
         </div>
-        <p className='text-xs text-gray-500 mt-2'>
-          💡 Usa el reporte impreso o PDF para presentar a la empresa. Los
-          archivos CSV/JSON son útiles para sistemas de facturación.
-        </p>
+
+        {/* Versión Desktop/Tablet - Botones en fila */}
+        <div className='hidden sm:block'>
+          <div className='flex flex-wrap gap-2'>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={generatePrintableReport}
+              className='flex items-center gap-2'
+            >
+              <FileText className='w-4 h-4' />
+              Imprimir/PDF
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => handleExport('csv')}
+              className='flex items-center gap-2'
+            >
+              <Download className='w-4 h-4' />
+              Descargar CSV
+            </Button>
+            <Button
+              variant='outline'
+              size='sm'
+              onClick={() => handleExport('json')}
+              className='flex items-center gap-2'
+            >
+              <Download className='w-4 h-4' />
+              Descargar JSON
+            </Button>
+          </div>
+        </div>
+
+        {/* Información adicional - Optimizada para móvil */}
+        <div className='mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-200'>
+          <div className='flex items-start space-x-2'>
+            <div className='w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0'>💡</div>
+            <div className='text-xs sm:text-sm text-blue-800'>
+              <div className='font-medium mb-1'>💡 Consejos de uso:</div>
+              <div className='sm:hidden space-y-1'>
+                <div>
+                  • <strong>PDF:</strong> Para presentaciones
+                </div>
+                <div>
+                  • <strong>CSV:</strong> Para Excel/facturación
+                </div>
+                <div>
+                  • <strong>JSON:</strong> Para sistemas
+                </div>
+              </div>
+              <div className='hidden sm:block'>
+                Usa el reporte impreso o PDF para presentar a la empresa. Los
+                archivos CSV/JSON son útiles para sistemas de facturación.
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
