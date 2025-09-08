@@ -360,11 +360,6 @@ const DailyRoute = (props: {
 
                 {/* Controles de modo de transporte - Optimizado para Móvil */}
                 <div className='mb-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm'>
-                  {/* Indicador visual del modo activo - Solo punto verde */}
-                  <div className='flex items-center justify-center mb-3 sm:mb-4'>
-                    <div className='w-3 h-3 bg-green-500 rounded-full animate-pulse border-2 border-white shadow-sm'></div>
-                  </div>
-
                   {/* Botones reorganizados para móvil */}
                   <div className='grid grid-cols-3 gap-2 sm:flex sm:flex-wrap sm:gap-3'>
                     {(
