@@ -1,5 +1,5 @@
 /**
- * Tipos TypeScript para la aplicación SAD LAS
+ * Tipos TypeScript para la aplicación SAD gusi
  */
 
 // Worker Types (basado en el esquema de Supabase)
@@ -273,7 +273,6 @@ export interface AuthContextType {
   };
   user: Worker | null;
   loading: boolean;
-  isPasswordRecovery: boolean;
   login: (credentials: AuthCredentials) => Promise<Worker | undefined>;
   logout: () => Promise<void>;
   signOut: () => Promise<void>;

@@ -21,14 +21,13 @@ type AuthAction =
   | { type: 'AUTH_SUCCESS'; payload: Worker }
   | { type: 'AUTH_FAILURE'; payload: string }
   | { type: 'AUTH_LOGOUT' }
-  | { type: 'CLEAR_ERROR' }
-  | { type: 'SET_PASSWORD_RECOVERY'; payload: boolean };
+  | { type: 'CLEAR_ERROR' };
 
 // Reducer
 function authReducer(
-  state: typeof initialState & { isPasswordRecovery: boolean },
+  state: typeof initialState,
   action: AuthAction
-): typeof initialState & { isPasswordRecovery: boolean } {
+): typeof initialState {
   // Debug completado - reducer funcionando correctamente
   switch (action.type) {
     case 'AUTH_START':
@@ -59,8 +58,6 @@ function authReducer(
       };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
-    case 'SET_PASSWORD_RECOVERY':
-      return { ...state, isPasswordRecovery: action.payload };
     default:
       return state;
   }
@@ -70,10 +67,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(authReducer, {
-    ...initialState,
-    isPasswordRecovery: false,
-  });
+  const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Debug completado - AuthProvider funcionando correctamente
 
@@ -261,7 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     state,
     user: state.currentWorker,
     loading: state.isLoading,
-    isPasswordRecovery: state.isPasswordRecovery,
     login,
     logout,
     signOut: logout,
