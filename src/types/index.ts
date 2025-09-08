@@ -273,7 +273,6 @@ export interface AuthContextType {
   };
   user: Worker | null;
   loading: boolean;
-  isPasswordRecovery: boolean;
   login: (credentials: AuthCredentials) => Promise<Worker | undefined>;
   logout: () => Promise<void>;
   signOut: () => Promise<void>;

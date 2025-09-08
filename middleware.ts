@@ -2,70 +2,7 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  const { pathname, searchParams } = request.nextUrl;
-  const hash = request.nextUrl.hash;
-
-  // 1. Verificar si es un enlace de verificación de Supabase
-  const verifyToken = searchParams.get('token');
-  const verifyType = searchParams.get('type');
-
-  if (
-    verifyToken &&
-    verifyType === 'recovery' &&
-    pathname === '/auth/v1/verify'
-  ) {
-    console.log(
-      'Middleware: Enlace de verificación de Supabase detectado, procesando...'
-    );
-
-    // Crear una respuesta que procese el token de verificación
-    const verifyUrl = new URL('/auth/reset-password', request.url);
-    verifyUrl.searchParams.set('verify_token', verifyToken);
-    verifyUrl.searchParams.set('type', verifyType);
-
-    return NextResponse.redirect(verifyUrl);
-  }
-
-  // 2. Verificar si hay parámetros de recuperación directos
-  const accessToken = searchParams.get('access_token');
-  const refreshToken = searchParams.get('refresh_token');
-  const type = searchParams.get('type');
-
-  // Buscar tokens en hash (para enlaces de Supabase)
-  let hashAccessToken = null;
-  let hashRefreshToken = null;
-  let hashType = null;
-
-  if (hash && hash.startsWith('#')) {
-    const hashParams = new URLSearchParams(hash.substring(1));
-    hashAccessToken = hashParams.get('access_token');
-    hashRefreshToken = hashParams.get('refresh_token');
-    hashType = hashParams.get('type');
-  }
-
-  // Usar tokens de hash si existen, sino usar los de search params
-  const finalAccessToken = hashAccessToken || accessToken;
-  const finalRefreshToken = hashRefreshToken || refreshToken;
-  const finalType = hashType || type;
-
-  // Si hay tokens de recuperación y no estamos ya en la página de reset
-  if (
-    finalAccessToken &&
-    finalRefreshToken &&
-    finalType === 'recovery' &&
-    pathname !== '/auth/reset-password'
-  ) {
-    console.log('Middleware: Token de recuperación detectado, redirigiendo...');
-
-    // Redirigir a la página de reset con los parámetros
-    const resetUrl = new URL('/auth/reset-password', request.url);
-    resetUrl.searchParams.set('access_token', finalAccessToken);
-    resetUrl.searchParams.set('refresh_token', finalRefreshToken);
-    resetUrl.searchParams.set('type', finalType);
-
-    return NextResponse.redirect(resetUrl);
-  }
-
+  // Middleware básico - solo permitir el paso de todas las rutas
   return NextResponse.next();
 }
 

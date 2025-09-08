@@ -21,14 +21,13 @@ type AuthAction =
   | { type: 'AUTH_SUCCESS'; payload: Worker }
   | { type: 'AUTH_FAILURE'; payload: string }
   | { type: 'AUTH_LOGOUT' }
-  | { type: 'CLEAR_ERROR' }
-  | { type: 'SET_PASSWORD_RECOVERY'; payload: boolean };
+  | { type: 'CLEAR_ERROR' };
 
 // Reducer
 function authReducer(
-  state: typeof initialState & { isPasswordRecovery: boolean },
+  state: typeof initialState,
   action: AuthAction
-): typeof initialState & { isPasswordRecovery: boolean } {
+): typeof initialState {
   // Debug completado - reducer funcionando correctamente
   switch (action.type) {
     case 'AUTH_START':
@@ -59,8 +58,6 @@ function authReducer(
       };
     case 'CLEAR_ERROR':
       return { ...state, error: null };
-    case 'SET_PASSWORD_RECOVERY':
-      return { ...state, isPasswordRecovery: action.payload };
     default:
       return state;
   }
@@ -70,10 +67,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 // Provider
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [state, dispatch] = useReducer(authReducer, {
-    ...initialState,
-    isPasswordRecovery: false,
-  });
+  const [state, dispatch] = useReducer(authReducer, initialState);
 
   // Debug completado - AuthProvider funcionando correctamente
 
@@ -103,63 +97,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     // Ejecutar inmediatamente sin demoras
     initializeAuth();
   }, []); // Solo al montar
-
-  // Manejar tokens de recuperación de contraseña
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const handlePasswordRecovery = async (): Promise<void> => {
-      try {
-        // Verificar si hay parámetros de recuperación en la URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const hashParams = new URLSearchParams(
-          window.location.hash.substring(1)
-        );
-
-        const accessToken =
-          urlParams.get('access_token') ?? hashParams.get('access_token');
-        const refreshToken =
-          urlParams.get('refresh_token') ?? hashParams.get('refresh_token');
-        const type = urlParams.get('type') ?? hashParams.get('type');
-
-        if (
-          accessToken !== null &&
-          accessToken !== undefined &&
-          refreshToken !== null &&
-          refreshToken !== undefined &&
-          type !== null &&
-          type !== undefined &&
-          type === 'recovery'
-        ) {
-          // eslint-disable-next-line no-console
-          console.log('Token de recuperación detectado, redirigiendo...');
-
-          // Configurar la sesión con el token de recuperación
-          const { error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken,
-          });
-
-          if (error) {
-            // eslint-disable-next-line no-console
-            console.error('Error al configurar sesión de recuperación:', error);
-            dispatch({
-              type: 'AUTH_FAILURE',
-              payload: 'Error al procesar token de recuperación',
-            });
-          } else {
-            // Redirigir a la página de reset de contraseña
-            window.location.href = '/auth/reset-password';
-          }
-        }
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error en manejo de recuperación:', error);
-      }
-    };
-
-    void handlePasswordRecovery();
-  }, []);
 
   const login = async (
     credentials: AuthCredentials
@@ -318,7 +255,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     state,
     user: state.currentWorker,
     loading: state.isLoading,
-    isPasswordRecovery: state.isPasswordRecovery,
     login,
     logout,
     signOut: logout,
