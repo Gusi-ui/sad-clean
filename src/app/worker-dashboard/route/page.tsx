@@ -389,11 +389,7 @@ const DailyRoute = (props: {
                     ).map(({ key, icon, label }) => (
                       <button
                         key={key}
-                        onClick={() =>
-                          setTravelMode(
-                            key as 'DRIVING' | 'WALKING' | 'TRANSIT'
-                          )
-                        }
+                        onClick={() => setTravelMode(key)}
                         className={`relative px-2 py-2 sm:px-4 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-all duration-200 transform hover:scale-105 ${
                           travelMode === key
                             ? 'bg-blue-600 text-white shadow-lg'
@@ -433,7 +429,8 @@ const DailyRoute = (props: {
                   </div>
                 </div>
 
-                <div className='space-y-3 sm:space-y-4'>
+                {/* Lista de Segmentos Optimizada para Móvil */}
+                <div className='space-y-2 sm:space-y-3'>
                   {travelSegments.map((segment, index) => {
                     // Obtener tiempo real si está disponible
                     const realSegment = realTimeSegments?.[index];
@@ -452,96 +449,165 @@ const DailyRoute = (props: {
                     return (
                       <div
                         key={index}
-                        className='bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-3 sm:p-4 border border-blue-100 shadow-sm'
+                        className={`rounded-lg border transition-all duration-200 ${
+                          segment.isZeroTravel
+                            ? 'bg-green-50 border-green-200 shadow-sm'
+                            : 'bg-white border-gray-200 shadow-sm hover:shadow-md'
+                        }`}
                       >
-                        {/* Encabezado del segmento - Mobile First */}
-                        <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
-                          <div className='flex-1 min-w-0'>
-                            <div className='flex items-center space-x-2 mb-2'>
-                              <span className='inline-flex items-center justify-center w-6 h-6 bg-blue-200 text-blue-800 text-xs font-bold rounded-full'>
+                        {/* Versión Móvil - Ultra Compacta */}
+                        <div className='sm:hidden p-3'>
+                          <div className='flex items-start justify-between mb-2'>
+                            <div className='flex items-center space-x-2 flex-1 min-w-0'>
+                              <span
+                                className={`inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full ${
+                                  segment.isZeroTravel
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-blue-500 text-white'
+                                }`}
+                              >
                                 {index + 1}
                               </span>
-                              <h5 className='text-sm sm:text-base font-medium text-blue-900 truncate'>
-                                {segment.from.userLabel} →{' '}
-                                {segment.to.userLabel}
-                              </h5>
+                              <div className='flex-1 min-w-0'>
+                                <h6 className='text-sm font-medium text-gray-900 truncate'>
+                                  {segment.from.userLabel}
+                                </h6>
+                                <div className='flex items-center space-x-1 text-xs text-gray-500'>
+                                  <span>→</span>
+                                  <span className='truncate'>
+                                    {segment.to.userLabel}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-
-                            {/* Direcciones - Responsive */}
-                            <div className='text-xs sm:text-sm text-blue-600 space-y-1'>
-                              <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
-                                <span className='font-medium text-blue-700'>
-                                  Desde:
-                                </span>
-                                <span className='break-words'>
-                                  {segment.from.address ?? 'Sin dirección'}
-                                </span>
+                            <div className='text-right ml-2'>
+                              <div
+                                className={`text-sm font-bold ${
+                                  segment.isZeroTravel
+                                    ? 'text-green-600'
+                                    : 'text-blue-600'
+                                }`}
+                              >
+                                {segmentsLoading ? '⏳' : displayTime}
                               </div>
-                              <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
-                                <span className='font-medium text-blue-700'>
-                                  Hasta:
-                                </span>
-                                <span className='break-words'>
-                                  {segment.to.address ?? 'Sin dirección'}
-                                </span>
+                              <div className='text-xs text-gray-500'>
+                                {segment.from.end}
                               </div>
-                              {displayDistance != null &&
-                                displayDistance !== '' && (
-                                  <div className='flex flex-col sm:flex-row sm:items-center sm:space-x-2'>
-                                    <span className='font-medium text-blue-700'>
-                                      Distancia:
-                                    </span>
-                                    <span className='text-blue-600'>
-                                      {displayDistance}
-                                    </span>
-                                  </div>
-                                )}
                             </div>
                           </div>
 
-                          {/* Información de tiempo - Responsive */}
-                          <div className='flex flex-row sm:flex-col items-center sm:items-end space-x-4 sm:space-x-0 sm:space-y-1 mt-2 sm:mt-0'>
-                            <div className='text-center sm:text-right'>
-                              <div className='text-lg sm:text-xl font-bold text-blue-900'>
-                                {segmentsLoading ? '⏳' : displayTime}
+                          {/* Información adicional en móvil */}
+                          <div className='space-y-1'>
+                            {segment.isZeroTravel && (
+                              <div className='flex items-center space-x-1 text-xs text-green-700 bg-green-100 rounded px-2 py-1'>
+                                <span>🏠</span>
+                                <span>Mismo domicilio</span>
                               </div>
-                              <div className='text-xs text-blue-600'>
-                                {hasRealTime
-                                  ? 'Tiempo real'
-                                  : 'Tiempo estimado'}
+                            )}
+                            {displayDistance && (
+                              <div className='text-xs text-gray-600'>
+                                📍 {displayDistance}
                               </div>
-                            </div>
-                            <div className='text-center sm:text-right'>
-                              <div className='text-sm font-medium text-blue-800'>
-                                {segment.from.end} - {segment.to.start}
-                              </div>
-                              <div className='text-xs text-blue-600'>
-                                Horario
-                              </div>
-                            </div>
+                            )}
+                            {!hasRealTime &&
+                              !segment.isZeroTravel &&
+                              segmentsError && (
+                                <div className='flex items-center space-x-1 text-xs text-amber-700 bg-amber-50 rounded px-2 py-1'>
+                                  <span>⚠️</span>
+                                  <span>Tiempo estimado</span>
+                                </div>
+                              )}
                           </div>
                         </div>
 
-                        {/* Indicador visual de tiempo cero */}
-                        {segment.isZeroTravel && (
-                          <div className='mt-2 flex items-center space-x-2 text-xs text-green-700 bg-green-50 rounded-md px-2 py-1'>
-                            <span>🏠</span>
-                            <span>Mismo domicilio - Sin desplazamiento</span>
-                          </div>
-                        )}
+                        {/* Versión Tablet/Desktop - Más detallada */}
+                        <div className='hidden sm:block p-4'>
+                          <div className='flex items-center justify-between'>
+                            <div className='flex-1 min-w-0'>
+                              <div className='flex items-center space-x-3 mb-2'>
+                                <span
+                                  className={`inline-flex items-center justify-center w-7 h-7 text-sm font-bold rounded-full ${
+                                    segment.isZeroTravel
+                                      ? 'bg-green-500 text-white'
+                                      : 'bg-blue-500 text-white'
+                                  }`}
+                                >
+                                  {index + 1}
+                                </span>
+                                <h5 className='text-base font-medium text-gray-900 truncate'>
+                                  {segment.from.userLabel} →{' '}
+                                  {segment.to.userLabel}
+                                </h5>
+                                {segment.isZeroTravel && (
+                                  <span className='inline-flex items-center space-x-1 bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full'>
+                                    <span>🏠</span>
+                                    <span>Mismo domicilio</span>
+                                  </span>
+                                )}
+                              </div>
 
-                        {/* Indicador de error en tiempo real */}
-                        {!hasRealTime &&
-                          !segment.isZeroTravel &&
-                          segmentsError != null &&
-                          segmentsError !== '' && (
-                            <div className='mt-2 flex items-center space-x-2 text-xs text-amber-700 bg-amber-50 rounded-md px-2 py-1'>
-                              <span>⚠️</span>
-                              <span>
-                                Usando tiempo estimado - Error en cálculo real
-                              </span>
+                              {/* Direcciones simplificadas */}
+                              <div className='text-sm text-gray-600'>
+                                <div className='flex items-start space-x-2 mb-1'>
+                                  <span className='font-medium text-gray-700 w-12 flex-shrink-0'>
+                                    Desde:
+                                  </span>
+                                  <span className='flex-1'>
+                                    {segment.from.address ?? 'Sin dirección'}
+                                  </span>
+                                </div>
+                                <div className='flex items-start space-x-2'>
+                                  <span className='font-medium text-gray-700 w-12 flex-shrink-0'>
+                                    Hasta:
+                                  </span>
+                                  <span className='flex-1'>
+                                    {segment.to.address ?? 'Sin dirección'}
+                                  </span>
+                                </div>
+                              </div>
                             </div>
-                          )}
+
+                            {/* Información de tiempo y distancia */}
+                            <div className='flex flex-col items-end space-y-1 ml-4'>
+                              <div className='text-center'>
+                                <div
+                                  className={`text-xl font-bold ${
+                                    segment.isZeroTravel
+                                      ? 'text-green-600'
+                                      : 'text-blue-600'
+                                  }`}
+                                >
+                                  {segmentsLoading ? '⏳' : displayTime}
+                                </div>
+                                <div className='text-xs text-gray-500'>
+                                  {hasRealTime
+                                    ? 'Tiempo real'
+                                    : 'Tiempo estimado'}
+                                </div>
+                              </div>
+                              {displayDistance && (
+                                <div className='text-sm text-gray-600'>
+                                  📍 {displayDistance}
+                                </div>
+                              )}
+                              <div className='text-xs text-gray-500'>
+                                {segment.from.end} - {segment.to.start}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Indicador de error en desktop */}
+                          {!hasRealTime &&
+                            !segment.isZeroTravel &&
+                            segmentsError && (
+                              <div className='mt-3 flex items-center space-x-2 text-sm text-amber-700 bg-amber-50 rounded-md px-3 py-2'>
+                                <span>⚠️</span>
+                                <span>
+                                  Usando tiempo estimado - Error en cálculo real
+                                </span>
+                              </div>
+                            )}
+                        </div>
                       </div>
                     );
                   })}
