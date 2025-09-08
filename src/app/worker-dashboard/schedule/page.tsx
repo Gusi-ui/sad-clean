@@ -453,17 +453,35 @@ const DayServicesModal = (props: {
             services.map((service, index) => {
               // Aplicar colores tenues si el día está completado
               const isCompletedDay = dayStatus === 'completed';
-              const serviceClasses = isCompletedDay
-                ? 'p-3 bg-gray-50/70 rounded border-l-4 border-gray-300 opacity-75'
-                : 'p-3 bg-blue-50 rounded border-l-4 border-blue-400';
+              const isInProgressDay = dayStatus === 'inprogress';
+              const isPendingDay = dayStatus === 'pending';
 
-              const userLabelClasses = isCompletedDay
-                ? 'font-semibold text-gray-700 bg-gray-100 px-2 py-1 rounded shadow-sm inline-block mb-1'
-                : 'font-semibold text-gray-900 bg-white px-2 py-1 rounded shadow-sm inline-block mb-1';
+              let serviceClasses = 'p-3 rounded border-l-4';
+              let userLabelClasses =
+                'font-semibold px-2 py-1 rounded shadow-sm inline-block mb-1';
+              let timeClasses = 'text-sm font-medium';
 
-              const timeClasses = isCompletedDay
-                ? 'text-sm text-gray-600 font-medium'
-                : 'text-sm text-gray-700 font-medium';
+              if (isCompletedDay) {
+                // Días completados: rojo pastel tenue
+                serviceClasses += ' bg-rose-50/80 border-rose-300 opacity-80';
+                userLabelClasses += ' text-rose-800 bg-rose-100';
+                timeClasses += ' text-rose-700';
+              } else if (isInProgressDay) {
+                // Días en progreso: verde
+                serviceClasses += ' bg-green-100 border-green-400';
+                userLabelClasses += ' text-green-800 bg-green-200';
+                timeClasses += ' text-green-700';
+              } else if (isPendingDay) {
+                // Días pendientes: amarillo
+                serviceClasses += ' bg-amber-100 border-amber-400';
+                userLabelClasses += ' text-amber-800 bg-amber-200';
+                timeClasses += ' text-amber-700';
+              } else {
+                // Estado por defecto
+                serviceClasses += ' bg-blue-50 border-blue-400';
+                userLabelClasses += ' text-gray-900 bg-white';
+                timeClasses += ' text-gray-700';
+              }
 
               return (
                 <div key={index} className={serviceClasses}>
@@ -570,14 +588,9 @@ const WorkerMonthCalendar = (props: {
     // Si es un día futuro, está pendiente
     if (targetDate > today) return 'pending';
 
-    // Si es un día pasado, verificar si todos los servicios están completados
+    // Si es un día pasado, asumir que está completado
     if (targetDate < today) {
-      const allCompleted = services.every((service) => {
-        const endMinutes = toMinutes(service.end);
-        // Considerar completado si la hora actual es mayor que la hora de fin del servicio
-        return now.getHours() * 60 + now.getMinutes() > endMinutes;
-      });
-      return allCompleted ? 'completed' : 'pending';
+      return 'completed';
     }
 
     // Es hoy, determinar el estado basado en los servicios actuales
@@ -619,14 +632,14 @@ const WorkerMonthCalendar = (props: {
 
     // Aplicar colores basados en el estado del día
     if (day.status === 'completed') {
-      // Días completados: color más tenue
-      baseClasses.push('opacity-60 bg-gray-50 border-gray-300');
+      // Días completados: rojo pastel
+      baseClasses.push('bg-rose-50 border-rose-300');
     } else if (day.status === 'inprogress') {
-      // Días en progreso: verde sutil
-      baseClasses.push('bg-green-50/50 border-green-200');
+      // Días en progreso: verde
+      baseClasses.push('bg-green-100 border-green-300');
     } else if (day.status === 'pending' && day.entries.length > 0) {
-      // Días pendientes con servicios: amarillo sutil
-      baseClasses.push('bg-amber-50/50 border-amber-200');
+      // Días pendientes con servicios: amarillo
+      baseClasses.push('bg-amber-100 border-amber-300');
     }
 
     return baseClasses.filter(Boolean).join(' ');
