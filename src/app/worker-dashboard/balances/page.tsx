@@ -312,12 +312,6 @@ export default function WorkerBalancesPage(): React.JSX.Element {
 
                   {/* Layout para móviles con información completa */}
                   <div className='sm:hidden grid grid-cols-2 gap-2 text-sm'>
-                    <div className='bg-purple-50 border border-purple-100 rounded-md px-2 py-1'>
-                      <p className='text-[11px] text-gray-600'>Asignadas</p>
-                      <p className='font-medium text-gray-900'>
-                        {row.assignedMonthlyHours.toFixed(1)} h
-                      </p>
-                    </div>
                     <div className='bg-green-50 border border-green-100 rounded-md px-2 py-1'>
                       <p className='text-[11px] text-gray-600'>Laborables</p>
                       <p className='font-medium text-gray-900'>
@@ -334,6 +328,12 @@ export default function WorkerBalancesPage(): React.JSX.Element {
                       <p className='text-[11px] text-gray-600'>Teóricas</p>
                       <p className='font-semibold text-gray-900'>
                         {row.theoreticalMonthlyHours.toFixed(1)} h
+                      </p>
+                    </div>
+                    <div className='bg-purple-50 border border-purple-100 rounded-md px-2 py-1'>
+                      <p className='text-[11px] text-gray-600'>Asignadas</p>
+                      <p className='font-medium text-gray-900'>
+                        {row.assignedMonthlyHours.toFixed(1)} h
                       </p>
                     </div>
                   </div>
