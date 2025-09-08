@@ -360,22 +360,9 @@ const DailyRoute = (props: {
 
                 {/* Controles de modo de transporte - Optimizado para Móvil */}
                 <div className='mb-4 p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl border border-blue-200 shadow-sm'>
-                  {/* Header mejorado */}
-                  <div className='flex items-center justify-between mb-3 sm:mb-4'>
-                    <div className='flex items-center space-x-2'>
-                      <div className='w-6 h-6 sm:w-7 sm:h-7 bg-blue-100 rounded-full flex items-center justify-center'>
-                        <span className='text-sm sm:text-base'>🛣️</span>
-                      </div>
-                      <h5 className='text-sm sm:text-base font-semibold text-blue-900'>
-                        Modo de Transporte
-                      </h5>
-                    </div>
-                    {/* Indicador del modo actual en desktop */}
-                    <div className='hidden sm:block text-xs text-blue-600 bg-blue-100 px-2 py-1 rounded-full'>
-                      {travelMode === 'DRIVING' && '🚗 Coche'}
-                      {travelMode === 'WALKING' && '🚶 Andando'}
-                      {travelMode === 'TRANSIT' && '🚌 Transporte público'}
-                    </div>
+                  {/* Indicador visual del modo activo - Solo punto verde */}
+                  <div className='flex items-center justify-center mb-3 sm:mb-4'>
+                    <div className='w-3 h-3 bg-green-500 rounded-full animate-pulse border-2 border-white shadow-sm'></div>
                   </div>
 
                   {/* Botones reorganizados para móvil */}
