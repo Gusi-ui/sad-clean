@@ -59,7 +59,10 @@ async function sendAssignmentChangeNotification(
       .single();
 
     if (userError) {
-      console.warn('⚠️ Error obteniendo datos del usuario:', userError);
+      logger.warn('Error obteniendo datos del usuario para notificación', {
+        userId,
+        error: userError,
+      });
       return false;
     }
 
@@ -70,12 +73,18 @@ async function sendAssignmentChangeNotification(
       .single();
 
     if (workerError) {
-      console.warn('⚠️ Error obteniendo datos de la trabajadora:', workerError);
+      logger.warn(
+        'Error obteniendo datos de la trabajadora para notificación',
+        { workerId, error: workerError }
+      );
       return false;
     }
 
     if (userData === null || workerData === null) {
-      console.warn('⚠️ Datos incompletos para enviar notificación');
+      logger.warn(
+        'Datos incompletos para enviar notificación de cambio de asignación',
+        { userId, workerId }
+      );
       return false;
     }
 
@@ -91,8 +100,9 @@ async function sendAssignmentChangeNotification(
     try {
       await supabase.from('worker_notifications').select('id').limit(1);
     } catch {
-      console.warn(
-        '⚠️ Tabla worker_notifications no encontrada, creando notificación básica'
+      logger.warn(
+        'Tabla worker_notifications no encontrada, creando notificación básica',
+        { workerId, userId }
       );
       // Crear notificación básica sin usar el servicio completo
       const { error: basicError } = await supabase
@@ -113,10 +123,14 @@ async function sendAssignmentChangeNotification(
         });
 
       if (basicError) {
-        console.error('❌ Error creando notificación básica:', basicError);
+        logger.error(
+          'Error creando notificación básica de cambio de asignación',
+          { workerId, userId, error: basicError }
+        );
         return false;
       }
 
+      // eslint-disable-next-line no-console
       console.log(`✅ Notificación básica creada para ${workerName}`);
       return true;
     }
@@ -139,22 +153,29 @@ async function sendAssignmentChangeNotification(
       });
 
     if (notificationResult !== null) {
+      // eslint-disable-next-line no-console
       console.log(
-        `✅ Notificación de cambio de asignación enviada a ${workerName} para usuario ${userName}`
+        `✅ Notificación enviada a ${workerName}: ${oldHours}h → ${newHours}h`
       );
       return true;
     }
 
-    console.error(
-      `❌ Error enviando notificación de cambio de asignación a ${workerName}`
-    );
+    logger.error('Error enviando notificación de cambio de asignación', {
+      workerId,
+      userId,
+      workerName,
+      userName,
+      oldHours,
+      newHours,
+    });
     return false;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    console.error(
-      '❌ Error enviando notificación de cambio de asignación:',
-      errorMessage
-    );
+    logger.error('Error general en notificación de cambio de asignación', {
+      workerId,
+      userId,
+      error: errorMessage,
+    });
     // No relanzar el error para no interrumpir el flujo principal
     return false;
   }
@@ -1185,8 +1206,11 @@ export default function AssignmentsPage() {
                     );
 
                   if (!notificationSent) {
-                    console.warn(
-                      '⚠️ No se pudo enviar notificación de cambio de asignación, pero la actualización continúa'
+                    logger.warn(
+                      'No se pudo enviar notificación de cambio de asignación, pero la actualización continúa',
+                      {
+                        editingAssignment: editingAssignment.id,
+                      }
                     );
                   }
 
