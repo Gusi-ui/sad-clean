@@ -96,12 +96,9 @@ const RouteMap = ({
 
   return (
     <div className='w-full space-y-4'>
-      {/* Controles de modo de viaje */}
+      {/* Controles de modo de viaje - Sin label para mejor legibilidad */}
       <div className='flex flex-wrap gap-2 p-4 bg-gray-50 rounded-lg'>
         <div className='flex items-center gap-2'>
-          <span className='text-sm font-medium text-gray-700'>
-            Modo de viaje:
-          </span>
           <div className='flex gap-1'>
             <Button
               variant={travelMode === 'DRIVING' ? 'primary' : 'outline'}
