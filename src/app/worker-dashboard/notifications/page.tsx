@@ -298,10 +298,19 @@ export default function NotificationsSettingsPage() {
             </div>
             <Link
               href='/worker-dashboard'
-              className='p-2 hover:bg-gray-100 rounded-full transition-colors duration-200'
-              aria-label='Cerrar configuración'
+              className='group relative flex items-center gap-2 px-3 py-2 bg-gray-100 hover:bg-red-50 border border-gray-300 hover:border-red-300 rounded-lg transition-all duration-200 shadow-sm hover:shadow-md'
+              aria-label='Cerrar configuración y volver al dashboard'
+              title='Cerrar configuración'
             >
-              <X className='h-5 w-5 text-gray-500 hover:text-gray-700' />
+              <X className='h-5 w-5 text-gray-600 group-hover:text-red-600 transition-colors duration-200' />
+              <span className='text-sm font-medium text-gray-700 group-hover:text-red-700 transition-colors duration-200 hidden sm:inline'>
+                Cerrar
+              </span>
+              {/* Tooltip para móviles */}
+              <div className='absolute top-full mt-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap z-10 sm:hidden'>
+                Cerrar configuración
+                <div className='absolute -top-1 left-1/2 transform -translate-x-1/2 w-2 h-2 bg-gray-800 rotate-45'></div>
+              </div>
             </Link>
           </div>
           <p className='text-gray-600'>
