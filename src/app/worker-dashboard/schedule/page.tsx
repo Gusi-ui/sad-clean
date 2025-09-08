@@ -192,28 +192,83 @@ const WeeklySchedule = (props: {
               </div>
             ) : (
               <div className='space-y-2 sm:space-y-3'>
-                {daySlots.map((slot, slotIndex) => (
-                  <div
-                    key={`${slot.assignmentId}-${slot.start}-${slot.end}-${slotIndex}`}
-                    className='bg-white rounded-lg p-3 sm:p-4 border border-gray-200 shadow-sm'
-                  >
-                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
-                      <div className='flex-1'>
-                        <p className='font-medium text-gray-900 text-sm sm:text-base'>
-                          {slot.userLabel}
-                        </p>
-                        <p className='text-xs sm:text-sm text-gray-600'>
-                          {slot.start} - {slot.end}
-                        </p>
-                      </div>
-                      <div className='flex justify-end sm:text-right'>
-                        <span className='inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
-                          Programado
-                        </span>
+                {daySlots.map((slot, slotIndex) => {
+                  // Lógica simple de colores basada en la fecha
+                  const now = new Date();
+                  const today = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate()
+                  );
+                  const serviceDate = new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth(),
+                    currentDate.getDate()
+                  );
+
+                  // Determinar colores y textos de estado
+                  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                  const startMinutes = toMinutes(slot.start);
+                  const endMinutes = toMinutes(slot.end);
+
+                  const isPastDay = serviceDate < today;
+                  const isFutureDay = serviceDate > today;
+                  const isToday = !isPastDay && !isFutureDay;
+                  const isInProgress =
+                    isToday &&
+                    nowMinutes >= startMinutes &&
+                    nowMinutes < endMinutes;
+                  const isCompleted = isToday && nowMinutes >= endMinutes;
+
+                  const bgColor = isPastDay
+                    ? 'bg-rose-100 border-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-amber-100 border-amber-300'
+                      : isInProgress
+                        ? 'bg-green-100 border-green-300'
+                        : 'bg-rose-100 border-rose-300';
+
+                  const badgeText = isPastDay
+                    ? 'Completado'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'Pendiente'
+                      : isInProgress
+                        ? 'En curso'
+                        : 'Completado';
+
+                  const badgeColor = isPastDay
+                    ? 'bg-white/80 text-rose-800 ring-1 ring-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-white/80 text-amber-800 ring-1 ring-amber-300'
+                      : isInProgress
+                        ? 'bg-white/80 text-green-800 ring-1 ring-green-300'
+                        : 'bg-white/80 text-rose-800 ring-1 ring-rose-300';
+
+                  return (
+                    <div
+                      key={`${slot.assignmentId}-${slot.start}-${slot.end}-${slotIndex}`}
+                      className={`${bgColor} rounded-lg p-3 sm:p-4 border shadow-sm hover:bg-opacity-80`}
+                    >
+                      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
+                        <div className='flex-1'>
+                          <p className='font-medium text-gray-900 text-sm sm:text-base'>
+                            {slot.userLabel}
+                          </p>
+                          <p className='text-xs sm:text-sm text-gray-600'>
+                            {slot.start} - {slot.end}
+                          </p>
+                        </div>
+                        <div className='flex justify-end sm:text-right'>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-full text-xs font-medium ${badgeColor}`}
+                          >
+                            {badgeText}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
