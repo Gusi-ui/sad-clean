@@ -640,11 +640,8 @@ const WorkerMonthCalendar = (props: {
   for (let i = 0; i < calendarDays.length; i += 7) {
     weeks.push(calendarDays.slice(i, i + 7));
   }
-  // Si es móvil o tablet y está en modo calendario, mostrar calendario convencional
-  if (
-    props.isMobile ??
-    (typeof window !== 'undefined' && window.innerWidth <= 1024)
-  ) {
+  // Mostrar calendario con modal en todas las pantallas
+  {
     return (
       <div>
         <div className='mb-4 md:mb-6'>
@@ -740,94 +737,6 @@ const WorkerMonthCalendar = (props: {
       </div>
     );
   }
-
-  // Vista original para desktop
-  return (
-    <div>
-      <div className='mb-4 sm:mb-6'>
-        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
-          Este Mes
-        </h3>
-        <p className='text-sm sm:text-base text-gray-600'>
-          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
-          {lastDayOfMonth.toLocaleDateString('es-ES')}
-        </p>
-      </div>
-      <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
-        {calendarDays
-          .filter((day) => day.isCurrentMonth)
-          .map((cell, idx) => {
-            const headerClasses = cell.isCurrentMonth
-              ? 'text-gray-900'
-              : 'text-gray-400';
-            const borderHighlight =
-              cell.isHoliday || cell.isWeekend
-                ? 'border-red-300'
-                : 'border-gray-200';
-            const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
-            const weekdayShort = cell.date
-              .toLocaleDateString('es-ES', { weekday: 'short' })
-              .replace('.', '')
-              .slice(0, 3);
-            return (
-              <div
-                key={idx}
-                className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-[100px] sm:min-h-[120px] md:min-h-[80px] rounded-lg ${todayRing}`}
-              >
-                <div className='flex items-center justify-between mb-1'>
-                  <div className='flex items-center gap-2'>
-                    <span className='inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
-                      {weekdayShort}
-                    </span>
-                    <span
-                      className={`text-xs sm:text-sm font-medium ${headerClasses}`}
-                    >
-                      {cell.date.getDate()}
-                    </span>
-                  </div>
-                  {cell.isHoliday && (
-                    <span className='text-[10px] sm:text-xs text-red-600 font-medium'>
-                      🎉
-                    </span>
-                  )}
-                </div>
-                <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
-                  {cell.entries.slice(0, 4).map((e, i) => (
-                    <div
-                      key={`${cell.key}-${e.assignmentId}-${i}`}
-                      className='rounded px-1.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50'
-                    >
-                      <div className='text-[11px] sm:text-xs font-medium text-gray-700 truncate'>
-                        {e.userLabel}
-                      </div>
-                      <div className='flex items-center gap-1 text-[11px] sm:text-xs text-blue-700 font-semibold'>
-                        <span>
-                          {e.start}–{e.end}
-                        </span>
-                      </div>
-                    </div>
-                  ))}
-                  {cell.entries.length > 4 && (
-                    <div className='text-center'>
-                      <span className='text-[10px] text-blue-600 font-medium'>
-                        +{cell.entries.length - 4} más
-                      </span>
-                    </div>
-                  )}
-                  {cell.entries.length === 0 && (
-                    <div className='text-center py-2'>
-                      <p className='text-[10px] text-gray-400 italic'>
-                        Sin servicios
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-      </div>
-    </div>
-  );
 };
 // Eliminado: Componente mensual previo ya no se usa
 /* const MonthlySchedule = (props: {
