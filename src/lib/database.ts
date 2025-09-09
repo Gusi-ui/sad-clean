@@ -17,9 +17,9 @@ import type {
 } from "@/types/database-types";
 import { securityLogger } from "@/utils/security-config";
 
-// Valores por defecto para desarrollo
-const DEFAULT_SUPABASE_URL = "https://placeholder.supabase.co";
-const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder";
+// Valores por defecto para desarrollo (NO USAR EN PRODUCCIÓN)
+const DEFAULT_SUPABASE_URL = "https://your-project-ref.supabase.co";
+const DEFAULT_SUPABASE_KEY = "your-anon-key-here";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
@@ -54,7 +54,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 export const supabaseAdmin =
   serviceRoleKey &&
   serviceRoleKey !== "your-service-role-key-here" &&
-  serviceRoleKey !== "tu_clave_de_servicio_aqui"
+  serviceRoleKey !== "tu_clave_de_servicio_aqui" &&
+  serviceRoleKey.length > 20 // Validación básica de longitud
     ? createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: true,
@@ -84,7 +85,7 @@ export type {
   UserUpdate,
   Worker,
   WorkerInsert,
-  WorkerUpdate,
+  WorkerUpdate
 };
 
 // Funciones helper para SAD LAS
