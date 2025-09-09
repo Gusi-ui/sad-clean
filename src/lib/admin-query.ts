@@ -1,8 +1,8 @@
-'use server';
+"use server";
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import type { AdminInsert, User as AdminUser } from '@/types';
-import { securityLogger } from '@/utils/security-config';
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import type { AdminInsert, User as AdminUser } from "@/types";
+import { securityLogger } from "@/utils/security-config";
 
 /**
  * Crea un nuevo usuario administrador en Supabase.
@@ -12,44 +12,44 @@ import { securityLogger } from '@/utils/security-config';
  * @returns El nuevo usuario creado.
  */
 export const createAdmin = async (
-  adminData: AdminInsert
+  adminData: AdminInsert,
 ): Promise<AdminUser> => {
   // Paso 1: Crear usuario confirmado usando el cliente de administrador
   const { data: authData, error: authError } =
     await supabaseAdmin.auth.admin.createUser({
-      email: adminData['email'] ?? '',
+      email: adminData["email"] ?? "",
       password: adminData.password,
       email_confirm: true, // Confirmar email automáticamente
       user_metadata: {
         name: adminData.name,
-        role: 'admin',
+        role: "admin",
       },
     });
 
   if (authError) {
     throw new Error(
-      `Error al crear el usuario en Supabase Auth: ${authError.message}`
+      `Error al crear el usuario en Supabase Auth: ${authError.message}`,
     );
   }
 
   if (authData.user === null || authData.user === undefined) {
-    throw new Error('No se pudo obtener el usuario después del registro.');
+    throw new Error("No se pudo obtener el usuario después del registro.");
   }
 
   const newUserId = authData.user.id;
 
   // Paso 2: Insertar en `auth_users` usando el cliente de administrador para bypassear RLS.
-  const adminEmail = adminData['email'];
-  if (adminEmail === undefined || adminEmail === null || adminEmail === '') {
-    throw new Error('Email es requerido para crear un administrador');
+  const adminEmail = adminData["email"];
+  if (adminEmail === undefined || adminEmail === null || adminEmail === "") {
+    throw new Error("Email es requerido para crear un administrador");
   }
 
   // Type assertion necesaria para tabla auth_users de Supabase
   /* eslint-disable @typescript-eslint/no-explicit-any */
-  const { error: userError } = await supabaseAdmin.from('auth_users').insert({
+  const { error: userError } = await supabaseAdmin.from("auth_users").insert({
     id: newUserId,
     email: adminEmail,
-    role: 'admin',
+    role: "admin",
   } as any);
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -57,21 +57,21 @@ export const createAdmin = async (
     // Si la inserción en `auth_users` falla, eliminar el usuario de `auth.users`
     await supabaseAdmin.auth.admin.deleteUser(newUserId);
     throw new Error(
-      `Error al insertar en la tabla de usuarios: ${userError.message}`
+      `Error al insertar en la tabla de usuarios: ${userError.message}`,
     );
   }
 
   // Devolver un objeto compatible con el tipo AdminUser
   return {
     id: newUserId,
-    email: adminData['email'] ?? '',
-    name: adminData['name'] || '',
-    surname: '',
-    phone: '',
-    address: '',
-    postal_code: '',
-    city: '',
-    client_code: '',
+    email: adminData["email"] ?? "",
+    name: adminData["name"] || "",
+    surname: "",
+    phone: "",
+    address: "",
+    postal_code: "",
+    city: "",
+    client_code: "",
     monthly_assigned_hours: 0,
     medical_conditions: [],
     // emergency_contact: {
@@ -101,25 +101,25 @@ export const getAdmins = async (): Promise<AdminUser[]> => {
 
   // Filtrar y mapear los usuarios que tienen el rol 'admin' en sus metadatos
   const admins = usersData.users
-    .filter((user) => user.user_metadata?.['role'] === 'admin')
+    .filter((user) => user.user_metadata?.["role"] === "admin")
     .map((user) => ({
       id: user.id,
-      email: user.email ?? '',
+      email: user.email ?? "",
       name:
-        (user.user_metadata?.['name'] as string | undefined) ??
-        'Nombre no disponible',
-      surname: '',
-      phone: '',
-      address: '',
-      postal_code: '',
-      city: '',
-      client_code: '',
+        (user.user_metadata?.["name"] as string | undefined) ??
+        "Nombre no disponible",
+      surname: "",
+      phone: "",
+      address: "",
+      postal_code: "",
+      city: "",
+      client_code: "",
       monthly_assigned_hours: 0,
       medical_conditions: [],
       emergency_contact: {
-        name: '',
-        phone: '',
-        relationship: '',
+        name: "",
+        phone: "",
+        relationship: "",
       },
       is_active: true,
       created_at: user.created_at,
@@ -139,7 +139,7 @@ export const getAdmins = async (): Promise<AdminUser[]> => {
  */
 export const resetAdminPassword = async (
   userId: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<{ success: boolean; message: string }> => {
   try {
     const { error } = await supabaseAdmin.auth.admin.updateUserById(userId, {
@@ -152,12 +152,12 @@ export const resetAdminPassword = async (
 
     return {
       success: true,
-      message: 'Contraseña actualizada exitosamente',
+      message: "Contraseña actualizada exitosamente",
     };
   } catch (error) {
     return {
       success: false,
-      message: error instanceof Error ? error.message : 'Error desconocido',
+      message: error instanceof Error ? error.message : "Error desconocido",
     };
   }
 };
@@ -173,14 +173,14 @@ export const resetAdminPassword = async (
  */
 export const deleteAdmin = async (
   userId: string,
-  userEmail: string
+  userEmail: string,
 ): Promise<{ success: boolean; message: string }> => {
   try {
     // Validación de seguridad: No permitir borrar al super admin
-    if (userEmail === 'conectomail@gmail.com') {
+    if (userEmail === "conectomail@gmail.com") {
       return {
         success: false,
-        message: 'No se puede eliminar al Super Administrador del sistema',
+        message: "No se puede eliminar al Super Administrador del sistema",
       };
     }
 
@@ -195,30 +195,30 @@ export const deleteAdmin = async (
     ) {
       return {
         success: false,
-        message: 'Usuario no encontrado en el sistema',
+        message: "Usuario no encontrado en el sistema",
       };
     }
 
     // Verificar que es administrador
-    const userRole = userData.user.user_metadata?.['role'] as
+    const userRole = userData.user.user_metadata?.["role"] as
       | string
       | undefined;
-    if (userRole !== 'admin') {
+    if (userRole !== "admin") {
       return {
         success: false,
-        message: 'Solo se pueden eliminar usuarios con rol de administrador',
+        message: "Solo se pueden eliminar usuarios con rol de administrador",
       };
     }
 
     // Paso 1: Eliminar de la tabla auth_users
     const { error: dbError } = await supabaseAdmin
-      .from('auth_users')
+      .from("auth_users")
       .delete()
-      .eq('id', userId);
+      .eq("id", userId);
 
     if (dbError) {
       throw new Error(
-        `Error al eliminar de la tabla auth_users: ${dbError.message}`
+        `Error al eliminar de la tabla auth_users: ${dbError.message}`,
       );
     }
 
@@ -231,15 +231,15 @@ export const deleteAdmin = async (
       // (Este es un caso edge, pero es buena práctica)
       // Type assertion necesaria para tabla auth_users de Supabase
       /* eslint-disable @typescript-eslint/no-explicit-any */
-      await supabaseAdmin.from('auth_users').insert({
+      await supabaseAdmin.from("auth_users").insert({
         id: userId,
         email: userEmail,
-        role: 'admin',
+        role: "admin",
       } as any);
       /* eslint-enable @typescript-eslint/no-explicit-any */
 
       throw new Error(
-        `Error al eliminar de Supabase Auth: ${authError.message}`
+        `Error al eliminar de Supabase Auth: ${authError.message}`,
       );
     }
 
@@ -253,7 +253,7 @@ export const deleteAdmin = async (
       message:
         error instanceof Error
           ? error.message
-          : 'Error desconocido al eliminar administrador',
+          : "Error desconocido al eliminar administrador",
     };
   }
 };
@@ -268,18 +268,18 @@ export const getUsersStats = async (): Promise<{
 }> => {
   try {
     const { data, error } = await supabaseAdmin
-      .from('auth_users')
-      .select('id, role');
+      .from("auth_users")
+      .select("id, role");
 
     if (error !== null) {
-      securityLogger.error('Error fetching users stats:', error);
+      securityLogger.error("Error fetching users stats:", error);
       throw error;
     }
 
     // Como no tenemos columna is_active, consideramos activos a todos los usuarios
     // excepto los que tengan role 'worker' (que son trabajadoras, no usuarios del sistema)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    const users = (data ?? []).filter((u: any) => u.role !== 'worker');
+    const users = (data ?? []).filter((u: any) => u.role !== "worker");
 
     const stats = {
       total: users.length,
@@ -289,7 +289,7 @@ export const getUsersStats = async (): Promise<{
 
     return stats;
   } catch (error) {
-    securityLogger.error('Error in getUsersStats:', error);
+    securityLogger.error("Error in getUsersStats:", error);
     throw error;
   }
 };

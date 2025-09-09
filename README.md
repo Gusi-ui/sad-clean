@@ -39,7 +39,7 @@ La aplicación móvil se conecta con el proyecto web a través de la API REST:
 
 ```typescript
 // src/lib/api.ts
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || "http://localhost:3000";
 
 // Ejemplo de uso
 const assignments = await getAssignments(workerId);

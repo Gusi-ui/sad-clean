@@ -1,4 +1,4 @@
-import { securityLogger } from '@/utils/security-config';
+import { securityLogger } from "@/utils/security-config";
 
 // Declaraciones de tipos para Google Maps
 declare global {
@@ -14,7 +14,7 @@ declare global {
               bounds?: unknown;
               componentRestrictions?: unknown;
             },
-            callback: (results: unknown, status: string) => void
+            callback: (results: unknown, status: string) => void,
           ) => void;
         };
         Marker?: new (options: unknown) => unknown;
@@ -47,8 +47,8 @@ declare global {
                   }>;
                 }>;
               } | null,
-              status: unknown
-            ) => void
+              status: unknown,
+            ) => void,
           ) => void;
         };
         DirectionsRenderer?: new (options?: { suppressMarkers?: boolean }) => {
@@ -68,33 +68,33 @@ declare global {
 export interface GoogleMapsConfig {
   apiKey: string;
   libraries: string[];
-  loading: 'async' | 'sync';
+  loading: "async" | "sync";
 }
 
 // Configuración por defecto
 export const defaultGoogleMapsConfig: GoogleMapsConfig = {
-  apiKey: process.env['NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'] ?? '',
-  libraries: ['places', 'marker'],
-  loading: 'async',
+  apiKey: process.env["NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"] ?? "",
+  libraries: ["places", "marker"],
+  loading: "async",
 };
 
 // Verificar si Google Maps está disponible
 export const isGoogleMapsAvailable = (): boolean =>
-  typeof window !== 'undefined' && window.google?.maps?.Map !== undefined;
+  typeof window !== "undefined" && window.google?.maps?.Map !== undefined;
 
 // Verificar si la API key está configurada
 export const isGoogleMapsApiKeyConfigured = (): boolean => {
-  const apiKey = process.env['NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'];
+  const apiKey = process.env["NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"];
   return (
     apiKey !== undefined &&
-    apiKey !== '' &&
-    apiKey !== 'your_google_maps_api_key'
+    apiKey !== "" &&
+    apiKey !== "your_google_maps_api_key"
   );
 };
 
 // Cargar Google Maps API de forma asíncrona
 export const loadGoogleMapsAPI = (
-  config: GoogleMapsConfig = defaultGoogleMapsConfig
+  config: GoogleMapsConfig = defaultGoogleMapsConfig,
 ): Promise<void> =>
   new Promise((resolve, reject) => {
     // Si ya está cargado, resolver inmediatamente
@@ -104,11 +104,11 @@ export const loadGoogleMapsAPI = (
     }
 
     // Verificar que la API key esté configurada
-    if (!config.apiKey || config.apiKey === 'your_google_maps_api_key') {
+    if (!config.apiKey || config.apiKey === "your_google_maps_api_key") {
       reject(
         new Error(
-          'API key de Google Maps no configurada. Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en tu archivo .env'
-        )
+          "API key de Google Maps no configurada. Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en tu archivo .env",
+        ),
       );
       return;
     }
@@ -118,14 +118,14 @@ export const loadGoogleMapsAPI = (
     const timeoutId = window.setTimeout(() => {
       reject(
         new Error(
-          'Timeout al cargar Google Maps API. Revisa Brave Shields/bloqueadores y dominios autorizados.'
-        )
+          "Timeout al cargar Google Maps API. Revisa Brave Shields/bloqueadores y dominios autorizados.",
+        ),
       );
     }, timeoutMs);
 
     // Verificar si ya hay un script cargándose
     const existingScript = document.querySelector(
-      'script[src*="maps.googleapis.com"]'
+      'script[src*="maps.googleapis.com"]',
     );
     if (existingScript) {
       // Esperar a que se cargue el script existente, con intentos limitados
@@ -139,11 +139,11 @@ export const loadGoogleMapsAPI = (
           mapsObj as { importLibrary?: (name: string) => Promise<unknown> }
         ).importLibrary;
         if (
-          typeof importLibrary === 'function' &&
-          mapsObj?.['Map'] === undefined
+          typeof importLibrary === "function" &&
+          mapsObj?.["Map"] === undefined
         ) {
           try {
-            await importLibrary('maps');
+            await importLibrary("maps");
           } catch {
             // Ignorar y seguir intentando hasta timeout
           }
@@ -156,8 +156,8 @@ export const loadGoogleMapsAPI = (
           clearTimeout(timeoutId);
           reject(
             new Error(
-              'No se pudo inicializar Google Maps API (posible bloqueo por navegador).'
-            )
+              "No se pudo inicializar Google Maps API (posible bloqueo por navegador).",
+            ),
           );
         } else {
           attempts += 1;
@@ -173,8 +173,8 @@ export const loadGoogleMapsAPI = (
     }
 
     // Crear y cargar el script
-    const script = document.createElement('script');
-    const libraries = config.libraries.join(',');
+    const script = document.createElement("script");
+    const libraries = config.libraries.join(",");
     script.src = `https://maps.googleapis.com/maps/api/js?key=${config.apiKey}&libraries=${libraries}&loading=${config.loading}&region=ES&language=es`;
     script.async = true;
     script.defer = true;
@@ -193,10 +193,10 @@ export const loadGoogleMapsAPI = (
               mapsObj as { importLibrary?: (name: string) => Promise<unknown> }
             ).importLibrary;
             if (
-              typeof importLibrary === 'function' &&
-              mapsObj?.['Map'] === undefined
+              typeof importLibrary === "function" &&
+              mapsObj?.["Map"] === undefined
             ) {
-              await importLibrary('maps');
+              await importLibrary("maps");
             }
           } catch {
             // Ignorar, validaremos disponibilidad abajo
@@ -209,13 +209,13 @@ export const loadGoogleMapsAPI = (
             clearTimeout(timeoutId);
             reject(
               new Error(
-                'Google Maps API no se inicializó correctamente. Verifica la configuración de dominios autorizados.'
-              )
+                "Google Maps API no se inicializó correctamente. Verifica la configuración de dominios autorizados.",
+              ),
             );
           }
         })().catch((e: unknown) => {
           // Registrar en consola de desarrollo sin interrumpir UX
-          securityLogger.error('Error inicializando Google Maps:', e);
+          securityLogger.error("Error inicializando Google Maps:", e);
         });
       }, 1000);
     };
@@ -224,8 +224,8 @@ export const loadGoogleMapsAPI = (
       clearTimeout(timeoutId);
       reject(
         new Error(
-          'Error al cargar Google Maps API. Verifica tu conexión a internet y la configuración de dominios autorizados.'
-        )
+          "Error al cargar Google Maps API. Verifica tu conexión a internet y la configuración de dominios autorizados.",
+        ),
       );
     };
 
@@ -245,16 +245,16 @@ export const geocodeAddress = (
       sw: { lat: number; lng: number };
       ne: { lat: number; lng: number };
     };
-  }
+  },
 ): Promise<{ lat: number; lng: number }> =>
   new Promise((resolve, reject) => {
     if (!isGoogleMapsAvailable()) {
-      reject(new Error('Google Maps API no disponible'));
+      reject(new Error("Google Maps API no disponible"));
       return;
     }
 
     if (!window.google?.maps?.Geocoder) {
-      reject(new Error('Google Maps Geocoder no está disponible'));
+      reject(new Error("Google Maps Geocoder no está disponible"));
       return;
     }
     const geocoder = new window.google.maps.Geocoder();
@@ -265,11 +265,11 @@ export const geocodeAddress = (
       bounds?: unknown;
     } = { address };
     if (options?.componentRestrictions) {
-      request['componentRestrictions'] = options.componentRestrictions;
+      request["componentRestrictions"] = options.componentRestrictions;
     }
     if (options?.bounds) {
       if (!window.google?.maps?.LatLngBounds) {
-        reject(new Error('Google Maps LatLngBounds no está disponible'));
+        reject(new Error("Google Maps LatLngBounds no está disponible"));
         return;
       }
       const b = new window.google.maps.LatLngBounds();
@@ -281,12 +281,12 @@ export const geocodeAddress = (
         lat: options.bounds.ne.lat,
         lng: options.bounds.ne.lng,
       } as unknown as { lat: number; lng: number });
-      request['bounds'] = b;
+      request["bounds"] = b;
     }
 
     geocoder.geocode(request, (results: unknown, status: string) => {
       if (
-        status === 'OK' &&
+        status === "OK" &&
         results !== null &&
         results !== undefined &&
         Array.isArray(results) &&
@@ -303,11 +303,11 @@ export const geocodeAddress = (
         });
       } else {
         // Manejar ZERO_RESULTS de manera más silenciosa
-        if (status === 'ZERO_RESULTS') {
+        if (status === "ZERO_RESULTS") {
           reject(
             new Error(
-              `ZERO_RESULTS: No se encontraron resultados para la dirección: ${address}`
-            )
+              `ZERO_RESULTS: No se encontraron resultados para la dirección: ${address}`,
+            ),
           );
         } else {
           reject(new Error(`Error de geocodificación: ${status}`));
@@ -323,10 +323,10 @@ export const createGoogleMap = (
     center?: { lat: number; lng: number };
     zoom?: number;
     mapTypeId?: unknown;
-  } = {}
+  } = {},
 ): unknown => {
   if (!isGoogleMapsAvailable()) {
-    throw new Error('Google Maps API no disponible');
+    throw new Error("Google Maps API no disponible");
   }
 
   const defaultOptions = {
@@ -337,43 +337,43 @@ export const createGoogleMap = (
     streetViewControl: false,
     fullscreenControl: true,
     styles: [
-      { featureType: 'poi', stylers: [{ visibility: 'off' }] },
-      { featureType: 'transit', stylers: [{ visibility: 'off' }] },
+      { featureType: "poi", stylers: [{ visibility: "off" }] },
+      { featureType: "transit", stylers: [{ visibility: "off" }] },
       {
-        featureType: 'road',
-        elementType: 'geometry',
+        featureType: "road",
+        elementType: "geometry",
         stylers: [{ lightness: 20 }],
       },
       {
-        featureType: 'road',
-        elementType: 'labels.text.fill',
-        stylers: [{ color: '#333333' }],
+        featureType: "road",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#333333" }],
       },
       {
-        featureType: 'road.arterial',
-        elementType: 'geometry',
+        featureType: "road.arterial",
+        elementType: "geometry",
         stylers: [{ lightness: 20 }],
       },
       {
-        featureType: 'administrative',
-        elementType: 'labels.text.fill',
-        stylers: [{ color: '#444444' }],
+        featureType: "administrative",
+        elementType: "labels.text.fill",
+        stylers: [{ color: "#444444" }],
       },
       {
-        featureType: 'landscape',
-        elementType: 'all',
-        stylers: [{ color: '#f4f6f9' }],
+        featureType: "landscape",
+        elementType: "all",
+        stylers: [{ color: "#f4f6f9" }],
       },
       {
-        featureType: 'water',
-        elementType: 'all',
-        stylers: [{ color: '#cfdff6' }],
+        featureType: "water",
+        elementType: "all",
+        stylers: [{ color: "#cfdff6" }],
       },
     ],
   };
 
   if (!window.google?.maps?.Map) {
-    throw new Error('Google Maps Map no está disponible');
+    throw new Error("Google Maps Map no está disponible");
   }
   return new window.google.maps.Map(element, { ...defaultOptions, ...options });
 };
@@ -387,11 +387,11 @@ export const createMarker = (options: {
   icon?: { url: string; scaledSize?: unknown };
 }): unknown => {
   if (!isGoogleMapsAvailable()) {
-    throw new Error('Google Maps API no disponible');
+    throw new Error("Google Maps API no disponible");
   }
 
   if (!window.google?.maps?.Marker) {
-    throw new Error('Google Maps Marker no está disponible');
+    throw new Error("Google Maps Marker no está disponible");
   }
   return new window.google.maps.Marker(options);
 };
@@ -402,11 +402,11 @@ export const createLatLngBounds = (): {
   isEmpty: () => boolean;
 } => {
   if (!isGoogleMapsAvailable()) {
-    throw new Error('Google Maps API no disponible');
+    throw new Error("Google Maps API no disponible");
   }
 
   if (!window.google?.maps?.LatLngBounds) {
-    throw new Error('Google Maps LatLngBounds no está disponible');
+    throw new Error("Google Maps LatLngBounds no está disponible");
   }
   return new window.google.maps.LatLngBounds();
 };
@@ -414,33 +414,33 @@ export const createLatLngBounds = (): {
 // Crear tamaño para iconos
 export const createSize = (width: number, height: number): unknown => {
   if (!isGoogleMapsAvailable()) {
-    throw new Error('Google Maps API no disponible');
+    throw new Error("Google Maps API no disponible");
   }
 
   if (!window.google?.maps?.Size) {
-    throw new Error('Google Maps Size no está disponible');
+    throw new Error("Google Maps Size no está disponible");
   }
   return new window.google.maps.Size(width, height);
 };
 
 // Obtener información de diagnóstico
 export const getGoogleMapsDiagnostics = () => {
-  const apiKey = process.env['NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'];
+  const apiKey = process.env["NEXT_PUBLIC_GOOGLE_MAPS_API_KEY"];
 
   return {
     isAvailable: isGoogleMapsAvailable(),
     isApiKeyConfigured: isGoogleMapsApiKeyConfigured(),
     apiKey:
-      apiKey !== undefined && apiKey !== '' ? 'Configurada' : 'No configurada',
+      apiKey !== undefined && apiKey !== "" ? "Configurada" : "No configurada",
     userAgent:
-      typeof window !== 'undefined'
+      typeof window !== "undefined"
         ? window.navigator.userAgent
-        : 'No disponible',
+        : "No disponible",
     hasAdBlocker:
-      typeof window !== 'undefined'
+      typeof window !== "undefined"
         ? window.google?.maps === undefined &&
           document.querySelector('script[src*="maps.googleapis.com"]') !== null
-        : 'No disponible',
+        : "No disponible",
   };
 };
 
@@ -448,7 +448,7 @@ export const getGoogleMapsDiagnostics = () => {
 export interface TravelTimeResult {
   duration: number; // en segundos
   distance: number; // en metros
-  status: 'OK' | 'ERROR';
+  status: "OK" | "ERROR";
   errorMessage?: string;
 }
 
@@ -456,15 +456,15 @@ export interface TravelTimeResult {
 export const calculateTravelTime = (
   fromAddress: string,
   toAddress: string,
-  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT' = 'DRIVING'
+  travelMode: "DRIVING" | "WALKING" | "TRANSIT" = "DRIVING",
 ): Promise<TravelTimeResult> =>
   new Promise((resolve) => {
     if (!isGoogleMapsAvailable()) {
       resolve({
         duration: 0,
         distance: 0,
-        status: 'ERROR',
-        errorMessage: 'Google Maps API no disponible',
+        status: "ERROR",
+        errorMessage: "Google Maps API no disponible",
       });
       return;
     }
@@ -474,9 +474,9 @@ export const calculateTravelTime = (
       resolve({
         duration: 0,
         distance: 0,
-        status: 'ERROR',
+        status: "ERROR",
         errorMessage:
-          'Timeout al calcular ruta - la API tardó demasiado en responder',
+          "Timeout al calcular ruta - la API tardó demasiado en responder",
       });
     }, 10000); // 10 segundos de timeout
 
@@ -484,8 +484,8 @@ export const calculateTravelTime = (
       resolve({
         duration: 0,
         distance: 0,
-        status: 'ERROR',
-        errorMessage: 'Google Maps DirectionsService no está disponible',
+        status: "ERROR",
+        errorMessage: "Google Maps DirectionsService no está disponible",
       });
       return;
     }
@@ -496,21 +496,21 @@ export const calculateTravelTime = (
       resolve({
         duration: 0,
         distance: 0,
-        status: 'ERROR',
-        errorMessage: 'Google Maps TravelMode no está disponible',
+        status: "ERROR",
+        errorMessage: "Google Maps TravelMode no está disponible",
       });
       return;
     }
 
     let googleTravelMode;
     switch (travelMode) {
-      case 'WALKING':
+      case "WALKING":
         googleTravelMode = window.google.maps.TravelMode.WALKING;
         break;
-      case 'TRANSIT':
+      case "TRANSIT":
         googleTravelMode = window.google.maps.TravelMode.TRANSIT;
         break;
-      case 'DRIVING':
+      case "DRIVING":
       default:
         googleTravelMode = window.google.maps.TravelMode.DRIVING;
         break;
@@ -531,8 +531,8 @@ export const calculateTravelTime = (
           resolve({
             duration: 0,
             distance: 0,
-            status: 'ERROR',
-            errorMessage: 'Google Maps DirectionsStatus no está disponible',
+            status: "ERROR",
+            errorMessage: "Google Maps DirectionsStatus no está disponible",
           });
           return;
         }
@@ -540,7 +540,7 @@ export const calculateTravelTime = (
         if (
           status === window.google.maps.DirectionsStatus.OK &&
           result &&
-          'routes' in result &&
+          "routes" in result &&
           result.routes?.[0]
         ) {
           const route = result.routes[0];
@@ -554,25 +554,25 @@ export const calculateTravelTime = (
             resolve({
               duration: leg.duration.value,
               distance: leg.distance.value,
-              status: 'OK',
+              status: "OK",
             });
           } else {
             resolve({
               duration: 0,
               distance: 0,
-              status: 'ERROR',
+              status: "ERROR",
               errorMessage:
-                'No se pudo obtener información de duración o distancia',
+                "No se pudo obtener información de duración o distancia",
             });
           }
         } else {
           resolve({
             duration: 0,
             distance: 0,
-            status: 'ERROR',
+            status: "ERROR",
             errorMessage: `Error en Directions API: ${String(status)}`,
           });
         }
-      }
+      },
     );
   });

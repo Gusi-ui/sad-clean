@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { RouteSegment } from '@/components/route/RouteSegmentDetails';
-import { isGoogleMapsAvailable, loadGoogleMapsAPI } from '@/lib/google-maps';
+import type { RouteSegment } from "@/components/route/RouteSegmentDetails";
+import { isGoogleMapsAvailable, loadGoogleMapsAPI } from "@/lib/google-maps";
 import {
   type AddressInfo,
   calculateRouteRealTravelTime,
-} from '@/lib/real-travel-time';
+} from "@/lib/real-travel-time";
 
 interface RouteStop {
   assignmentId: string;
@@ -29,7 +29,7 @@ interface WorkerInfo {
 interface UseSimpleRouteSegmentsProps {
   routeStops: RouteStop[];
   workerInfo: WorkerInfo | null;
-  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT';
+  travelMode: "DRIVING" | "WALKING" | "TRANSIT";
 }
 
 interface UseSimpleRouteSegmentsReturn {
@@ -38,7 +38,7 @@ interface UseSimpleRouteSegmentsReturn {
   error: string | null;
   totalBillableTime: number; // en minutos
   totalDistance: number; // en metros
-  confidence: 'high' | 'medium' | 'low';
+  confidence: "high" | "medium" | "low";
   refreshSegments: () => void;
 }
 
@@ -50,16 +50,16 @@ const useSimpleRouteSegments = ({
   const [segments, setSegments] = useState<RouteSegment[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [confidence, setConfidence] = useState<'high' | 'medium' | 'low'>(
-    'medium'
+  const [confidence, setConfidence] = useState<"high" | "medium" | "low">(
+    "medium",
   );
   const isCalculatingRef = useRef(false);
-  const lastCalculationRef = useRef<string>('');
+  const lastCalculationRef = useRef<string>("");
 
   // Función para refrescar los cálculos manualmente
   const refreshSegments = useCallback(() => {
     isCalculatingRef.current = false; // Reset para permitir nueva ejecución
-    lastCalculationRef.current = ''; // Limpiar hash para forzar recálculo
+    lastCalculationRef.current = ""; // Limpiar hash para forzar recálculo
     // Forzar recálculo inmediato
     setIsLoading(true);
   }, []);
@@ -67,11 +67,11 @@ const useSimpleRouteSegments = ({
   // Calcular totales
   const totalBillableTime = segments.reduce(
     (total, segment) => total + segment.billableTime,
-    0
+    0,
   );
   const totalDistance = segments.reduce(
     (total, segment) => total + segment.distance,
-    0
+    0,
   );
 
   // Recalcular cuando cambien las dependencias
@@ -79,7 +79,7 @@ const useSimpleRouteSegments = ({
     // Para cambios de modo de transporte, ejecutar inmediatamente
     // Para otros cambios, usar debounce
     const isOnlyTravelModeChange = lastCalculationRef.current.includes(
-      JSON.stringify({ routeStops, workerInfo })
+      JSON.stringify({ routeStops, workerInfo }),
     );
     const delay = isOnlyTravelModeChange ? 0 : 1000;
 
@@ -110,7 +110,7 @@ const useSimpleRouteSegments = ({
         if (routeStops.length === 0) {
           setSegments([]);
           setError(null);
-          setConfidence('medium');
+          setConfidence("medium");
           lastCalculationRef.current = dataHash;
           return;
         }
@@ -145,8 +145,8 @@ const useSimpleRouteSegments = ({
           // Si no hay direcciones válidas, no hacer cálculos
           if (addressStops.length === 0) {
             setSegments([]);
-            setError('No hay direcciones válidas para calcular la ruta');
-            setConfidence('low');
+            setError("No hay direcciones válidas para calcular la ruta");
+            setConfidence("low");
             return;
           }
 
@@ -155,7 +155,7 @@ const useSimpleRouteSegments = ({
           const routeResult = await calculateRouteRealTravelTime(
             addressStops,
             undefined, // No pasar dirección de trabajadora
-            travelMode
+            travelMode,
           );
 
           const newSegments: RouteSegment[] = [];
@@ -197,26 +197,26 @@ const useSimpleRouteSegments = ({
               ? confidenceScores.reduce((sum, score) => sum + score, 0) /
                 confidenceScores.length
               : 1;
-          const overallConfidence: 'high' | 'medium' | 'low' =
+          const overallConfidence: "high" | "medium" | "low" =
             avgConfidence >= 2.5
-              ? 'high'
+              ? "high"
               : avgConfidence >= 1.5
-                ? 'medium'
-                : 'low';
+                ? "medium"
+                : "low";
 
           setSegments(newSegments);
           setConfidence(overallConfidence);
           // Verificar si hay errores en los segmentos
           const failedSegments = routeResult.segments.filter(
-            (seg) => !seg.success
+            (seg) => !seg.success,
           );
           const successfulSegments = routeResult.segments.filter(
-            (seg) => seg.success
+            (seg) => seg.success,
           );
 
           // Solo mostrar error si TODOS los cálculos fallaron
           if (failedSegments.length > 0 && successfulSegments.length === 0) {
-            setError('Todos los cálculos de tiempo fallaron');
+            setError("Todos los cálculos de tiempo fallaron");
           } else {
             setError(null);
           }
@@ -224,10 +224,10 @@ const useSimpleRouteSegments = ({
           lastCalculationRef.current = dataHash;
         } catch (err) {
           const errorMessage =
-            err instanceof Error ? err.message : 'Error desconocido';
+            err instanceof Error ? err.message : "Error desconocido";
           setError(`Error calculando segmentos: ${errorMessage}`);
           setSegments([]);
-          setConfidence('low');
+          setConfidence("low");
         } finally {
           setIsLoading(false);
           isCalculatingRef.current = false;

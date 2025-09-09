@@ -55,24 +55,24 @@ npx supabase gen types typescript --project-id tu-project-id > src/types/supabas
 
 ```typescript
 // mcp-supabase-server.ts
-import { Server } from '@modelcontextprotocol/sdk/server/index.js';
-import { StdioServerTransport } from '@modelcontextprotocol/sdk/server/stdio.js';
-import { createClient } from '@supabase/supabase-js';
+import { Server } from "@modelcontextprotocol/sdk/server/index.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createClient } from "@supabase/supabase-js";
 
 const server = new Server(
   {
-    name: 'supabase-mcp-server',
-    version: '1.0.0',
+    name: "supabase-mcp-server",
+    version: "1.0.0",
   },
   {
     capabilities: {
       tools: {},
     },
-  }
+  },
 );
 
 // Implementar métodos para consultar Supabase
-server.setRequestHandler('tools/call', async (request) => {
+server.setRequestHandler("tools/call", async (request) => {
   // Lógica para consultar Supabase
 });
 ```
@@ -141,9 +141,9 @@ Crear `.cursor/settings.json`:
 
 ```typescript
 // src/lib/database.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-import type { Database } from '@/types/supabase';
+import type { Database } from "@/types/supabase";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -152,17 +152,20 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
 // Funciones helper para SAD LAS
 export const getWorkers = async () => {
-  const { data, error } = await supabase.from('workers').select('*').eq('status', 'active');
+  const { data, error } = await supabase
+    .from("workers")
+    .select("*")
+    .eq("status", "active");
 
   if (error) throw error;
   return data;
 };
 
 export const getAssignments = async (workerId?: string) => {
-  let query = supabase.from('assignments').select('*');
+  let query = supabase.from("assignments").select("*");
 
   if (workerId) {
-    query = query.eq('worker_id', workerId);
+    query = query.eq("worker_id", workerId);
   }
 
   const { data, error } = await query;
@@ -177,12 +180,16 @@ export const getAssignments = async (workerId?: string) => {
 
 ```typescript
 // Cursor puede usar los tipos generados automáticamente
-import type { Database } from '@/types/supabase';
+import type { Database } from "@/types/supabase";
 
-type Worker = Database['public']['Tables']['workers']['Row'];
+type Worker = Database["public"]["Tables"]["workers"]["Row"];
 
-const createWorker = async (worker: Omit<Worker, 'id' | 'created_at'>) => {
-  const { data, error } = await supabase.from('workers').insert(worker).select().single();
+const createWorker = async (worker: Omit<Worker, "id" | "created_at">) => {
+  const { data, error } = await supabase
+    .from("workers")
+    .insert(worker)
+    .select()
+    .single();
 
   if (error) throw error;
   return data;
@@ -192,19 +199,19 @@ const createWorker = async (worker: Omit<Worker, 'id' | 'created_at'>) => {
 ### **2. Asignaciones de Tareas**
 
 ```typescript
-type Assignment = Database['public']['Tables']['assignments']['Row'];
+type Assignment = Database["public"]["Tables"]["assignments"]["Row"];
 
 const getWorkerAssignments = async (workerId: string) => {
   const { data, error } = await supabase
-    .from('assignments')
+    .from("assignments")
     .select(
       `
       *,
       workers (name, email),
       tasks (title, description)
-    `
+    `,
     )
-    .eq('worker_id', workerId);
+    .eq("worker_id", workerId);
 
   if (error) throw error;
   return data;
@@ -214,18 +221,25 @@ const getWorkerAssignments = async (workerId: string) => {
 ### **3. Reportes y Estadísticas**
 
 ```typescript
-const getWorkerStats = async (workerId: string, startDate: string, endDate: string) => {
+const getWorkerStats = async (
+  workerId: string,
+  startDate: string,
+  endDate: string,
+) => {
   const { data, error } = await supabase
-    .from('assignments')
-    .select('hours_worked, status')
-    .eq('worker_id', workerId)
-    .gte('scheduled_date', startDate)
-    .lte('scheduled_date', endDate);
+    .from("assignments")
+    .select("hours_worked, status")
+    .eq("worker_id", workerId)
+    .gte("scheduled_date", startDate)
+    .lte("scheduled_date", endDate);
 
   if (error) throw error;
 
-  const totalHours = data.reduce((sum, assignment) => sum + (assignment.hours_worked || 0), 0);
-  const completedTasks = data.filter((a) => a.status === 'completed').length;
+  const totalHours = data.reduce(
+    (sum, assignment) => sum + (assignment.hours_worked || 0),
+    0,
+  );
+  const completedTasks = data.filter((a) => a.status === "completed").length;
 
   return { totalHours, completedTasks, totalTasks: data.length };
 };

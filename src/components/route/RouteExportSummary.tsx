@@ -1,33 +1,33 @@
-'use client';
+"use client";
 
-import { Calendar, Clock, Download, FileText, MapPin } from 'lucide-react';
+import { Calendar, Clock, Download, FileText, MapPin } from "lucide-react";
 
-import React from 'react';
+import React from "react";
 
-import { Button } from '@/components/ui';
+import { Button } from "@/components/ui";
 
-import type { RouteSegment } from './RouteSegmentDetails';
+import type { RouteSegment } from "./RouteSegmentDetails";
 
 interface RouteExportSummaryProps {
   segments: RouteSegment[];
   workerName?: string;
   date?: string;
-  onExport?: (format: 'pdf' | 'csv' | 'json') => void;
+  onExport?: (format: "pdf" | "csv" | "json") => void;
 }
 
 const RouteExportSummary = ({
   segments,
-  workerName = 'Trabajadora',
-  date = new Date().toLocaleDateString('es-ES'),
+  workerName = "Trabajadora",
+  date = new Date().toLocaleDateString("es-ES"),
   onExport,
 }: RouteExportSummaryProps): React.JSX.Element => {
   const totalBillableTime = segments.reduce(
     (total, segment) => total + segment.billableTime,
-    0
+    0,
   );
   const totalDistance = segments.reduce(
     (total, segment) => total + segment.distance,
-    0
+    0,
   );
 
   const formatDistance = (meters: number): string => {
@@ -39,26 +39,26 @@ const RouteExportSummary = ({
 
   const getTravelModeText = (mode: string): string => {
     switch (mode) {
-      case 'DRIVING':
-        return 'En coche';
-      case 'WALKING':
-        return 'A pie';
-      case 'TRANSIT':
-        return 'Transporte público';
+      case "DRIVING":
+        return "En coche";
+      case "WALKING":
+        return "A pie";
+      case "TRANSIT":
+        return "Transporte público";
       default:
-        return 'Desconocido';
+        return "Desconocido";
     }
   };
 
   const generateCSVData = (): string => {
     const headers = [
-      'Segmento',
-      'Desde',
-      'Hasta',
-      'Modo de Transporte',
-      'Duración (min)',
-      'Distancia (m)',
-      'Tiempo Facturable (min)',
+      "Segmento",
+      "Desde",
+      "Hasta",
+      "Modo de Transporte",
+      "Duración (min)",
+      "Distancia (m)",
+      "Tiempo Facturable (min)",
     ];
 
     const rows = segments.map((segment, index) => [
@@ -72,8 +72,8 @@ const RouteExportSummary = ({
     ]);
 
     const csvContent = [headers, ...rows]
-      .map((row) => row.map((cell) => `"${cell}"`).join(','))
-      .join('\n');
+      .map((row) => row.map((cell) => `"${cell}"`).join(","))
+      .join("\n");
 
     return csvContent;
   };
@@ -106,11 +106,11 @@ const RouteExportSummary = ({
   const downloadFile = (
     content: string,
     filename: string,
-    mimeType: string
+    mimeType: string,
   ): void => {
     const blob = new Blob([content], { type: mimeType });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = filename;
     document.body.appendChild(link);
@@ -119,23 +119,23 @@ const RouteExportSummary = ({
     URL.revokeObjectURL(url);
   };
 
-  const handleExport = (format: 'csv' | 'json'): void => {
-    const dateStr = new Date().toISOString().split('T')[0];
-    const baseFilename = `ruta-${workerName.toLowerCase().replace(/\s+/g, '-')}-${dateStr}`;
+  const handleExport = (format: "csv" | "json"): void => {
+    const dateStr = new Date().toISOString().split("T")[0];
+    const baseFilename = `ruta-${workerName.toLowerCase().replace(/\s+/g, "-")}-${dateStr}`;
 
     switch (format) {
-      case 'csv':
+      case "csv":
         downloadFile(
           generateCSVData(),
           `${baseFilename}.csv`,
-          'text/csv;charset=utf-8;'
+          "text/csv;charset=utf-8;",
         );
         break;
-      case 'json':
+      case "json":
         downloadFile(
           generateJSONData(),
           `${baseFilename}.json`,
-          'application/json;charset=utf-8;'
+          "application/json;charset=utf-8;",
         );
         break;
     }
@@ -146,7 +146,7 @@ const RouteExportSummary = ({
   };
 
   const generatePrintableReport = (): void => {
-    const printWindow = window.open('', '_blank');
+    const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     const htmlContent = `
@@ -194,9 +194,9 @@ const RouteExportSummary = ({
                   <div><strong>Tiempo facturable:</strong> ${segment.billableTime} min</div>
                 </div>
               </div>
-            `
+            `,
               )
-              .join('')}
+              .join("")}
           </div>
 
         </body>
@@ -213,9 +213,9 @@ const RouteExportSummary = ({
 
   if (segments.length === 0) {
     return (
-      <div className='bg-white rounded-xl border border-gray-200 shadow-sm p-6'>
-        <div className='text-center text-gray-500'>
-          <FileText className='w-12 h-12 mx-auto mb-3 text-gray-300' />
+      <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+        <div className="text-center text-gray-500">
+          <FileText className="w-12 h-12 mx-auto mb-3 text-gray-300" />
           <p>No hay datos de ruta para exportar</p>
         </div>
       </div>
@@ -223,69 +223,69 @@ const RouteExportSummary = ({
   }
 
   return (
-    <div className='bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden'>
+    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
       {/* Header */}
-      <div className='p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50'>
-        <div className='flex items-center justify-between'>
+      <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+        <div className="flex items-center justify-between">
           <div>
-            <h3 className='text-lg font-semibold text-gray-900 flex items-center gap-2'>
-              <FileText className='w-5 h-5 text-green-600' />
+            <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+              <FileText className="w-5 h-5 text-green-600" />
               Resumen de Facturación
             </h3>
-            <p className='text-sm text-gray-600'>
+            <p className="text-sm text-gray-600">
               Reporte de desplazamientos • {date}
             </p>
           </div>
-          <div className='text-right'>
-            <div className='text-2xl font-bold text-blue-600'>
+          <div className="text-right">
+            <div className="text-2xl font-bold text-blue-600">
               {Math.floor(totalBillableTime / 60)}h {totalBillableTime % 60}min
             </div>
-            <div className='text-xs text-gray-500'>Tiempo total</div>
+            <div className="text-xs text-gray-500">Tiempo total</div>
           </div>
         </div>
       </div>
 
       {/* Summary Stats - Optimizado para Móvil */}
-      <div className='p-3 sm:p-4 bg-gray-50'>
+      <div className="p-3 sm:p-4 bg-gray-50">
         {/* Versión Móvil - Tarjetas apiladas */}
-        <div className='sm:hidden space-y-3'>
-          <div className='bg-white rounded-lg p-3 border border-gray-200'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-2'>
-                <Calendar className='w-4 h-4 text-blue-500' />
-                <span className='text-xs text-gray-600 font-medium'>
+        <div className="sm:hidden space-y-3">
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Calendar className="w-4 h-4 text-blue-500" />
+                <span className="text-xs text-gray-600 font-medium">
                   Trabajadora
                 </span>
               </div>
-              <span className='text-sm font-bold text-blue-600 truncate max-w-32'>
+              <span className="text-sm font-bold text-blue-600 truncate max-w-32">
                 {workerName}
               </span>
             </div>
           </div>
 
-          <div className='bg-white rounded-lg p-3 border border-gray-200'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-2'>
-                <MapPin className='w-4 h-4 text-purple-500' />
-                <span className='text-xs text-gray-600 font-medium'>
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <MapPin className="w-4 h-4 text-purple-500" />
+                <span className="text-xs text-gray-600 font-medium">
                   Segmentos
                 </span>
               </div>
-              <span className='text-lg font-bold text-purple-600'>
+              <span className="text-lg font-bold text-purple-600">
                 {segments.length}
               </span>
             </div>
           </div>
 
-          <div className='bg-white rounded-lg p-3 border border-gray-200'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-2'>
-                <Clock className='w-4 h-4 text-orange-500' />
-                <span className='text-xs text-gray-600 font-medium'>
+          <div className="bg-white rounded-lg p-3 border border-gray-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <Clock className="w-4 h-4 text-orange-500" />
+                <span className="text-xs text-gray-600 font-medium">
                   Tiempo total
                 </span>
               </div>
-              <span className='text-sm font-bold text-orange-600'>
+              <span className="text-sm font-bold text-orange-600">
                 {Math.floor(totalBillableTime / 60)}h {totalBillableTime % 60}
                 min
               </span>
@@ -294,27 +294,27 @@ const RouteExportSummary = ({
         </div>
 
         {/* Versión Desktop/Tablet - Grid original */}
-        <div className='hidden sm:block'>
-          <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
-            <div className='flex items-center gap-2'>
-              <Calendar className='w-4 h-4 text-blue-500' />
+        <div className="hidden sm:block">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Calendar className="w-4 h-4 text-blue-500" />
               <div>
-                <div className='text-gray-600'>Trabajadora</div>
-                <div className='font-medium'>{workerName}</div>
+                <div className="text-gray-600">Trabajadora</div>
+                <div className="font-medium">{workerName}</div>
               </div>
             </div>
-            <div className='flex items-center gap-2'>
-              <MapPin className='w-4 h-4 text-purple-500' />
+            <div className="flex items-center gap-2">
+              <MapPin className="w-4 h-4 text-purple-500" />
               <div>
-                <div className='text-gray-600'>Segmentos</div>
-                <div className='font-medium'>{segments.length}</div>
+                <div className="text-gray-600">Segmentos</div>
+                <div className="font-medium">{segments.length}</div>
               </div>
             </div>
-            <div className='flex items-center gap-2'>
-              <Clock className='w-4 h-4 text-orange-500' />
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-orange-500" />
               <div>
-                <div className='text-gray-600'>Tiempo total</div>
-                <div className='font-medium'>
+                <div className="text-gray-600">Tiempo total</div>
+                <div className="font-medium">
                   {Math.floor(totalBillableTime / 60)}h {totalBillableTime % 60}
                   min
                 </div>
@@ -325,90 +325,90 @@ const RouteExportSummary = ({
       </div>
 
       {/* Export Options - Optimizado para Móvil */}
-      <div className='p-3 sm:p-4'>
-        <div className='flex items-center justify-between mb-3 sm:mb-4'>
-          <h4 className='text-sm sm:text-base font-medium text-gray-900'>
-            <span className='sm:hidden'>Exportar</span>
-            <span className='hidden sm:inline'>Exportar reporte</span>
+      <div className="p-3 sm:p-4">
+        <div className="flex items-center justify-between mb-3 sm:mb-4">
+          <h4 className="text-sm sm:text-base font-medium text-gray-900">
+            <span className="sm:hidden">Exportar</span>
+            <span className="hidden sm:inline">Exportar reporte</span>
           </h4>
-          <div className='sm:hidden text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded-full'>
+          <div className="sm:hidden text-xs text-gray-500 bg-blue-50 px-2 py-1 rounded-full">
             💡 Reportes
           </div>
         </div>
 
         {/* Versión Móvil - Botones en columna */}
-        <div className='sm:hidden space-y-2'>
+        <div className="sm:hidden space-y-2">
           <Button
-            variant='outline'
-            size='sm'
+            variant="outline"
+            size="sm"
             onClick={generatePrintableReport}
-            className='w-full flex items-center justify-center gap-2 py-3'
+            className="w-full flex items-center justify-center gap-2 py-3"
           >
-            <FileText className='w-4 h-4' />
-            <span className='font-medium'>Imprimir/PDF</span>
+            <FileText className="w-4 h-4" />
+            <span className="font-medium">Imprimir/PDF</span>
           </Button>
 
           <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handleExport('csv')}
-            className='w-full flex items-center justify-center gap-2 py-3'
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport("csv")}
+            className="w-full flex items-center justify-center gap-2 py-3"
           >
-            <Download className='w-4 h-4' />
-            <span className='font-medium'>Descargar CSV</span>
+            <Download className="w-4 h-4" />
+            <span className="font-medium">Descargar CSV</span>
           </Button>
 
           <Button
-            variant='outline'
-            size='sm'
-            onClick={() => handleExport('json')}
-            className='w-full flex items-center justify-center gap-2 py-3'
+            variant="outline"
+            size="sm"
+            onClick={() => handleExport("json")}
+            className="w-full flex items-center justify-center gap-2 py-3"
           >
-            <Download className='w-4 h-4' />
-            <span className='font-medium'>Descargar JSON</span>
+            <Download className="w-4 h-4" />
+            <span className="font-medium">Descargar JSON</span>
           </Button>
         </div>
 
         {/* Versión Desktop/Tablet - Botones en fila */}
-        <div className='hidden sm:block'>
-          <div className='flex flex-wrap gap-2'>
+        <div className="hidden sm:block">
+          <div className="flex flex-wrap gap-2">
             <Button
-              variant='outline'
-              size='sm'
+              variant="outline"
+              size="sm"
               onClick={generatePrintableReport}
-              className='flex items-center gap-2'
+              className="flex items-center gap-2"
             >
-              <FileText className='w-4 h-4' />
+              <FileText className="w-4 h-4" />
               Imprimir/PDF
             </Button>
             <Button
-              variant='outline'
-              size='sm'
-              onClick={() => handleExport('csv')}
-              className='flex items-center gap-2'
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("csv")}
+              className="flex items-center gap-2"
             >
-              <Download className='w-4 h-4' />
+              <Download className="w-4 h-4" />
               Descargar CSV
             </Button>
             <Button
-              variant='outline'
-              size='sm'
-              onClick={() => handleExport('json')}
-              className='flex items-center gap-2'
+              variant="outline"
+              size="sm"
+              onClick={() => handleExport("json")}
+              className="flex items-center gap-2"
             >
-              <Download className='w-4 h-4' />
+              <Download className="w-4 h-4" />
               Descargar JSON
             </Button>
           </div>
         </div>
 
         {/* Información adicional - Optimizada para móvil */}
-        <div className='mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-200'>
-          <div className='flex items-start space-x-2'>
-            <div className='w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0'>💡</div>
-            <div className='text-xs sm:text-sm text-blue-800'>
-              <div className='font-medium mb-1'>💡 Consejos de uso:</div>
-              <div className='sm:hidden space-y-1'>
+        <div className="mt-3 sm:mt-4 p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-start space-x-2">
+            <div className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0">💡</div>
+            <div className="text-xs sm:text-sm text-blue-800">
+              <div className="font-medium mb-1">💡 Consejos de uso:</div>
+              <div className="sm:hidden space-y-1">
                 <div>
                   • <strong>PDF:</strong> Para presentaciones
                 </div>
@@ -419,7 +419,7 @@ const RouteExportSummary = ({
                   • <strong>JSON:</strong> Para sistemas
                 </div>
               </div>
-              <div className='hidden sm:block'>
+              <div className="hidden sm:block">
                 Usa el reporte impreso o PDF para presentar a la empresa. Los
                 archivos CSV/JSON son útiles para sistemas de facturación.
               </div>

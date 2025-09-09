@@ -1,10 +1,10 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 
 const supabase = createClient(
-  process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '',
-  process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? ''
+  process.env["NEXT_PUBLIC_SUPABASE_URL"] ?? "",
+  process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "",
 );
 
 interface Holiday {
@@ -13,7 +13,7 @@ interface Holiday {
   month: number;
   year: number;
   name: string;
-  type: 'national' | 'regional' | 'local';
+  type: "national" | "regional" | "local";
   created_at: string;
   updated_at: string;
 }
@@ -36,19 +36,19 @@ const validateHolidayData = (data: unknown): Holiday[] | null => {
   if (!Array.isArray(data)) return null;
 
   const isValidHoliday = (item: unknown): item is Holiday => {
-    if (typeof item !== 'object' || item === null) return false;
+    if (typeof item !== "object" || item === null) return false;
     const holiday = item as Record<string, unknown>;
 
     return (
-      typeof holiday['id'] === 'string' &&
-      typeof holiday['day'] === 'number' &&
-      typeof holiday['month'] === 'number' &&
-      typeof holiday['year'] === 'number' &&
-      typeof holiday['name'] === 'string' &&
-      typeof holiday['type'] === 'string' &&
-      typeof holiday['created_at'] === 'string' &&
-      typeof holiday['updated_at'] === 'string' &&
-      ['national', 'regional', 'local'].includes(holiday['type'])
+      typeof holiday["id"] === "string" &&
+      typeof holiday["day"] === "number" &&
+      typeof holiday["month"] === "number" &&
+      typeof holiday["year"] === "number" &&
+      typeof holiday["name"] === "string" &&
+      typeof holiday["type"] === "string" &&
+      typeof holiday["created_at"] === "string" &&
+      typeof holiday["updated_at"] === "string" &&
+      ["national", "regional", "local"].includes(holiday["type"])
     );
   };
 
@@ -57,7 +57,7 @@ const validateHolidayData = (data: unknown): Holiday[] | null => {
 
 const validateHolidaysIntegrity = (
   holidays: Holiday[],
-  year: number
+  year: number,
 ): ValidationResult => {
   const errors: string[] = [];
   const warnings: string[] = [];
@@ -83,24 +83,24 @@ const validateHolidaysIntegrity = (
       const monthStr = String(holiday.month);
       const yearStr = String(holiday.year);
       errors.push(
-        `Festivo duplicado: ${holiday.name} (${dayStr}/${monthStr}/${yearStr})`
+        `Festivo duplicado: ${holiday.name} (${dayStr}/${monthStr}/${yearStr})`,
       );
     }
     dateKeys.add(dateKey);
 
     switch (holiday.type) {
-      case 'national':
+      case "national":
         summary.nationalHolidays++;
         break;
-      case 'regional':
+      case "regional":
         summary.regionalHolidays++;
         break;
-      case 'local':
+      case "local":
         summary.localHolidays++;
         break;
       default:
         errors.push(
-          `Tipo de festivo inválido: ${String(holiday.type)} para ${holiday.name}`
+          `Tipo de festivo inválido: ${String(holiday.type)} para ${holiday.name}`,
         );
     }
 
@@ -112,13 +112,13 @@ const validateHolidaysIntegrity = (
     }
     if (holiday.year !== year) {
       errors.push(
-        `Año incorrecto: ${holiday.year} para ${holiday.name} (esperado: ${year})`
+        `Año incorrecto: ${holiday.year} para ${holiday.name} (esperado: ${year})`,
       );
     }
 
     if (!holiday.name.trim()) {
       errors.push(
-        `Nombre de festivo vacío para ${holiday.day}/${holiday.month}/${holiday.year}`
+        `Nombre de festivo vacío para ${holiday.day}/${holiday.month}/${holiday.year}`,
       );
     }
 
@@ -128,44 +128,44 @@ const validateHolidaysIntegrity = (
   }
 
   const expectedHolidays = [
-    { day: 1, month: 1, name: "Cap d'Any", type: 'national' },
-    { day: 6, month: 1, name: 'Reis', type: 'national' },
-    { day: 9, month: 6, name: 'Fira a Mataró', type: 'local' },
-    { day: 28, month: 7, name: 'Festa major de Les Santes', type: 'local' },
-    { day: 15, month: 8, name: "L'Assumpció", type: 'national' },
-    { day: 25, month: 12, name: 'Nadal', type: 'national' },
+    { day: 1, month: 1, name: "Cap d'Any", type: "national" },
+    { day: 6, month: 1, name: "Reis", type: "national" },
+    { day: 9, month: 6, name: "Fira a Mataró", type: "local" },
+    { day: 28, month: 7, name: "Festa major de Les Santes", type: "local" },
+    { day: 15, month: 8, name: "L'Assumpció", type: "national" },
+    { day: 25, month: 12, name: "Nadal", type: "national" },
   ];
 
   for (const expected of expectedHolidays) {
     const found = holidays.find(
-      (h) => h.day === expected.day && h.month === expected.month
+      (h) => h.day === expected.day && h.month === expected.month,
     );
     if (!found) {
       warnings.push(
-        `Festivo esperado no encontrado: ${expected.name} (${expected.day}/${expected.month})`
+        `Festivo esperado no encontrado: ${expected.name} (${expected.day}/${expected.month})`,
       );
     } else if (found.type !== expected.type) {
       warnings.push(
-        `Tipo incorrecto para ${expected.name}: esperado ${expected.type}, encontrado ${found.type}`
+        `Tipo incorrecto para ${expected.name}: esperado ${expected.type}, encontrado ${found.type}`,
       );
     }
   }
 
   if (summary.monthsWithHolidays.length < 6) {
     warnings.push(
-      `Pocos meses con festivos: ${summary.monthsWithHolidays.length} (esperado al menos 6)`
+      `Pocos meses con festivos: ${summary.monthsWithHolidays.length} (esperado al menos 6)`,
     );
   }
 
   if (summary.nationalHolidays < 8) {
     warnings.push(
-      `Pocos festivos nacionales: ${summary.nationalHolidays} (esperado al menos 8)`
+      `Pocos festivos nacionales: ${summary.nationalHolidays} (esperado al menos 8)`,
     );
   }
 
   if (summary.localHolidays < 2) {
     warnings.push(
-      `Pocos festivos locales: ${summary.localHolidays} (esperado al menos 2: Fira a Mataró y Les Santes)`
+      `Pocos festivos locales: ${summary.localHolidays} (esperado al menos 2: Fira a Mataró y Les Santes)`,
     );
   }
 
@@ -183,22 +183,22 @@ export const POST = async (request: NextRequest) => {
     const { year } = body;
 
     if (!year) {
-      return NextResponse.json({ error: 'Año requerido' }, { status: 400 });
+      return NextResponse.json({ error: "Año requerido" }, { status: 400 });
     }
 
     // Obtener festivos del año
     const { data: holidays, error } = await supabase
-      .from('holidays')
-      .select('*')
-      .eq('year', year)
-      .order('month', { ascending: true })
-      .order('day', { ascending: true });
+      .from("holidays")
+      .select("*")
+      .eq("year", year)
+      .order("month", { ascending: true })
+      .order("day", { ascending: true });
 
     if (error !== null && error !== undefined) {
       // console.error('Error obteniendo festivos:', error);
       return NextResponse.json(
-        { error: 'Error al obtener festivos de la base de datos' },
-        { status: 500 }
+        { error: "Error al obtener festivos de la base de datos" },
+        { status: 500 },
       );
     }
 
@@ -214,8 +214,8 @@ export const POST = async (request: NextRequest) => {
   } catch {
     // console.error('Error en la validación:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 };

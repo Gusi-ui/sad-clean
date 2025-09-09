@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 /**
  * Sistema de estimación de tiempo de viaje sin dependencia de geocodificación
@@ -8,8 +8,8 @@
 interface TravelEstimate {
   estimatedDuration: number; // en segundos
   estimatedDistance: number; // en metros
-  confidence: 'high' | 'medium' | 'low';
-  method: 'postal_code' | 'city_distance' | 'default';
+  confidence: "high" | "medium" | "low";
+  method: "postal_code" | "city_distance" | "default";
 }
 
 interface AddressInfo {
@@ -46,7 +46,7 @@ function extractPostalCode(address: string): string | null {
  */
 function extractCity(address: string): string | null {
   // Buscar ciudad después de coma o al final
-  const parts = address.split(',').map((part) => part.trim());
+  const parts = address.split(",").map((part) => part.trim());
   if (parts.length >= 2) {
     // Tomar la penúltima parte como ciudad (antes del código postal)
     return parts[parts.length - 2];
@@ -59,7 +59,7 @@ function extractCity(address: string): string | null {
  */
 function estimateDistanceByPostalCode(
   fromPostal: string,
-  toPostal: string
+  toPostal: string,
 ): number {
   // Estimación muy básica basada en diferencia de códigos postales
   const fromNum = parseInt(fromPostal);
@@ -131,23 +131,23 @@ function estimateDistanceByCities(fromCity: string, toCity: string): number {
 export function estimateTravelTime(
   fromAddress: AddressInfo,
   toAddress: AddressInfo,
-  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT' = 'DRIVING'
+  travelMode: "DRIVING" | "WALKING" | "TRANSIT" = "DRIVING",
 ): TravelEstimate {
   const speed = AVERAGE_SPEEDS[travelMode];
   const baseTime = BASE_TIME_MINUTES[travelMode];
 
   let estimatedDistance = 5000; // 5km por defecto
-  let confidence: 'high' | 'medium' | 'low' = 'low';
-  let method: 'postal_code' | 'city_distance' | 'default' = 'default';
+  let confidence: "high" | "medium" | "low" = "low";
+  let method: "postal_code" | "city_distance" | "default" = "default";
 
   // Intentar extraer información de las direcciones
   const fromPostal =
-    fromAddress.postalCode ?? extractPostalCode(fromAddress.address ?? '');
+    fromAddress.postalCode ?? extractPostalCode(fromAddress.address ?? "");
   const toPostal =
-    toAddress.postalCode ?? extractPostalCode(toAddress.address ?? '');
+    toAddress.postalCode ?? extractPostalCode(toAddress.address ?? "");
 
-  const fromCity = fromAddress.city ?? extractCity(fromAddress.address ?? '');
-  const toCity = toAddress.city ?? extractCity(toAddress.address ?? '');
+  const fromCity = fromAddress.city ?? extractCity(fromAddress.address ?? "");
+  const toCity = toAddress.city ?? extractCity(toAddress.address ?? "");
 
   // Método 1: Comparar códigos postales (más preciso)
   if (
@@ -157,8 +157,8 @@ export function estimateTravelTime(
     toPostal.length > 0
   ) {
     estimatedDistance = estimateDistanceByPostalCode(fromPostal, toPostal);
-    confidence = 'high';
-    method = 'postal_code';
+    confidence = "high";
+    method = "postal_code";
   }
   // Método 2: Comparar ciudades
   else if (
@@ -168,8 +168,8 @@ export function estimateTravelTime(
     toCity.length > 0
   ) {
     estimatedDistance = estimateDistanceByCities(fromCity, toCity);
-    confidence = 'medium';
-    method = 'city_distance';
+    confidence = "medium";
+    method = "city_distance";
   }
   // Calcular tiempo basado en distancia y velocidad
   const timeHours = estimatedDistance / 1000 / speed;
@@ -193,12 +193,12 @@ export function estimateRouteTime(
     postalCode?: string | null;
     city?: string | null;
   }>,
-  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT' = 'DRIVING'
+  travelMode: "DRIVING" | "WALKING" | "TRANSIT" = "DRIVING",
 ): {
   segments: Array<TravelEstimate & { from: number; to: number }>;
   totalDuration: number;
   totalDistance: number;
-  averageConfidence: 'high' | 'medium' | 'low';
+  averageConfidence: "high" | "medium" | "low";
 } {
   const segments: Array<TravelEstimate & { from: number; to: number }> = [];
   for (let i = 0; i < stops.length - 1; i++) {
@@ -212,21 +212,21 @@ export function estimateRouteTime(
 
   const totalDuration = segments.reduce(
     (sum, seg) => sum + seg.estimatedDuration,
-    0
+    0,
   );
   const totalDistance = segments.reduce(
     (sum, seg) => sum + seg.estimatedDistance,
-    0
+    0,
   );
 
   // Calcular confianza promedio
   const confidenceScores = segments.map((seg) => {
     switch (seg.confidence) {
-      case 'high':
+      case "high":
         return 3;
-      case 'medium':
+      case "medium":
         return 2;
-      case 'low':
+      case "low":
         return 1;
       default:
         return 1;
@@ -236,8 +236,8 @@ export function estimateRouteTime(
   const avgScore =
     confidenceScores.reduce((sum, score) => sum + score, 0) /
     confidenceScores.length;
-  const averageConfidence: 'high' | 'medium' | 'low' =
-    avgScore >= 2.5 ? 'high' : avgScore >= 1.5 ? 'medium' : 'low';
+  const averageConfidence: "high" | "medium" | "low" =
+    avgScore >= 2.5 ? "high" : avgScore >= 1.5 ? "medium" : "low";
   return {
     segments,
     totalDuration,

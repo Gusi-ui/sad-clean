@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 import type {
   Assignment,
@@ -14,12 +14,12 @@ import type {
   Worker,
   WorkerInsert,
   WorkerUpdate,
-} from '@/types/database-types';
-import { securityLogger } from '@/utils/security-config';
+} from "@/types/database-types";
+import { securityLogger } from "@/utils/security-config";
 
 // Valores por defecto para desarrollo
-const DEFAULT_SUPABASE_URL = 'https://placeholder.supabase.co';
-const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
+const DEFAULT_SUPABASE_URL = "https://placeholder.supabase.co";
+const DEFAULT_SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder";
 
 const supabaseUrl =
   process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
@@ -30,13 +30,13 @@ const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 // Validar que al menos tengamos valores por defecto o valores reales
 if (supabaseUrl === DEFAULT_SUPABASE_URL) {
   console.warn(
-    '⚠️ WARNING: Using placeholder Supabase URL. Please set NEXT_PUBLIC_SUPABASE_URL in your .env.local file'
+    "⚠️ WARNING: Using placeholder Supabase URL. Please set NEXT_PUBLIC_SUPABASE_URL in your .env.local file",
   );
 }
 
 if (supabaseKey === DEFAULT_SUPABASE_KEY) {
   console.warn(
-    '⚠️ WARNING: Using placeholder Supabase key. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file'
+    "⚠️ WARNING: Using placeholder Supabase key. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file",
   );
 }
 
@@ -53,8 +53,8 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 // Solo crear si tenemos la clave de service role válida
 export const supabaseAdmin =
   serviceRoleKey &&
-  serviceRoleKey !== 'your-service-role-key-here' &&
-  serviceRoleKey !== 'tu_clave_de_servicio_aqui'
+  serviceRoleKey !== "your-service-role-key-here" &&
+  serviceRoleKey !== "tu_clave_de_servicio_aqui"
     ? createClient(supabaseUrl, serviceRoleKey, {
         auth: {
           autoRefreshToken: true,
@@ -94,13 +94,13 @@ export type {
  */
 export const getActiveWorkers = async (): Promise<Worker[]> => {
   const { data, error } = await supabase
-    .from('workers')
-    .select('*')
-    .eq('is_active', true)
-    .order('name');
+    .from("workers")
+    .select("*")
+    .eq("is_active", true)
+    .order("name");
 
   if (error !== null) {
-    securityLogger.error('Error fetching active workers:', error);
+    securityLogger.error("Error fetching active workers:", error);
     throw error;
   }
 
@@ -112,13 +112,13 @@ export const getActiveWorkers = async (): Promise<Worker[]> => {
  */
 export const getWorkerById = async (id: string): Promise<Worker | null> => {
   const { data, error } = await supabase
-    .from('workers')
-    .select('*')
-    .eq('id', id)
+    .from("workers")
+    .select("*")
+    .eq("id", id)
     .single();
 
   if (error !== null) {
-    securityLogger.error('Error fetching worker:', error);
+    securityLogger.error("Error fetching worker:", error);
     throw error;
   }
 
@@ -129,22 +129,22 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
  * Obtiene asignaciones de un worker
  */
 export const getWorkerAssignments = async (
-  workerId: string
+  workerId: string,
 ): Promise<Assignment[]> => {
   const { data, error } = await supabase
-    .from('assignments')
+    .from("assignments")
     .select(
       `
       *,
       workers (name, surname, email),
       users (name, surname, client_code)
-    `
+    `,
     )
-    .eq('worker_id', workerId)
-    .order('start_date', { ascending: false });
+    .eq("worker_id", workerId)
+    .order("start_date", { ascending: false });
 
   if (error !== null) {
-    securityLogger.error('Error fetching worker assignments:', error);
+    securityLogger.error("Error fetching worker assignments:", error);
     throw error;
   }
 
@@ -155,16 +155,16 @@ export const getWorkerAssignments = async (
  * Crea una nueva asignación
  */
 export const createAssignment = async (
-  assignment: AssignmentInsert
+  assignment: AssignmentInsert,
 ): Promise<Assignment> => {
   const { data, error } = await supabase
-    .from('assignments')
+    .from("assignments")
     .insert(assignment)
     .select()
     .single();
 
   if (error !== null) {
-    securityLogger.error('Error creating assignment:', error);
+    securityLogger.error("Error creating assignment:", error);
     throw error;
   }
 
@@ -176,17 +176,17 @@ export const createAssignment = async (
  */
 export const updateAssignment = async (
   id: string,
-  updates: AssignmentUpdate
+  updates: AssignmentUpdate,
 ): Promise<Assignment> => {
   const { data, error } = await supabase
-    .from('assignments')
+    .from("assignments")
     .update(updates)
-    .eq('id', id)
+    .eq("id", id)
     .select()
     .single();
 
   if (error !== null) {
-    securityLogger.error('Error updating assignment:', error);
+    securityLogger.error("Error updating assignment:", error);
     throw error;
   }
 
@@ -206,28 +206,28 @@ interface WorkerStats {
 export const getWorkerStats = async (
   workerId: string,
   startDate: string,
-  endDate: string
+  endDate: string,
 ): Promise<WorkerStats> => {
   const { data, error } = await supabase
-    .from('assignments')
-    .select('weekly_hours, status')
-    .eq('worker_id', workerId)
-    .gte('start_date', startDate)
-    .lte('start_date', endDate);
+    .from("assignments")
+    .select("weekly_hours, status")
+    .eq("worker_id", workerId)
+    .gte("start_date", startDate)
+    .lte("start_date", endDate);
 
   if (error !== null) {
-    securityLogger.error('Error fetching worker stats:', error);
+    securityLogger.error("Error fetching worker stats:", error);
     throw error;
   }
 
   const totalHours = (data ?? []).reduce((sum, assignment) => {
-    if (typeof assignment.weekly_hours === 'number') {
+    if (typeof assignment.weekly_hours === "number") {
       return sum + assignment.weekly_hours;
     }
     return sum;
   }, 0);
   const completedTasks = (data ?? []).filter(
-    (a) => a.status === 'completed'
+    (a) => a.status === "completed",
   ).length;
   const totalTasks = (data ?? []).length;
 
@@ -244,13 +244,13 @@ export const getWorkerStats = async (
  */
 export const getAllUsers = async (): Promise<User[]> => {
   const { data, error } = await supabase
-    .from('users')
-    .select('*')
-    .eq('is_active', true)
-    .order('name');
+    .from("users")
+    .select("*")
+    .eq("is_active", true)
+    .order("name");
 
   if (error !== null) {
-    securityLogger.error('Error fetching users:', error);
+    securityLogger.error("Error fetching users:", error);
     throw error;
   }
 
@@ -261,24 +261,24 @@ export const getAllUsers = async (): Promise<User[]> => {
  * Obtiene servicios activos para hoy
  */
 export const getTodayServices = async (): Promise<Assignment[]> => {
-  const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+  const today = new Date().toISOString().split("T")[0]; // YYYY-MM-DD
 
   const { data, error } = await supabase
-    .from('assignments')
+    .from("assignments")
     .select(
       `
       *,
       workers (name, surname, email),
       users (name, surname, client_code)
-    `
+    `,
     )
-    .lte('start_date', today)
+    .lte("start_date", today)
     .or(`end_date.is.null,end_date.gte.${today}`)
-    .eq('status', 'active')
-    .order('start_date', { ascending: false });
+    .eq("status", "active")
+    .order("start_date", { ascending: false });
 
   if (error !== null) {
-    securityLogger.error('Error fetching today services:', error);
+    securityLogger.error("Error fetching today services:", error);
     throw error;
   }
 
@@ -304,26 +304,26 @@ export const getServicesStats = async (): Promise<{
     const endOfWeek = new Date(startOfWeek);
     endOfWeek.setDate(startOfWeek.getDate() + 6); // Sábado
 
-    const startDate = startOfWeek.toISOString().split('T')[0];
-    const endDate = endOfWeek.toISOString().split('T')[0];
+    const startDate = startOfWeek.toISOString().split("T")[0];
+    const endDate = endOfWeek.toISOString().split("T")[0];
 
     // Obtener asignaciones activas de la semana actual
     const { data: weeklyAssignments, error: weeklyError } = await supabase
-      .from('assignments')
-      .select('weekly_hours, start_date, end_date')
-      .lte('start_date', endDate)
+      .from("assignments")
+      .select("weekly_hours, start_date, end_date")
+      .lte("start_date", endDate)
       .or(`end_date.is.null,end_date.gte.${startDate}`)
-      .eq('status', 'active');
+      .eq("status", "active");
 
     if (weeklyError !== null) {
-      securityLogger.error('Error fetching weekly assignments:', weeklyError);
+      securityLogger.error("Error fetching weekly assignments:", weeklyError);
       throw weeklyError;
     }
 
     // Calcular horas totales de la semana actual
     const weeklyHours = (weeklyAssignments ?? []).reduce(
       (total, assignment) => total + (assignment.weekly_hours ?? 0),
-      0
+      0,
     );
 
     // Calcular horas de la semana anterior para el incremento
@@ -332,27 +332,27 @@ export const getServicesStats = async (): Promise<{
     const endOfLastWeek = new Date(startOfLastWeek);
     endOfLastWeek.setDate(startOfLastWeek.getDate() + 6);
 
-    const startDateLastWeek = startOfLastWeek.toISOString().split('T')[0];
-    const endDateLastWeek = endOfLastWeek.toISOString().split('T')[0];
+    const startDateLastWeek = startOfLastWeek.toISOString().split("T")[0];
+    const endDateLastWeek = endOfLastWeek.toISOString().split("T")[0];
 
     const { data: lastWeekAssignments, error: lastWeekError } = await supabase
-      .from('assignments')
-      .select('weekly_hours, start_date, end_date')
-      .lte('start_date', endDateLastWeek)
+      .from("assignments")
+      .select("weekly_hours, start_date, end_date")
+      .lte("start_date", endDateLastWeek)
       .or(`end_date.is.null,end_date.gte.${startDateLastWeek}`)
-      .eq('status', 'active');
+      .eq("status", "active");
 
     if (lastWeekError !== null) {
       securityLogger.error(
-        'Error fetching last week assignments:',
-        lastWeekError
+        "Error fetching last week assignments:",
+        lastWeekError,
       );
       throw lastWeekError;
     }
 
     const lastWeekHours = (lastWeekAssignments ?? []).reduce(
       (total, assignment) => total + (assignment.weekly_hours ?? 0),
-      0
+      0,
     );
 
     // Calcular incremento real
@@ -364,7 +364,7 @@ export const getServicesStats = async (): Promise<{
       weeklyHoursIncrement,
     };
   } catch (error) {
-    securityLogger.error('Error in getServicesStats:', error);
+    securityLogger.error("Error in getServicesStats:", error);
     return {
       todayServices: 0,
       weeklyHours: 0,
@@ -387,18 +387,18 @@ export const getTodayServicesStats = async (): Promise<{
 
     // Obtener trabajadoras únicas
     const uniqueWorkers = new Set(
-      todayServices.map((service) => service.worker_id)
+      todayServices.map((service) => service.worker_id),
     );
 
     // Obtener usuarios únicos
     const uniqueUsers = new Set(
-      todayServices.map((service) => service.user_id)
+      todayServices.map((service) => service.user_id),
     );
 
     // Calcular horas totales
     const totalHours = todayServices.reduce(
       (total, service) => total + (service.weekly_hours ?? 0),
-      0
+      0,
     );
 
     return {
@@ -408,7 +408,7 @@ export const getTodayServicesStats = async (): Promise<{
       totalHours,
     };
   } catch (error) {
-    securityLogger.error('Error in getTodayServicesStats:', error);
+    securityLogger.error("Error in getTodayServicesStats:", error);
     return {
       totalServices: 0,
       activeWorkers: 0,
@@ -425,21 +425,21 @@ export const handleSupabaseError = (error: unknown, context: string) => {
   securityLogger.error(`Error in ${context}:`, error);
 
   // Determinar el tipo de error y retornar mensaje apropiado
-  if (typeof error === 'object' && error !== null && 'code' in error) {
+  if (typeof error === "object" && error !== null && "code" in error) {
     const errorCode = (error as { code: string }).code;
 
-    if (errorCode === '23505') {
-      return 'Ya existe un registro con estos datos';
+    if (errorCode === "23505") {
+      return "Ya existe un registro con estos datos";
     }
 
-    if (errorCode === '23503') {
-      return 'No se puede eliminar este registro porque está siendo usado';
+    if (errorCode === "23503") {
+      return "No se puede eliminar este registro porque está siendo usado";
     }
 
-    if (errorCode === '42P01') {
-      return 'La tabla no existe';
+    if (errorCode === "42P01") {
+      return "La tabla no existe";
     }
   }
 
-  return 'Ha ocurrido un error inesperado';
+  return "Ha ocurrido un error inesperado";
 };

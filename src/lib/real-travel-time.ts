@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
 import {
   type TravelTimeResult,
   calculateTravelTime,
   loadGoogleMapsAPI,
-} from '@/lib/google-maps';
+} from "@/lib/google-maps";
 
 /**
  * Interfaz para el resultado del cálculo de tiempo de viaje real
@@ -45,12 +45,12 @@ function buildFullAddress(addressInfo: AddressInfo): string {
 
   // Si no hay información suficiente, usar Mataró como ciudad por defecto
   if (parts.length === 0) {
-    return 'Mataró, España';
+    return "Mataró, España";
   }
 
   // Asegurar que incluya España para mejor geocodificación
-  const fullAddress = parts.join(', ');
-  if (!fullAddress.toLowerCase().includes('españa')) {
+  const fullAddress = parts.join(", ");
+  if (!fullAddress.toLowerCase().includes("españa")) {
     return `${fullAddress}, España`;
   }
 
@@ -63,7 +63,7 @@ function buildFullAddress(addressInfo: AddressInfo): string {
 export async function calculateRealTravelTime(
   fromAddress: AddressInfo,
   toAddress: AddressInfo,
-  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT' = 'DRIVING'
+  travelMode: "DRIVING" | "WALKING" | "TRANSIT" = "DRIVING",
 ): Promise<RealTravelTimeResult> {
   try {
     await loadGoogleMapsAPI();
@@ -72,31 +72,31 @@ export async function calculateRealTravelTime(
     const toFullAddress = buildFullAddress(toAddress);
 
     // Validar que las direcciones no estén vacías
-    if (!fromFullAddress || fromFullAddress.trim() === 'Mataró, España') {
+    if (!fromFullAddress || fromFullAddress.trim() === "Mataró, España") {
       return {
         duration: 0,
         distance: 0,
         success: false,
-        errorMessage: 'Dirección de origen no válida o incompleta',
+        errorMessage: "Dirección de origen no válida o incompleta",
       };
     }
 
-    if (!toFullAddress || toFullAddress.trim() === 'Mataró, España') {
+    if (!toFullAddress || toFullAddress.trim() === "Mataró, España") {
       return {
         duration: 0,
         distance: 0,
         success: false,
-        errorMessage: 'Dirección de destino no válida o incompleta',
+        errorMessage: "Dirección de destino no válida o incompleta",
       };
     }
 
     const result: TravelTimeResult = await calculateTravelTime(
       fromFullAddress,
       toFullAddress,
-      travelMode
+      travelMode,
     );
 
-    if (result.status === 'OK' && result.duration && result.distance) {
+    if (result.status === "OK" && result.duration && result.distance) {
       return {
         duration: result.duration,
         distance: result.distance,
@@ -108,14 +108,14 @@ export async function calculateRealTravelTime(
       distance: 0,
       success: false,
       errorMessage:
-        result.errorMessage ?? 'Error desconocido al calcular tiempo de viaje',
+        result.errorMessage ?? "Error desconocido al calcular tiempo de viaje",
     };
   } catch (error) {
     return {
       duration: 0,
       distance: 0,
       success: false,
-      errorMessage: `Error al cargar Google Maps: ${error instanceof Error ? error.message : 'Error desconocido'}`,
+      errorMessage: `Error al cargar Google Maps: ${error instanceof Error ? error.message : "Error desconocido"}`,
     };
   }
 }
@@ -126,7 +126,7 @@ export async function calculateRealTravelTime(
 export async function calculateRouteRealTravelTime(
   stops: AddressInfo[],
   workerStartAddress?: AddressInfo,
-  travelMode: 'DRIVING' | 'WALKING' | 'TRANSIT' = 'DRIVING'
+  travelMode: "DRIVING" | "WALKING" | "TRANSIT" = "DRIVING",
 ): Promise<{
   segments: Array<{
     from: number;

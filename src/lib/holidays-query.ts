@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-member-access */
-import { logger } from '@/utils/logger';
+import { logger } from "@/utils/logger";
 
-import { supabase } from './database';
+import { supabase } from "./database";
 
 export interface Holiday {
   id: string;
@@ -9,7 +9,7 @@ export interface Holiday {
   month: number;
   year: number;
   name: string;
-  type: 'national' | 'regional' | 'local';
+  type: "national" | "regional" | "local";
   created_at: string;
   updated_at: string;
 }
@@ -23,29 +23,29 @@ export interface MonthDaysCalculation {
 // Obtener festivos de un mes específico
 export const getHolidaysForMonth = async (
   month: number,
-  year: number
+  year: number,
 ): Promise<Holiday[]> => {
   try {
     const { data, error } = await supabase
-      .from('holidays')
-      .select('*')
-      .eq('month', month)
-      .eq('year', year)
-      .order('day');
+      .from("holidays")
+      .select("*")
+      .eq("month", month)
+      .eq("year", year)
+      .order("day");
 
     if (error !== null) {
-      logger.error('Error obteniendo festivos:', error);
+      logger.error("Error obteniendo festivos:", error);
       return [];
     }
 
     return (data ?? []).map((holiday) => ({
       ...holiday,
-      type: holiday.type as 'national' | 'regional' | 'local',
-      created_at: holiday.created_at ?? '',
-      updated_at: holiday.updated_at ?? '',
+      type: holiday.type as "national" | "regional" | "local",
+      created_at: holiday.created_at ?? "",
+      updated_at: holiday.updated_at ?? "",
     }));
   } catch (error) {
-    logger.error('Error obteniendo festivos:', error);
+    logger.error("Error obteniendo festivos:", error);
     return [];
   }
 };
@@ -54,25 +54,25 @@ export const getHolidaysForMonth = async (
 export const getHolidaysForYear = async (year: number): Promise<Holiday[]> => {
   try {
     const { data, error } = await supabase
-      .from('holidays')
-      .select('*')
-      .eq('year', year)
-      .order('month', { ascending: true })
-      .order('day', { ascending: true });
+      .from("holidays")
+      .select("*")
+      .eq("year", year)
+      .order("month", { ascending: true })
+      .order("day", { ascending: true });
 
     if (error !== null) {
-      logger.error('Error obteniendo festivos del año:', error);
+      logger.error("Error obteniendo festivos del año:", error);
       return [];
     }
 
     return (data ?? []).map((holiday) => ({
       ...holiday,
-      type: holiday.type as 'national' | 'regional' | 'local',
-      created_at: holiday.created_at ?? '',
-      updated_at: holiday.updated_at ?? '',
+      type: holiday.type as "national" | "regional" | "local",
+      created_at: holiday.created_at ?? "",
+      updated_at: holiday.updated_at ?? "",
     }));
   } catch (error) {
-    logger.error('Error obteniendo festivos del año:', error);
+    logger.error("Error obteniendo festivos del año:", error);
     return [];
   }
 };
@@ -80,7 +80,7 @@ export const getHolidaysForYear = async (year: number): Promise<Holiday[]> => {
 // Calcular días del mes (implementación en JavaScript)
 export const calculateMonthDays = async (
   month: number,
-  year: number
+  year: number,
 ): Promise<MonthDaysCalculation> => {
   try {
     // Obtener festivos del mes
@@ -114,7 +114,7 @@ export const calculateMonthDays = async (
       fines_de_semana: finesDeSemana,
     };
   } catch (error) {
-    logger.error('Error calculando días del mes:', error);
+    logger.error("Error calculando días del mes:", error);
     return {
       laborables: 0,
       festivos: 0,
@@ -125,28 +125,28 @@ export const calculateMonthDays = async (
 
 // Añadir un nuevo festivo
 export const addHoliday = async (
-  holiday: Omit<Holiday, 'id' | 'created_at' | 'updated_at'>
+  holiday: Omit<Holiday, "id" | "created_at" | "updated_at">,
 ): Promise<Holiday | null> => {
   try {
     const { data, error } = await supabase
-      .from('holidays')
+      .from("holidays")
       .insert(holiday)
       .select()
       .single();
 
     if (error !== null) {
-      logger.error('Error añadiendo festivo:', error);
+      logger.error("Error añadiendo festivo:", error);
       return null;
     }
 
     return {
       ...data,
-      type: data.type as 'national' | 'regional' | 'local',
-      created_at: data.created_at ?? '',
-      updated_at: data.updated_at ?? '',
+      type: data.type as "national" | "regional" | "local",
+      created_at: data.created_at ?? "",
+      updated_at: data.updated_at ?? "",
     };
   } catch (error) {
-    logger.error('Error añadiendo festivo:', error);
+    logger.error("Error añadiendo festivo:", error);
     return null;
   }
 };
@@ -154,29 +154,29 @@ export const addHoliday = async (
 // Actualizar un festivo
 export const updateHoliday = async (
   id: string,
-  updates: Partial<Holiday>
+  updates: Partial<Holiday>,
 ): Promise<Holiday | null> => {
   try {
     const { data, error } = await supabase
-      .from('holidays')
+      .from("holidays")
       .update(updates)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
     if (error !== null) {
-      logger.error('Error actualizando festivo:', error);
+      logger.error("Error actualizando festivo:", error);
       return null;
     }
 
     return {
       ...data,
-      type: data.type as 'national' | 'regional' | 'local',
-      created_at: data.created_at ?? '',
-      updated_at: data.updated_at ?? '',
+      type: data.type as "national" | "regional" | "local",
+      created_at: data.created_at ?? "",
+      updated_at: data.updated_at ?? "",
     };
   } catch (error) {
-    logger.error('Error actualizando festivo:', error);
+    logger.error("Error actualizando festivo:", error);
     return null;
   }
 };
@@ -184,52 +184,52 @@ export const updateHoliday = async (
 // Eliminar un festivo
 export const deleteHoliday = async (id: string): Promise<boolean> => {
   try {
-    const { error } = await supabase.from('holidays').delete().eq('id', id);
+    const { error } = await supabase.from("holidays").delete().eq("id", id);
 
     if (error !== null) {
-      logger.error('Error eliminando festivo:', error);
+      logger.error("Error eliminando festivo:", error);
       return false;
     }
 
     return true;
   } catch (error) {
-    logger.error('Error eliminando festivo:', error);
+    logger.error("Error eliminando festivo:", error);
     return false;
   }
 };
 
 // Obtener festivos por tipo
 export const getHolidaysByType = async (
-  type: 'national' | 'regional' | 'local',
-  year?: number
+  type: "national" | "regional" | "local",
+  year?: number,
 ): Promise<Holiday[]> => {
   try {
     let query = supabase
-      .from('holidays')
-      .select('*')
-      .eq('type', type)
-      .order('month', { ascending: true })
-      .order('day', { ascending: true });
+      .from("holidays")
+      .select("*")
+      .eq("type", type)
+      .order("month", { ascending: true })
+      .order("day", { ascending: true });
 
     if (year !== undefined) {
-      query = query.eq('year', year);
+      query = query.eq("year", year);
     }
 
     const { data, error } = await query;
 
     if (error !== null) {
-      logger.error('Error obteniendo festivos por tipo:', error);
+      logger.error("Error obteniendo festivos por tipo:", error);
       return [];
     }
 
     return (data ?? []).map((holiday) => ({
       ...holiday,
-      type: holiday.type as 'national' | 'regional' | 'local',
-      created_at: holiday.created_at ?? '',
-      updated_at: holiday.updated_at ?? '',
+      type: holiday.type as "national" | "regional" | "local",
+      created_at: holiday.created_at ?? "",
+      updated_at: holiday.updated_at ?? "",
     }));
   } catch (error) {
-    logger.error('Error obteniendo festivos por tipo:', error);
+    logger.error("Error obteniendo festivos por tipo:", error);
     return [];
   }
 };
@@ -238,22 +238,22 @@ export const getHolidaysByType = async (
 export const isHoliday = async (
   day: number,
   month: number,
-  year: number
+  year: number,
 ): Promise<boolean> => {
   try {
     const { data, error } = await supabase
-      .from('holidays')
-      .select('id')
-      .eq('day', day)
-      .eq('month', month)
-      .eq('year', year)
+      .from("holidays")
+      .select("id")
+      .eq("day", day)
+      .eq("month", month)
+      .eq("year", year)
       .maybeSingle();
 
     if (error !== null) return false;
 
     return data !== null;
   } catch (error) {
-    logger.error('Error verificando si es festivo:', error);
+    logger.error("Error verificando si es festivo:", error);
     return false;
   }
 };
@@ -273,7 +273,7 @@ export const getMonthInfo = async (month: number, year: number) => {
       year,
     };
   } catch (error) {
-    logger.error('Error obteniendo información del mes:', error);
+    logger.error("Error obteniendo información del mes:", error);
     return {
       holidays: [],
       daysCalculation: {

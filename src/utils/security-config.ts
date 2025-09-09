@@ -4,8 +4,8 @@
  */
 
 // Configuración de entorno
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isProduction = process.env.NODE_ENV === 'production';
+const isDevelopment = process.env.NODE_ENV === "development";
+const isProduction = process.env.NODE_ENV === "production";
 
 /**
  * Logger seguro que no expone información sensible en producción
@@ -82,15 +82,15 @@ export const securityLogger = SecurityLogger.getInstance();
 export const securityConfig = {
   // Headers de seguridad para fetch requests
   secureHeaders: {
-    'Content-Type': 'application/json',
-    'X-Requested-With': 'XMLHttpRequest',
+    "Content-Type": "application/json",
+    "X-Requested-With": "XMLHttpRequest",
     // Agregar más headers de seguridad según sea necesario
   },
 
   // Configuración de CORS
   corsConfig: {
-    credentials: 'include' as const,
-    mode: 'cors' as const,
+    credentials: "include" as const,
+    mode: "cors" as const,
   },
 
   // Timeouts para requests
@@ -116,7 +116,7 @@ export class InputValidator {
    */
   static sanitizeString(input: string): string {
     return input
-      .replace(/[<>]/g, '') // Remover < y >
+      .replace(/[<>]/g, "") // Remover < y >
       .trim();
   }
 
@@ -141,7 +141,7 @@ export class InputValidator {
   static isValidUrl(url: string): boolean {
     try {
       const urlObj = new URL(url);
-      return ['http:', 'https:'].includes(urlObj.protocol);
+      return ["http:", "https:"].includes(urlObj.protocol);
     } catch {
       return false;
     }
@@ -153,12 +153,12 @@ export class InputValidator {
  */
 export const googleMapsConfig = {
   // API Key debe estar en variables de entorno
-  apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+  apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
 
   // Configuración de seguridad para Google Maps
   securityOptions: {
     // Restringir dominio en Google Cloud Console
-    allowedDomains: ['localhost', 'sad-las.com'], // Agregar tu dominio
+    allowedDomains: ["localhost", "sad-las.com"], // Agregar tu dominio
   },
 };
 
@@ -170,33 +170,33 @@ export const validateSecurityConfig = (): void => {
 
   // Verificar API key de Google Maps
   if (
-    (googleMapsConfig.apiKey === null || googleMapsConfig.apiKey === '') &&
+    (googleMapsConfig.apiKey === null || googleMapsConfig.apiKey === "") &&
     isProduction
   ) {
-    errors.push('Google Maps API key no configurada en producción');
+    errors.push("Google Maps API key no configurada en producción");
   }
 
   // Verificar variables de entorno críticas
   if (
     process.env.NEXT_PUBLIC_SUPABASE_URL === null ||
     process.env.NEXT_PUBLIC_SUPABASE_URL === undefined ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL === ''
+    process.env.NEXT_PUBLIC_SUPABASE_URL === ""
   ) {
-    errors.push('Supabase URL no configurada');
+    errors.push("Supabase URL no configurada");
   }
 
   if (
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === null ||
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === undefined ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === ''
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === ""
   ) {
-    errors.push('Supabase Anon Key no configurada');
+    errors.push("Supabase Anon Key no configurada");
   }
 
   if (errors.length > 0) {
-    securityLogger.error('Configuración de seguridad incompleta:', errors);
+    securityLogger.error("Configuración de seguridad incompleta:", errors);
     throw new Error(
-      `Configuración de seguridad incompleta: ${errors.join(', ')}`
+      `Configuración de seguridad incompleta: ${errors.join(", ")}`,
     );
   }
 };

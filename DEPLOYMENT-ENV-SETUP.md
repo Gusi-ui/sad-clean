@@ -153,7 +153,10 @@ En producción, abre las herramientas de desarrollador y verifica:
 
 ```javascript
 // En la consola del navegador
-console.log('Google Maps API Key:', process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY);
+console.log(
+  "Google Maps API Key:",
+  process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY,
+);
 ```
 
 ## 🔒 Consideraciones de Seguridad

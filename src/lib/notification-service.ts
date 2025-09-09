@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-unnecessary-type-assertion */
-import { supabase } from '@/lib/database';
-import type { NotificationType, PushNotificationPayload } from '@/types';
+import { supabase } from "@/lib/database";
+import type { NotificationType, PushNotificationPayload } from "@/types";
 import type {
   WorkerNotification,
   WorkerNotificationInsert,
-} from '@/types/database-types';
+} from "@/types/database-types";
 
 /**
  * Servicio para manejar notificaciones push y en tiempo real
@@ -23,13 +23,13 @@ export class NotificationService {
    */
   async createAndSendNotification(
     workerId: string,
-    notification: Omit<WorkerNotificationInsert, 'worker_id'>
+    notification: Omit<WorkerNotificationInsert, "worker_id">,
   ): Promise<WorkerNotification | null> {
     try {
       // Crear notificación en la base de datos
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { data: createdNotification, error } = await supabase
-        .from('worker_notifications')
+        .from("worker_notifications")
         .insert({
           worker_id: workerId,
           ...notification,
@@ -39,7 +39,7 @@ export class NotificationService {
 
       if (error) {
         // eslint-disable-next-line no-console
-        console.error('Error creating notification:', error);
+        console.error("Error creating notification:", error);
         return null;
       }
 
@@ -53,7 +53,7 @@ export class NotificationService {
       return createdNotification;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error in createAndSendNotification:', error);
+      console.error("Error in createAndSendNotification:", error);
       return null;
     }
   }
@@ -62,27 +62,27 @@ export class NotificationService {
    * Enviar notificación push usando Service Worker
    */
   private async sendPushNotification(
-    notification: WorkerNotification
+    notification: WorkerNotification,
   ): Promise<void> {
     try {
       // Obtener el token de push del dispositivo del trabajador
       const { data: devices } = await supabase
-        .from('worker_devices')
-        .select('push_token, platform')
-        .eq('worker_id', notification.worker_id)
-        .eq('authorized', true)
-        .not('push_token', 'is', null);
+        .from("worker_devices")
+        .select("push_token, platform")
+        .eq("worker_id", notification.worker_id)
+        .eq("authorized", true)
+        .not("push_token", "is", null);
 
       if (devices === null || devices.length === 0) {
         // eslint-disable-next-line no-console
-        console.log('No push tokens found for worker:', notification.worker_id);
+        console.log("No push tokens found for worker:", notification.worker_id);
         return;
       }
 
       const payload: PushNotificationPayload = {
         title: notification.title,
         body: notification.body,
-        icon: '/favicon.ico',
+        icon: "/favicon.ico",
         badge: 1,
         sound: this.getNotificationSound(notification.type as NotificationType),
         vibrate: this.getVibrationPattern(notification.priority as string),
@@ -93,7 +93,7 @@ export class NotificationService {
           ...notification.data,
         },
         actions: this.getNotificationActions(
-          notification.type as NotificationType
+          notification.type as NotificationType,
         ),
       };
 
@@ -104,7 +104,7 @@ export class NotificationService {
         platform: string;
       }[]) {
         if (
-          typeof device.push_token === 'string' &&
+          typeof device.push_token === "string" &&
           device.push_token.length > 0
         ) {
           await this.sendWebPushNotification(device.push_token, payload);
@@ -112,7 +112,7 @@ export class NotificationService {
       }
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error sending push notification:', error);
+      console.error("Error sending push notification:", error);
     }
   }
 
@@ -121,7 +121,7 @@ export class NotificationService {
    */
   private async sendRealtimeNotification(
     workerId: string,
-    notification: WorkerNotification
+    notification: WorkerNotification,
   ): Promise<void> {
     try {
       // Usar Supabase Realtime para enviar la notificación
@@ -134,11 +134,11 @@ export class NotificationService {
 
       // Suscribirse temporalmente y enviar
       channel.subscribe((status) => {
-        if (status === 'SUBSCRIBED') {
+        if (status === "SUBSCRIBED") {
           // Enviar la notificación por broadcast (sin await para evitar Promise en callback)
           void channel.send({
-            type: 'broadcast',
-            event: 'notification',
+            type: "broadcast",
+            event: "notification",
             payload: notification,
           });
 
@@ -153,7 +153,7 @@ export class NotificationService {
       }, 5000);
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error sending realtime notification:', error);
+      console.error("Error sending realtime notification:", error);
     }
   }
 
@@ -162,13 +162,13 @@ export class NotificationService {
    */
   private async sendWebPushNotification(
     pushToken: string,
-    payload: PushNotificationPayload
+    payload: PushNotificationPayload,
   ): Promise<void> {
     try {
       // Aquí se implementaría la lógica para enviar la notificación
       // usando una librería como web-push o un servicio como Firebase FCM
       // eslint-disable-next-line no-console
-      console.log('Sending web push notification:', { pushToken, payload });
+      console.log("Sending web push notification:", { pushToken, payload });
 
       // Ejemplo de implementación con fetch (requiere configuración adicional)
       // await fetch('/api/send-push', {
@@ -178,7 +178,7 @@ export class NotificationService {
       // });
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error sending web push notification:', error);
+      console.error("Error sending web push notification:", error);
     }
   }
 
@@ -187,20 +187,20 @@ export class NotificationService {
    */
   private getNotificationSound(type: NotificationType): string {
     const soundMap: Record<NotificationType, string> = {
-      new_user: 'notification-user_added_new.wav',
-      user_removed: 'notification-user_removed_new.wav',
-      schedule_change: 'notification-schedule_changed_new.wav',
-      assignment_change: 'notification-assignment_changed_new.wav',
-      route_update: 'notification-route_update_new.wav',
-      system_message: 'notification-system_new.wav',
-      reminder: 'notification-reminder_new.wav',
-      urgent: 'notification-urgent_new.wav',
-      holiday_update: 'notification-holiday_update_new.wav',
-      service_start: 'notification-service_start_new.wav',
-      service_end: 'notification-service_end_new.wav',
+      new_user: "notification-user_added_new.wav",
+      user_removed: "notification-user_removed_new.wav",
+      schedule_change: "notification-schedule_changed_new.wav",
+      assignment_change: "notification-assignment_changed_new.wav",
+      route_update: "notification-route_update_new.wav",
+      system_message: "notification-system_new.wav",
+      reminder: "notification-reminder_new.wav",
+      urgent: "notification-urgent_new.wav",
+      holiday_update: "notification-holiday_update_new.wav",
+      service_start: "notification-service_start_new.wav",
+      service_end: "notification-service_end_new.wav",
     };
 
-    return soundMap[type] || 'notification-default_new.wav';
+    return soundMap[type] || "notification-default_new.wav";
   }
 
   /**
@@ -222,44 +222,44 @@ export class NotificationService {
    */
   private getNotificationActions(type: NotificationType) {
     const baseActions = [
-      { action: 'view', title: 'Ver', icon: '/icons/view.png' },
-      { action: 'dismiss', title: 'Descartar', icon: '/icons/dismiss.png' },
+      { action: "view", title: "Ver", icon: "/icons/view.png" },
+      { action: "dismiss", title: "Descartar", icon: "/icons/dismiss.png" },
     ];
 
     const typeSpecificActions: Record<NotificationType, typeof baseActions> = {
       new_user: [
-        { action: 'view_user', title: 'Ver Usuario', icon: '/icons/user.png' },
+        { action: "view_user", title: "Ver Usuario", icon: "/icons/user.png" },
         {
-          action: 'view_schedule',
-          title: 'Ver Horario',
-          icon: '/icons/schedule.png',
+          action: "view_schedule",
+          title: "Ver Horario",
+          icon: "/icons/schedule.png",
         },
         ...baseActions,
       ],
       schedule_change: [
         {
-          action: 'view_schedule',
-          title: 'Ver Horario',
-          icon: '/icons/schedule.png',
+          action: "view_schedule",
+          title: "Ver Horario",
+          icon: "/icons/schedule.png",
         },
-        { action: 'acknowledge', title: 'Confirmar', icon: '/icons/check.png' },
+        { action: "acknowledge", title: "Confirmar", icon: "/icons/check.png" },
         ...baseActions,
       ],
       assignment_change: [
         {
-          action: 'view_assignment',
-          title: 'Ver Asignación',
-          icon: '/icons/assignment.png',
+          action: "view_assignment",
+          title: "Ver Asignación",
+          icon: "/icons/assignment.png",
         },
         ...baseActions,
       ],
       route_update: [
-        { action: 'view_route', title: 'Ver Ruta', icon: '/icons/route.png' },
+        { action: "view_route", title: "Ver Ruta", icon: "/icons/route.png" },
         ...baseActions,
       ],
       urgent: [
-        { action: 'call', title: 'Llamar', icon: '/icons/phone.png' },
-        { action: 'respond', title: 'Responder', icon: '/icons/message.png' },
+        { action: "call", title: "Llamar", icon: "/icons/phone.png" },
+        { action: "respond", title: "Responder", icon: "/icons/message.png" },
         ...baseActions,
       ],
       user_removed: baseActions,
@@ -268,32 +268,32 @@ export class NotificationService {
       holiday_update: baseActions,
       service_start: [
         {
-          action: 'view_service',
-          title: 'Ver Servicio',
-          icon: '/icons/service.png',
+          action: "view_service",
+          title: "Ver Servicio",
+          icon: "/icons/service.png",
         },
         {
-          action: 'start_navigation',
-          title: 'Iniciar Ruta',
-          icon: '/icons/navigation.png',
+          action: "start_navigation",
+          title: "Iniciar Ruta",
+          icon: "/icons/navigation.png",
         },
         ...baseActions,
       ],
       service_end: [
         {
-          action: 'view_service',
-          title: 'Ver Servicio',
-          icon: '/icons/service.png',
+          action: "view_service",
+          title: "Ver Servicio",
+          icon: "/icons/service.png",
         },
         {
-          action: 'complete_service',
-          title: 'Marcar Completado',
-          icon: '/icons/check.png',
+          action: "complete_service",
+          title: "Marcar Completado",
+          icon: "/icons/check.png",
         },
         {
-          action: 'next_service',
-          title: 'Siguiente Servicio',
-          icon: '/icons/next.png',
+          action: "next_service",
+          title: "Siguiente Servicio",
+          icon: "/icons/next.png",
         },
         ...baseActions,
       ],
@@ -310,13 +310,13 @@ export class NotificationService {
     const createNewUserNotification = async (
       workerId: string,
       userName: string,
-      userAddress: string
+      userAddress: string,
     ) => {
       void this.createAndSendNotification(workerId, {
-        title: '👤 Nuevo usuario asignado',
+        title: "👤 Nuevo usuario asignado",
         body: `Se te ha asignado un nuevo usuario: ${userName} en ${userAddress}`,
-        type: 'new_user',
-        priority: 'high',
+        type: "new_user",
+        priority: "high",
         data: { userName, userAddress },
       });
     };
@@ -324,13 +324,13 @@ export class NotificationService {
     // Notificación de usuario eliminado
     const createUserRemovedNotification = async (
       workerId: string,
-      userName: string
+      userName: string,
     ) => {
       void this.createAndSendNotification(workerId, {
-        title: '❌ Usuario eliminado',
+        title: "❌ Usuario eliminado",
         body: `El usuario ${userName} ha sido eliminado de tus asignaciones`,
-        type: 'user_removed',
-        priority: 'normal',
+        type: "user_removed",
+        priority: "normal",
         data: { userName },
       });
     };
@@ -340,13 +340,13 @@ export class NotificationService {
       workerId: string,
       userName: string,
       oldTime: string,
-      newTime: string
+      newTime: string,
     ) => {
       void this.createAndSendNotification(workerId, {
-        title: '⏰ Cambio de horario',
+        title: "⏰ Cambio de horario",
         body: `Horario de ${userName} cambiado de ${oldTime} a ${newTime}`,
-        type: 'schedule_change',
-        priority: 'high',
+        type: "schedule_change",
+        priority: "high",
         data: { userName, oldTime, newTime },
       });
     };
@@ -356,13 +356,13 @@ export class NotificationService {
       workerId: string,
       userName: string,
       serviceTime: string,
-      serviceAddress: string
+      serviceAddress: string,
     ) => {
       void this.createAndSendNotification(workerId, {
-        title: '▶️ Servicio iniciado',
+        title: "▶️ Servicio iniciado",
         body: `Servicio con ${userName} a las ${serviceTime} en ${serviceAddress} ha comenzado`,
-        type: 'service_start',
-        priority: 'high',
+        type: "service_start",
+        priority: "high",
         data: { userName, serviceTime, serviceAddress },
       });
     };
@@ -372,13 +372,13 @@ export class NotificationService {
       workerId: string,
       userName: string,
       serviceTime: string,
-      nextServiceInfo?: string
+      nextServiceInfo?: string,
     ) => {
       void this.createAndSendNotification(workerId, {
-        title: '⏹️ Servicio finalizado',
-        body: `Servicio con ${userName} a las ${serviceTime} ha terminado${nextServiceInfo != null && nextServiceInfo.length > 0 ? `. ${nextServiceInfo}` : ''}`,
-        type: 'service_end',
-        priority: 'normal',
+        title: "⏹️ Servicio finalizado",
+        body: `Servicio con ${userName} a las ${serviceTime} ha terminado${nextServiceInfo != null && nextServiceInfo.length > 0 ? `. ${nextServiceInfo}` : ""}`,
+        type: "service_end",
+        priority: "normal",
         data: { userName, serviceTime, nextServiceInfo },
       });
     };

@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from "react";
 
-import Link from 'next/link';
+import Link from "next/link";
 
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import Navigation from '@/components/layout/Navigation';
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
-import Modal from '@/components/ui/Modal';
-import { useDashboardUrl } from '@/hooks/useDashboardUrl';
-import { supabase } from '@/lib/database';
-import { type Holiday, getHolidaysForMonth } from '@/lib/holidays-query';
-import { logger } from '@/utils/logger';
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import Navigation from "@/components/layout/Navigation";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import Modal from "@/components/ui/Modal";
+import { useDashboardUrl } from "@/hooks/useDashboardUrl";
+import { supabase } from "@/lib/database";
+import { type Holiday, getHolidaysForMonth } from "@/lib/holidays-query";
+import { logger } from "@/utils/logger";
 
 interface DayTimeSlot {
   id: string;
@@ -78,24 +78,24 @@ export default function PlanningPage() {
     activeWorkers: 0,
   });
   const [showEntryModal, setShowEntryModal] = useState<boolean>(false);
-  const [selectedCellDate, setSelectedCellDate] = useState<string>('');
+  const [selectedCellDate, setSelectedCellDate] = useState<string>("");
   // Consultas de filtro por texto (mobile-first)
-  const [selectedWorker, setSelectedWorker] = useState<string>('');
-  const [selectedUser, setSelectedUser] = useState<string>('');
+  const [selectedWorker, setSelectedWorker] = useState<string>("");
+  const [selectedUser, setSelectedUser] = useState<string>("");
 
   const dashboardUrl = useDashboardUrl();
 
   const firstDayOfMonth = useMemo(
     () => new Date(year, month - 1, 1),
-    [year, month]
+    [year, month],
   );
   const lastDayOfMonth = useMemo(() => new Date(year, month, 0), [year, month]);
 
   // Helper para formatear clave de fecha en horario LOCAL (evita desfases por UTC)
   const getDateKeyLocal = (d: Date): string => {
     const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
     return `${y}-${m}-${day}`;
   };
 
@@ -104,7 +104,7 @@ export default function PlanningPage() {
   // Aplicar filtros de trabajadora/usuario
   const visibleEntriesByDate = useMemo(() => {
     // Si no hay filtros, mantener el calendario vacío (mejor rendimiento/legibilidad)
-    if (selectedWorker.trim() === '' && selectedUser.trim() === '') return {};
+    if (selectedWorker.trim() === "" && selectedUser.trim() === "") return {};
 
     // Si el filtro por trabajadora coincide exactamente con un nombre existente,
     // usamos coincidencia exacta; de lo contrario, coincidencia parcial (includes)
@@ -112,13 +112,13 @@ export default function PlanningPage() {
     Object.values(entriesByDate).forEach((list) => {
       list.forEach((e) => {
         const name = e.workerName?.toLowerCase();
-        if (name && name.trim() !== '') allWorkerNames.add(name);
+        if (name && name.trim() !== "") allWorkerNames.add(name);
       });
     });
 
     const workerQuery = selectedWorker.trim().toLowerCase();
     const exactWorkerMatch =
-      workerQuery !== '' && allWorkerNames.has(workerQuery)
+      workerQuery !== "" && allWorkerNames.has(workerQuery)
         ? workerQuery
         : undefined;
 
@@ -127,11 +127,11 @@ export default function PlanningPage() {
       result[key] = list.filter((e) => {
         const uq = selectedUser.trim().toLowerCase();
         const okWorker =
-          workerQuery === '' ||
+          workerQuery === "" ||
           (exactWorkerMatch !== undefined
             ? e.workerName.toLowerCase() === exactWorkerMatch
             : e.workerName.toLowerCase().includes(workerQuery));
-        const okUser = uq === '' || e.userName.toLowerCase().includes(uq);
+        const okUser = uq === "" || e.userName.toLowerCase().includes(uq);
         return okWorker && okUser;
       });
     });
@@ -173,13 +173,13 @@ export default function PlanningPage() {
       date.setDate(d);
       const dateKey = getDateKeyLocal(date);
       const isHoliday: boolean = holidays.some(
-        (h) => h.day === date.getDate() && h.month === month && h.year === year
+        (h) => h.day === date.getDate() && h.month === month && h.year === year,
       );
       const holidayName = isHoliday
         ? (holidays.find(
             (h) =>
-              h.day === date.getDate() && h.month === month && h.year === year
-          )?.name ?? '')
+              h.day === date.getDate() && h.month === month && h.year === year,
+          )?.name ?? "")
         : undefined;
       grid.push({
         date,
@@ -219,15 +219,15 @@ export default function PlanningPage() {
 
   // Utilidad: parsear schedule de la BD en forma segura
   const parseSchedule = (raw: unknown): Record<string, DaySchedule> => {
-    if (typeof raw === 'string') {
+    if (typeof raw === "string") {
       try {
         const parsed: unknown = JSON.parse(raw);
-        if (parsed !== null && typeof parsed === 'object') {
+        if (parsed !== null && typeof parsed === "object") {
           return parsed as Record<string, DaySchedule>;
         }
         return {};
       } catch (error: unknown) {
-        logger.error('Error parsing assignment schedule:', error);
+        logger.error("Error parsing assignment schedule:", error);
         return {};
       }
     }
@@ -243,33 +243,33 @@ export default function PlanningPage() {
         const monthHolidays = await getHolidaysForMonth(month, year);
         // eslint-disable-next-line no-console
         console.log(
-          'Festivos cargados para agosto 2025:',
-          JSON.stringify(monthHolidays, null, 2)
+          "Festivos cargados para agosto 2025:",
+          JSON.stringify(monthHolidays, null, 2),
         );
 
         setHolidays(monthHolidays);
 
         // Rango de fechas del mes
-        const startDate = firstDayOfMonth.toISOString().split('T')[0];
-        const endDate = lastDayOfMonth.toISOString().split('T')[0];
+        const startDate = firstDayOfMonth.toISOString().split("T")[0];
+        const endDate = lastDayOfMonth.toISOString().split("T")[0];
 
         // Asignaciones que intersectan con el mes
         const { data, error } = await supabase
-          .from('assignments')
+          .from("assignments")
           .select(
             `
             *,
             user:users(name, surname),
             worker:workers(name, surname)
-          `
+          `,
           )
-          .lte('start_date', endDate)
+          .lte("start_date", endDate)
           .or(`end_date.is.null,end_date.gte.${startDate}`)
-          .eq('status', 'active')
-          .order('created_at', { ascending: false });
+          .eq("status", "active")
+          .order("created_at", { ascending: false });
 
         if (error !== null) {
-          logger.error('Error cargando asignaciones para planning:', error);
+          logger.error("Error cargando asignaciones para planning:", error);
           setEntriesByDate({});
           setStats({ totalAssignments: 0, totalHours: 0, activeWorkers: 0 });
           return;
@@ -285,7 +285,7 @@ export default function PlanningPage() {
         for (const a of storedList) {
           const schedule = parseSchedule(a.schedule);
           const scheduleAny = schedule as Record<string, unknown>;
-          const holidayConfig = (scheduleAny['holiday_config'] ?? undefined) as
+          const holidayConfig = (scheduleAny["holiday_config"] ?? undefined) as
             | {
                 has_holiday_service?: boolean;
                 holiday_timeSlots?: Array<{
@@ -296,12 +296,12 @@ export default function PlanningPage() {
               }
             | undefined;
           const userName =
-            `${a.user?.name ?? ''} ${a.user?.surname ?? ''}`.trim() ||
-            'Sin nombre';
+            `${a.user?.name ?? ""} ${a.user?.surname ?? ""}`.trim() ||
+            "Sin nombre";
           const workerName =
-            `${a.worker?.name ?? ''} ${a.worker?.surname ?? ''}`.trim() ||
-            'Sin nombre';
-          if (workerName !== '') workerSet.add(workerName);
+            `${a.worker?.name ?? ""} ${a.worker?.surname ?? ""}`.trim() ||
+            "Sin nombre";
+          if (workerName !== "") workerSet.add(workerName);
 
           // Iterar días del mes
           for (let d = 1; d <= lastDayOfMonth.getDate(); d++) {
@@ -320,44 +320,46 @@ export default function PlanningPage() {
             // Día de semana
             const weekDayIndex = date.getDay(); // 0=Domingo ... 6=Sábado
             const dayKeyMap: Record<number, string> = {
-              0: 'sunday',
-              1: 'monday',
-              2: 'tuesday',
-              3: 'wednesday',
-              4: 'thursday',
-              5: 'friday',
-              6: 'saturday',
+              0: "sunday",
+              1: "monday",
+              2: "tuesday",
+              3: "wednesday",
+              4: "thursday",
+              5: "friday",
+              6: "saturday",
             };
-            const dayKey = dayKeyMap[weekDayIndex] ?? 'monday';
+            const dayKey = dayKeyMap[weekDayIndex] ?? "monday";
 
             // Determinar si es festivo o fin de semana y filtrar por tipo de asignación
             const isWeekend = weekDayIndex === 0 || weekDayIndex === 6;
             const isHoliday = monthHolidays.some(
               (h) =>
-                h.day === date.getDate() && h.month === month && h.year === year
+                h.day === date.getDate() &&
+                h.month === month &&
+                h.year === year,
             );
             const onHolidayContext = isHoliday || isWeekend;
 
             const type = a.assignment_type;
             const allowedOnThisDay = onHolidayContext
-              ? type === 'festivos' ||
-                type === 'flexible' ||
-                type === 'completa'
-              : type === 'laborables' ||
-                type === 'flexible' ||
-                type === 'completa';
+              ? type === "festivos" ||
+                type === "flexible" ||
+                type === "completa"
+              : type === "laborables" ||
+                type === "flexible" ||
+                type === "completa";
 
             if (!allowedOnThisDay) {
               continue;
             }
             // Determinar los tramos a usar según el contexto y tipo de asignación
             let slots: DayTimeSlot[] = [];
-            const typeLower = (a.assignment_type ?? '').toLowerCase();
+            const typeLower = (a.assignment_type ?? "").toLowerCase();
 
             if (onHolidayContext) {
               // Preferir tramos de festivo si existen para festivos/flexible/completa
               const holidaySlotsRawCfg = holidayConfig?.holiday_timeSlots ?? [];
-              const scheduleHoliday = scheduleAny['holiday'] as
+              const scheduleHoliday = scheduleAny["holiday"] as
                 | {
                     enabled?: boolean;
                     timeSlots?: Array<{
@@ -379,17 +381,17 @@ export default function PlanningPage() {
                     : [];
 
               if (
-                (typeLower === 'festivos' ||
-                  typeLower === 'flexible' ||
-                  typeLower === 'completa') &&
+                (typeLower === "festivos" ||
+                  typeLower === "flexible" ||
+                  typeLower === "completa") &&
                 holidaySlotsRaw.length > 0
               ) {
                 slots = holidaySlotsRaw.map((s, idx) => {
                   const safeId =
-                    typeof s.id === 'string' ? s.id : `holiday-${idx + 1}`;
+                    typeof s.id === "string" ? s.id : `holiday-${idx + 1}`;
                   const safeStart =
-                    typeof s.start === 'string' ? s.start : '08:00';
-                  const safeEnd = typeof s.end === 'string' ? s.end : '16:00';
+                    typeof s.start === "string" ? s.start : "08:00";
+                  const safeEnd = typeof s.end === "string" ? s.end : "16:00";
                   return { id: safeId, start: safeStart, end: safeEnd };
                 });
               } else {
@@ -399,7 +401,7 @@ export default function PlanningPage() {
                 if (
                   dayScheduleRaw !== null &&
                   dayScheduleRaw !== undefined &&
-                  typeof dayScheduleRaw === 'object'
+                  typeof dayScheduleRaw === "object"
                 ) {
                   daySchedule = dayScheduleRaw as unknown as DaySchedule;
                 }
@@ -411,20 +413,20 @@ export default function PlanningPage() {
                       (s: unknown, idx: number) => {
                         const slot = s as Partial<DayTimeSlot>;
                         const safeId =
-                          typeof slot.id === 'string'
+                          typeof slot.id === "string"
                             ? slot.id
                             : `${dayKey}-${idx + 1}`;
                         const safeStart =
-                          typeof slot.start === 'string' ? slot.start : '08:00';
+                          typeof slot.start === "string" ? slot.start : "08:00";
                         const safeEnd =
-                          typeof slot.end === 'string' ? slot.end : '16:00';
+                          typeof slot.end === "string" ? slot.end : "16:00";
                         const result: DayTimeSlot = {
                           id: safeId,
                           start: safeStart,
                           end: safeEnd,
                         };
                         return result;
-                      }
+                      },
                     )
                   : [];
               }
@@ -435,7 +437,7 @@ export default function PlanningPage() {
               if (
                 dayScheduleRaw !== null &&
                 dayScheduleRaw !== undefined &&
-                typeof dayScheduleRaw === 'object'
+                typeof dayScheduleRaw === "object"
               ) {
                 daySchedule = dayScheduleRaw as unknown as DaySchedule;
               }
@@ -447,20 +449,20 @@ export default function PlanningPage() {
                     (s: unknown, idx: number) => {
                       const slot = s as Partial<DayTimeSlot>;
                       const safeId =
-                        typeof slot.id === 'string'
+                        typeof slot.id === "string"
                           ? slot.id
                           : `${dayKey}-${idx + 1}`;
                       const safeStart =
-                        typeof slot.start === 'string' ? slot.start : '08:00';
+                        typeof slot.start === "string" ? slot.start : "08:00";
                       const safeEnd =
-                        typeof slot.end === 'string' ? slot.end : '16:00';
+                        typeof slot.end === "string" ? slot.end : "16:00";
                       const result: DayTimeSlot = {
                         id: safeId,
                         start: safeStart,
                         end: safeEnd,
                       };
                       return result;
-                    }
+                    },
                   )
                 : [];
             }
@@ -491,13 +493,13 @@ export default function PlanningPage() {
         setStats({
           totalAssignments: Object.values(byDate).reduce(
             (acc, list) => acc + list.length,
-            0
+            0,
           ),
           totalHours: Number(totalHours.toFixed(1)),
           activeWorkers: workerSet.size,
         });
       } catch (error: unknown) {
-        logger.error('Error cargando datos del planning:', error);
+        logger.error("Error cargando datos del planning:", error);
         setEntriesByDate({});
         setStats({ totalAssignments: 0, totalHours: 0, activeWorkers: 0 });
       } finally {
@@ -506,15 +508,15 @@ export default function PlanningPage() {
     };
 
     loadData().catch((error: unknown) => {
-      logger.error('Unhandled error loading planning:', error);
+      logger.error("Unhandled error loading planning:", error);
       setLoading(false);
     });
   }, [firstDayOfMonth, lastDayOfMonth, month, year]);
 
   const formatMonthTitle = (date: Date): string => {
     const monthName = date
-      .toLocaleDateString('es-ES', { month: 'long' })
-      .replace(' de', '');
+      .toLocaleDateString("es-ES", { month: "long" })
+      .replace(" de", "");
     const yearNum = date.getFullYear();
     return `${monthName} ${yearNum}`;
   };
@@ -546,86 +548,86 @@ export default function PlanningPage() {
 
   const closeModals = () => {
     setShowEntryModal(false);
-    setSelectedCellDate('');
+    setSelectedCellDate("");
   };
 
   return (
-    <ProtectedRoute requiredRole='admin'>
-      <div className='bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen flex flex-col'>
+    <ProtectedRoute requiredRole="admin">
+      <div className="bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen flex flex-col">
         {/* Header - Visible en todos los dispositivos */}
-        <header className='bg-white shadow-sm border-b border-gray-200'>
-          <div className='px-4 py-3 flex items-center justify-between'>
-            <div className='flex items-center space-x-3'>
-              <div className='w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden'>
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="px-4 py-3 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <div className="w-10 h-10 rounded-xl flex items-center justify-center shadow-lg overflow-hidden">
                 <svg
-                  xmlns='http://www.w3.org/2000/svg'
-                  viewBox='0 0 64 64'
-                  width='32'
-                  height='32'
-                  className='w-full h-full'
+                  xmlns="http://www.w3.org/2000/svg"
+                  viewBox="0 0 64 64"
+                  width="32"
+                  height="32"
+                  className="w-full h-full"
                 >
                   <defs>
                     <linearGradient
-                      id='mobilePlanningLogoGradient'
-                      x1='0%'
-                      y1='0%'
-                      x2='100%'
-                      y2='100%'
+                      id="mobilePlanningLogoGradient"
+                      x1="0%"
+                      y1="0%"
+                      x2="100%"
+                      y2="100%"
                     >
-                      <stop offset='0%' stopColor='#3b82f6' />
-                      <stop offset='100%' stopColor='#22c55e' />
+                      <stop offset="0%" stopColor="#3b82f6" />
+                      <stop offset="100%" stopColor="#22c55e" />
                     </linearGradient>
                   </defs>
                   <circle
-                    cx='32'
-                    cy='32'
-                    r='30'
-                    fill='url(#mobilePlanningLogoGradient)'
+                    cx="32"
+                    cy="32"
+                    r="30"
+                    fill="url(#mobilePlanningLogoGradient)"
                   />
                   <path
-                    d='M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z'
-                    fill='white'
-                    stroke='white'
-                    strokeWidth='2'
-                    strokeLinecap='round'
-                    strokeLinejoin='round'
+                    d="M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z"
+                    fill="white"
+                    stroke="white"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
                   />
                 </svg>
               </div>
-              <span className='text-lg font-bold text-gray-900'>SAD</span>
+              <span className="text-lg font-bold text-gray-900">SAD</span>
             </div>
             <Link
               href={dashboardUrl}
-              className='flex items-center text-gray-600 hover:text-gray-900 transition-colors space-x-2'
+              className="flex items-center text-gray-600 hover:text-gray-900 transition-colors space-x-2"
             >
               <svg
-                className='w-6 h-6'
-                fill='none'
-                stroke='currentColor'
-                viewBox='0 0 24 24'
+                className="w-6 h-6"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
               >
                 <path
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                   strokeWidth={2}
-                  d='M10 19l-7-7m0 0l7-7m-7 7h18'
+                  d="M10 19l-7-7m0 0l7-7m-7 7h18"
                 />
               </svg>
-              <span className='text-sm font-medium'>Volver al Dashboard</span>
+              <span className="text-sm font-medium">Volver al Dashboard</span>
             </Link>
           </div>
         </header>
 
         {/* Contenido Principal */}
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 lg:py-8 flex-1'>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 md:py-6 lg:py-8 flex-1">
           {/* Header Desktop */}
-          <div className='hidden lg:block mb-8'>
-            <div className='flex items-center justify-between'>
+          <div className="hidden lg:block mb-8">
+            <div className="flex items-center justify-between">
               <div>
-                <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+                <h1 className="text-3xl font-bold text-gray-900 mb-2">
                   📅 Planificación Mensual
                 </h1>
-                <p className='text-gray-600 text-lg'>
+                <p className="text-gray-600 text-lg">
                   Gestiona la planificación de servicios SAD
                 </p>
               </div>
@@ -633,93 +635,93 @@ export default function PlanningPage() {
           </div>
 
           {/* Header Mobile */}
-          <div className='lg:hidden mb-6'>
-            <h1 className='text-2xl font-bold text-gray-900 mb-2'>
+          <div className="lg:hidden mb-6">
+            <h1 className="text-2xl font-bold text-gray-900 mb-2">
               📅 Planificación Mensual
             </h1>
-            <p className='text-gray-600 text-sm'>
+            <p className="text-gray-600 text-sm">
               Gestiona la planificación de servicios SAD
             </p>
           </div>
 
           {/* Enhanced Month Selector */}
-          <div className='mb-6'>
-            <Card className='p-4 lg:p-6'>
-              <div className='flex flex-col lg:flex-row lg:flex-nowrap items-center justify-between gap-4'>
+          <div className="mb-6">
+            <Card className="p-4 lg:p-6">
+              <div className="flex flex-col lg:flex-row lg:flex-nowrap items-center justify-between gap-4">
                 {/* Month Navigation */}
-                <div className='flex items-center justify-center lg:justify-start space-x-3 h-12 flex-none'>
+                <div className="flex items-center justify-center lg:justify-start space-x-3 h-12 flex-none">
                   <Button
-                    variant='outline'
-                    size='sm'
+                    variant="outline"
+                    size="sm"
                     onClick={handlePrevMonth}
-                    className='flex items-center space-x-1 px-3 py-2 h-10 text-sm font-medium'
+                    className="flex items-center space-x-1 px-3 py-2 h-10 text-sm font-medium"
                   >
                     <svg
-                      className='w-4 h-4'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         strokeWidth={2}
-                        d='M15 19l-7-7 7-7'
+                        d="M15 19l-7-7 7-7"
                       />
                     </svg>
-                    <span className='hidden sm:inline'>Anterior</span>
+                    <span className="hidden sm:inline">Anterior</span>
                   </Button>
 
-                  <h2 className='text-lg lg:text-xl font-bold text-gray-900 text-center'>
+                  <h2 className="text-lg lg:text-xl font-bold text-gray-900 text-center">
                     {formatMonthTitle(firstDayOfMonth)}
                   </h2>
 
                   <Button
-                    variant='outline'
-                    size='sm'
+                    variant="outline"
+                    size="sm"
                     onClick={handleNextMonth}
-                    className='flex items-center space-x-1 px-3 py-2 h-10 text-sm font-medium'
+                    className="flex items-center space-x-1 px-3 py-2 h-10 text-sm font-medium"
                   >
-                    <span className='hidden sm:inline'>Siguiente</span>
+                    <span className="hidden sm:inline">Siguiente</span>
                     <svg
-                      className='w-4 h-4'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
+                      className="w-4 h-4"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         strokeWidth={2}
-                        d='M9 5l7 7-7 7'
+                        d="M9 5l7 7-7 7"
                       />
                     </svg>
                   </Button>
                 </div>
 
                 {/* Filters */}
-                <div className='w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:flex lg:space-x-3 lg:items-center'>
+                <div className="w-full lg:flex-1 lg:min-w-0 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:flex lg:space-x-3 lg:items-center">
                   {/* Worker Filter */}
-                  <div className='relative'>
+                  <div className="relative">
                     <input
-                      id='filter-worker'
-                      aria-label='Buscar trabajadora'
-                      type='text'
-                      className='w-full px-4 py-2 h-10 border border-gray-300 rounded-lg placeholder-gray-400 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors'
-                      placeholder='🔍 Buscar trabajadora'
+                      id="filter-worker"
+                      aria-label="Buscar trabajadora"
+                      type="text"
+                      className="w-full px-4 py-2 h-10 border border-gray-300 rounded-lg placeholder-gray-400 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="🔍 Buscar trabajadora"
                       value={selectedWorker}
                       onChange={(e) => setSelectedWorker(e.target.value)}
                     />
                   </div>
 
                   {/* User Filter */}
-                  <div className='relative'>
+                  <div className="relative">
                     <input
-                      id='filter-user'
-                      aria-label='Buscar usuario'
-                      type='text'
-                      className='w-full px-4 py-2 h-10 border border-gray-300 rounded-lg placeholder-gray-400 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors'
-                      placeholder='👤 Buscar usuario'
+                      id="filter-user"
+                      aria-label="Buscar usuario"
+                      type="text"
+                      className="w-full px-4 py-2 h-10 border border-gray-300 rounded-lg placeholder-gray-400 bg-white text-gray-900 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+                      placeholder="👤 Buscar usuario"
                       value={selectedUser}
                       onChange={(e) => setSelectedUser(e.target.value)}
                     />
@@ -727,25 +729,25 @@ export default function PlanningPage() {
 
                   {/* Clear Filters */}
                   <Button
-                    variant='outline'
-                    size='sm'
-                    className='h-10 text-sm font-medium'
+                    variant="outline"
+                    size="sm"
+                    className="h-10 text-sm font-medium"
                     onClick={() => {
-                      setSelectedWorker('');
-                      setSelectedUser('');
+                      setSelectedWorker("");
+                      setSelectedUser("");
                     }}
                   >
                     <svg
-                      className='w-4 h-4 mr-1'
-                      fill='none'
-                      stroke='currentColor'
-                      viewBox='0 0 24 24'
+                      className="w-4 h-4 mr-1"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
                     >
                       <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         strokeWidth={2}
-                        d='M6 18L18 6M6 6l12 12'
+                        d="M6 18L18 6M6 6l12 12"
                       />
                     </svg>
                     Limpiar
@@ -757,32 +759,32 @@ export default function PlanningPage() {
 
           {/* Loading State */}
           {loading && (
-            <div className='text-center py-8'>
-              <div className='inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
-              <p className='mt-2 text-gray-600'>Cargando planificación...</p>
+            <div className="text-center py-8">
+              <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+              <p className="mt-2 text-gray-600">Cargando planificación...</p>
             </div>
           )}
 
           {/* Desktop Calendar Grid */}
           {!loading && (
-            <div className='hidden lg:block mb-8'>
-              <div className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'>
+            <div className="hidden lg:block mb-8">
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
                 {/* Weekday Headers */}
-                <div className='grid grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200'>
-                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(
+                <div className="grid grid-cols-7 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-200">
+                  {["Lun", "Mar", "Mié", "Jue", "Vie", "Sáb", "Dom"].map(
                     (day) => (
                       <div
                         key={day}
-                        className='px-2 py-3 text-center text-sm font-semibold text-gray-700 border-r border-gray-200 last:border-r-0'
+                        className="px-2 py-3 text-center text-sm font-semibold text-gray-700 border-r border-gray-200 last:border-r-0"
                       >
                         {day}
                       </div>
-                    )
+                    ),
                   )}
                 </div>
 
                 {/* Calendar Grid */}
-                <div className='grid grid-cols-7 border border-gray-200'>
+                <div className="grid grid-cols-7 border border-gray-200">
                   {monthGrid.map((cell, idx) => {
                     const dateKey = getDateKeyLocal(cell.date);
                     const isCurrentMonth = cell.isCurrentMonth;
@@ -792,20 +794,20 @@ export default function PlanningPage() {
 
                     // Estilos base
                     let cellClasses =
-                      'min-h-[160px] p-3 relative border-r border-b border-gray-200';
+                      "min-h-[160px] p-3 relative border-r border-b border-gray-200";
 
                     if (!isCurrentMonth) {
-                      cellClasses += ' bg-gray-50 text-gray-400';
+                      cellClasses += " bg-gray-50 text-gray-400";
                     } else if (isToday) {
-                      cellClasses += ' bg-blue-50 border-2 border-blue-500';
+                      cellClasses += " bg-blue-50 border-2 border-blue-500";
                     } else if (isHoliday) {
-                      cellClasses += ' bg-red-50 border-l-4 border-red-500';
+                      cellClasses += " bg-red-50 border-l-4 border-red-500";
                     } else if (isWeekend) {
                       cellClasses +=
-                        ' bg-orange-50 border-l-4 border-orange-300';
+                        " bg-orange-50 border-l-4 border-orange-300";
                     } else {
                       cellClasses +=
-                        ' bg-white hover:bg-gray-50 transition-colors';
+                        " bg-white hover:bg-gray-50 transition-colors";
                     }
 
                     return (
@@ -817,20 +819,20 @@ export default function PlanningPage() {
                             ? () => handleOpenCell(dateKey)
                             : undefined
                         }
-                        role={isCurrentMonth ? 'button' : undefined}
+                        role={isCurrentMonth ? "button" : undefined}
                         tabIndex={isCurrentMonth ? 0 : -1}
                       >
                         {/* Date Number */}
-                        <div className='flex items-center justify-between mb-2'>
+                        <div className="flex items-center justify-between mb-2">
                           <span
                             className={`text-base font-semibold ${
                               isToday
-                                ? 'text-blue-700'
+                                ? "text-blue-700"
                                 : isHoliday
-                                  ? 'text-red-700'
+                                  ? "text-red-700"
                                   : isWeekend
-                                    ? 'text-orange-700'
-                                    : 'text-gray-900'
+                                    ? "text-orange-700"
+                                    : "text-gray-900"
                             }`}
                           >
                             {cell.date.getDate()}
@@ -839,7 +841,7 @@ export default function PlanningPage() {
                           {/* Holiday Indicator */}
                           {isHoliday && (
                             <span
-                              className='text-xs text-red-600 font-medium'
+                              className="text-xs text-red-600 font-medium"
                               title={cell.holidayName}
                             >
                               🎉
@@ -848,7 +850,7 @@ export default function PlanningPage() {
 
                           {/* Today Indicator */}
                           {isToday && (
-                            <span className='text-xs text-blue-600 font-medium'>
+                            <span className="text-xs text-blue-600 font-medium">
                               Hoy
                             </span>
                           )}
@@ -856,27 +858,27 @@ export default function PlanningPage() {
 
                         {/* Entries */}
                         {isCurrentMonth && (
-                          <div className='space-y-1 max-h-28 overflow-y-auto'>
+                          <div className="space-y-1 max-h-28 overflow-y-auto">
                             {cell.entries.slice(0, 3).map((entry, i) => (
                               <div
                                 key={`${dateKey}-${i}`}
                                 className={`rounded-lg px-2 py-1.5 text-xs border-l-3 ${
-                                  entry.assignmentType === 'laborables'
-                                    ? 'bg-blue-100 border-blue-500 text-blue-800'
-                                    : entry.assignmentType === 'festivos'
-                                      ? 'bg-orange-100 border-orange-500 text-orange-800'
-                                      : entry.assignmentType === 'flexible'
-                                        ? 'bg-purple-100 border-purple-500 text-purple-800'
-                                        : 'bg-gray-100 border-gray-500 text-gray-800'
+                                  entry.assignmentType === "laborables"
+                                    ? "bg-blue-100 border-blue-500 text-blue-800"
+                                    : entry.assignmentType === "festivos"
+                                      ? "bg-orange-100 border-orange-500 text-orange-800"
+                                      : entry.assignmentType === "flexible"
+                                        ? "bg-purple-100 border-purple-500 text-purple-800"
+                                        : "bg-gray-100 border-gray-500 text-gray-800"
                                 }`}
                               >
-                                <div className='font-medium truncate'>
+                                <div className="font-medium truncate">
                                   {entry.workerName}
                                 </div>
-                                <div className='text-xs opacity-75 truncate'>
+                                <div className="text-xs opacity-75 truncate">
                                   {entry.userName}
                                 </div>
-                                <div className='text-xs font-semibold'>
+                                <div className="text-xs font-semibold">
                                   {entry.start}-{entry.end}
                                 </div>
                               </div>
@@ -885,7 +887,7 @@ export default function PlanningPage() {
                             {/* More entries indicator */}
                             {cell.entries.length > 3 && (
                               <button
-                                className='w-full text-xs text-blue-600 hover:text-blue-800 font-medium text-center py-1 hover:bg-blue-50 rounded'
+                                className="w-full text-xs text-blue-600 hover:text-blue-800 font-medium text-center py-1 hover:bg-blue-50 rounded"
                                 onClick={(e) => {
                                   e.stopPropagation();
                                   handleOpenCell(dateKey);
@@ -899,9 +901,9 @@ export default function PlanningPage() {
 
                         {/* Empty state for current month */}
                         {isCurrentMonth && cell.entries.length === 0 && (
-                          <div className='text-center py-4 text-gray-400'>
-                            <div className='text-lg'>📅</div>
-                            <div className='text-xs'>Sin servicios</div>
+                          <div className="text-center py-4 text-gray-400">
+                            <div className="text-lg">📅</div>
+                            <div className="text-xs">Sin servicios</div>
                           </div>
                         )}
                       </div>
@@ -914,7 +916,7 @@ export default function PlanningPage() {
 
           {/* Mobile/Tablet List View */}
           {!loading && (
-            <div className='lg:hidden mb-8 space-y-4'>
+            <div className="lg:hidden mb-8 space-y-4">
               {/* Group by week for better mobile experience */}
               {(() => {
                 const weeks: Array<{
@@ -937,7 +939,7 @@ export default function PlanningPage() {
                   .forEach((cell) => {
                     const weekStart = new Date(cell.date);
                     weekStart.setDate(
-                      weekStart.getDate() - weekStart.getDay() + 1
+                      weekStart.getDate() - weekStart.getDay() + 1,
                     ); // Monday
 
                     if (
@@ -974,64 +976,64 @@ export default function PlanningPage() {
                 return weeks.map((week, weekIndex) => (
                   <div
                     key={weekIndex}
-                    className='bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden'
+                    className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden"
                   >
                     {/* Week Header */}
-                    <div className='bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200'>
-                      <h3 className='text-sm font-semibold text-gray-900'>
-                        Semana del{' '}
-                        {week.weekStart.toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
-                        })}{' '}
-                        -{' '}
-                        {week.weekEnd.toLocaleDateString('es-ES', {
-                          day: 'numeric',
-                          month: 'short',
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 px-4 py-3 border-b border-gray-200">
+                      <h3 className="text-sm font-semibold text-gray-900">
+                        Semana del{" "}
+                        {week.weekStart.toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "short",
+                        })}{" "}
+                        -{" "}
+                        {week.weekEnd.toLocaleDateString("es-ES", {
+                          day: "numeric",
+                          month: "short",
                         })}
                       </h3>
                     </div>
 
                     {/* Week Days */}
-                    <div className='divide-y divide-gray-200'>
+                    <div className="divide-y divide-gray-200">
                       {week.days.map((day, dayIndex) => {
-                        const dayName = day.date.toLocaleDateString('es-ES', {
-                          weekday: 'long',
-                          day: 'numeric',
-                          month: 'short',
+                        const dayName = day.date.toLocaleDateString("es-ES", {
+                          weekday: "long",
+                          day: "numeric",
+                          month: "short",
                         });
 
                         return (
-                          <div key={dayIndex} className='p-4'>
+                          <div key={dayIndex} className="p-4">
                             {/* Day Header */}
-                            <div className='flex items-center justify-between mb-3'>
-                              <div className='flex items-center space-x-2'>
+                            <div className="flex items-center justify-between mb-3">
+                              <div className="flex items-center space-x-2">
                                 <div
                                   className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
                                     day.isToday
-                                      ? 'bg-blue-500 text-white'
+                                      ? "bg-blue-500 text-white"
                                       : day.isHoliday
-                                        ? 'bg-red-500 text-white'
+                                        ? "bg-red-500 text-white"
                                         : day.isWeekend
-                                          ? 'bg-orange-500 text-white'
-                                          : 'bg-gray-200 text-gray-700'
+                                          ? "bg-orange-500 text-white"
+                                          : "bg-gray-200 text-gray-700"
                                   }`}
                                 >
                                   {day.date.getDate()}
                                 </div>
                                 <div>
-                                  <h4 className='font-semibold text-gray-900'>
+                                  <h4 className="font-semibold text-gray-900">
                                     {dayName}
                                   </h4>
                                   {day.isHoliday && (
-                                    <p className='text-xs text-red-600'>
+                                    <p className="text-xs text-red-600">
                                       🎉 {day.holidayName}
                                     </p>
                                   )}
                                 </div>
                               </div>
-                              <div className='text-right'>
-                                <span className='text-sm text-gray-500'>
+                              <div className="text-right">
+                                <span className="text-sm text-gray-500">
                                   {day.entries.length} servicios
                                 </span>
                               </div>
@@ -1039,60 +1041,60 @@ export default function PlanningPage() {
 
                             {/* Day Entries */}
                             {day.entries.length > 0 ? (
-                              <div className='space-y-2'>
+                              <div className="space-y-2">
                                 {day.entries.map((entry, entryIndex) => (
                                   <div
                                     key={entryIndex}
                                     className={`p-3 rounded-lg border-l-4 ${
-                                      entry.assignmentType === 'laborables'
-                                        ? 'bg-blue-50 border-blue-500'
-                                        : entry.assignmentType === 'festivos'
-                                          ? 'bg-orange-50 border-orange-500'
-                                          : entry.assignmentType === 'flexible'
-                                            ? 'bg-purple-50 border-purple-500'
-                                            : 'bg-gray-50 border-gray-500'
+                                      entry.assignmentType === "laborables"
+                                        ? "bg-blue-50 border-blue-500"
+                                        : entry.assignmentType === "festivos"
+                                          ? "bg-orange-50 border-orange-500"
+                                          : entry.assignmentType === "flexible"
+                                            ? "bg-purple-50 border-purple-500"
+                                            : "bg-gray-50 border-gray-500"
                                     }`}
                                   >
-                                    <div className='flex items-center justify-between mb-1'>
-                                      <span className='font-medium text-gray-900'>
+                                    <div className="flex items-center justify-between mb-1">
+                                      <span className="font-medium text-gray-900">
                                         {entry.workerName}
                                       </span>
                                       <span
                                         className={`text-xs px-2 py-1 rounded-full ${
-                                          entry.assignmentType === 'laborables'
-                                            ? 'bg-blue-100 text-blue-800'
+                                          entry.assignmentType === "laborables"
+                                            ? "bg-blue-100 text-blue-800"
                                             : entry.assignmentType ===
-                                                'festivos'
-                                              ? 'bg-orange-100 text-orange-800'
+                                                "festivos"
+                                              ? "bg-orange-100 text-orange-800"
                                               : entry.assignmentType ===
-                                                  'flexible'
-                                                ? 'bg-purple-100 text-purple-800'
-                                                : 'bg-gray-100 text-gray-800'
+                                                  "flexible"
+                                                ? "bg-purple-100 text-purple-800"
+                                                : "bg-gray-100 text-gray-800"
                                         }`}
                                       >
-                                        {entry.assignmentType === 'laborables'
-                                          ? 'Laborables'
-                                          : entry.assignmentType === 'festivos'
-                                            ? 'Festivos'
+                                        {entry.assignmentType === "laborables"
+                                          ? "Laborables"
+                                          : entry.assignmentType === "festivos"
+                                            ? "Festivos"
                                             : entry.assignmentType ===
-                                                'flexible'
-                                              ? 'Flexible'
-                                              : 'Otro'}
+                                                "flexible"
+                                              ? "Flexible"
+                                              : "Otro"}
                                       </span>
                                     </div>
-                                    <p className='text-sm text-gray-700 mb-1'>
+                                    <p className="text-sm text-gray-700 mb-1">
                                       {entry.userName}
                                     </p>
-                                    <p className='text-sm font-semibold text-gray-900'>
+                                    <p className="text-sm font-semibold text-gray-900">
                                       {entry.start} - {entry.end}
                                     </p>
                                   </div>
                                 ))}
                               </div>
                             ) : (
-                              <div className='text-center py-6 text-gray-400'>
-                                <div className='text-2xl mb-2'>📅</div>
-                                <p className='text-sm'>
+                              <div className="text-center py-6 text-gray-400">
+                                <div className="text-2xl mb-2">📅</div>
+                                <p className="text-sm">
                                   Sin servicios programados
                                 </p>
                               </div>
@@ -1239,57 +1241,57 @@ export default function PlanningPage() {
 
           {/* Summary Stats */}
           {!loading && (
-            <div className='grid grid-cols-2 lg:grid-cols-4 gap-4'>
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200'>
-                <div className='flex items-center'>
-                  <div className='text-2xl lg:text-3xl mr-3'>👥</div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <Card className="p-4 lg:p-6 bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
+                <div className="flex items-center">
+                  <div className="text-2xl lg:text-3xl mr-3">👥</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className="text-sm lg:text-base font-medium text-gray-600">
                       Trabajadores Activos
                     </p>
-                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                    <p className="text-xl lg:text-2xl font-bold text-gray-900">
                       {stats.activeWorkers}
                     </p>
                   </div>
                 </div>
               </Card>
 
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200'>
-                <div className='flex items-center'>
-                  <div className='text-2xl lg:text-3xl mr-3'>⏰</div>
+              <Card className="p-4 lg:p-6 bg-gradient-to-br from-green-50 to-green-100 border-green-200">
+                <div className="flex items-center">
+                  <div className="text-2xl lg:text-3xl mr-3">⏰</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className="text-sm lg:text-base font-medium text-gray-600">
                       Horas Programadas
                     </p>
-                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                    <p className="text-xl lg:text-2xl font-bold text-gray-900">
                       {stats.totalHours}h
                     </p>
                   </div>
                 </div>
               </Card>
 
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200'>
-                <div className='flex items-center'>
-                  <div className='text-2xl lg:text-3xl mr-3'>📋</div>
+              <Card className="p-4 lg:p-6 bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
+                <div className="flex items-center">
+                  <div className="text-2xl lg:text-3xl mr-3">📋</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className="text-sm lg:text-base font-medium text-gray-600">
                       Asignaciones
                     </p>
-                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                    <p className="text-xl lg:text-2xl font-bold text-gray-900">
                       {stats.totalAssignments}
                     </p>
                   </div>
                 </div>
               </Card>
 
-              <Card className='p-4 lg:p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200'>
-                <div className='flex items-center'>
-                  <div className='text-2xl lg:text-3xl mr-3'>⏳</div>
+              <Card className="p-4 lg:p-6 bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
+                <div className="flex items-center">
+                  <div className="text-2xl lg:text-3xl mr-3">⏳</div>
                   <div>
-                    <p className='text-sm lg:text-base font-medium text-gray-600'>
+                    <p className="text-sm lg:text-base font-medium text-gray-600">
                       Pendientes
                     </p>
-                    <p className='text-xl lg:text-2xl font-bold text-gray-900'>
+                    <p className="text-xl lg:text-2xl font-bold text-gray-900">
                       {stats.totalAssignments}
                     </p>
                   </div>
@@ -1300,17 +1302,17 @@ export default function PlanningPage() {
 
           {/* Empty State */}
           {!loading && Object.keys(entriesByDate).length === 0 && (
-            <Card className='p-8 text-center'>
-              <div className='text-6xl mb-4'>📅</div>
-              <h3 className='text-lg font-medium text-gray-900 mb-2'>
+            <Card className="p-8 text-center">
+              <div className="text-6xl mb-4">📅</div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">
                 No hay asignaciones programadas este mes
               </h3>
-              <p className='text-gray-600 mb-4'>
+              <p className="text-gray-600 mb-4">
                 Comienza creando tu primera asignación para este mes
               </p>
               <Button
                 onClick={() => setShowEntryModal(true)}
-                className='bg-blue-600 hover:bg-blue-700 text-white'
+                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 ➕ Nueva Entrada
               </Button>
@@ -1322,38 +1324,38 @@ export default function PlanningPage() {
         <Modal
           isOpen={showEntryModal}
           onClose={closeModals}
-          title='Entradas del día'
+          title="Entradas del día"
         >
-          <div className='space-y-4'>
-            <p className='text-sm text-gray-600'>
+          <div className="space-y-4">
+            <p className="text-sm text-gray-600">
               {selectedCellDate
-                ? new Date(selectedCellDate).toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'long',
-                    year: 'numeric',
+                ? new Date(selectedCellDate).toLocaleDateString("es-ES", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "long",
+                    year: "numeric",
                   })
-                : ''}
+                : ""}
             </p>
-            <div className='space-y-2'>
-              {(entriesByDate[selectedCellDate ?? ''] ?? []).map((e, idx) => (
-                <Card key={`${selectedCellDate}-${idx}`} className='p-3'>
-                  <div className='flex items-center justify-between'>
+            <div className="space-y-2">
+              {(entriesByDate[selectedCellDate ?? ""] ?? []).map((e, idx) => (
+                <Card key={`${selectedCellDate}-${idx}`} className="p-3">
+                  <div className="flex items-center justify-between">
                     <div>
-                      <div className='text-sm font-semibold text-gray-900'>
+                      <div className="text-sm font-semibold text-gray-900">
                         {e.workerName}
                       </div>
-                      <div className='text-xs text-gray-600'>{e.userName}</div>
+                      <div className="text-xs text-gray-600">{e.userName}</div>
                     </div>
-                    <div className='text-sm font-medium text-gray-800'>
+                    <div className="text-sm font-medium text-gray-800">
                       {e.start}–{e.end}
                     </div>
                   </div>
                 </Card>
               ))}
             </div>
-            <div className='flex justify-end'>
-              <Button variant='outline' onClick={closeModals}>
+            <div className="flex justify-end">
+              <Button variant="outline" onClick={closeModals}>
                 Cerrar
               </Button>
             </div>
@@ -1363,23 +1365,23 @@ export default function PlanningPage() {
         {/* View Assignment Modal (no usado en vista mensual actual) */}
 
         {/* Footer */}
-        <footer className='border-t border-gray-200 bg-white py-8 mt-auto mb-20'>
-          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8'>
-            <div className='text-center'>
-              <p className='text-sm text-gray-600 mb-2 font-medium'>
+        <footer className="border-t border-gray-200 bg-white py-8 mt-auto mb-20">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="text-center">
+              <p className="text-sm text-gray-600 mb-2 font-medium">
                 © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
                 Domiciliarios
               </p>
-              <p className='text-xs text-gray-500'>
-                Hecho con mucho ❤️ por{' '}
-                <span className='font-bold text-gray-700'>Gusi</span>
+              <p className="text-xs text-gray-500">
+                Hecho con mucho ❤️ por{" "}
+                <span className="font-bold text-gray-700">Gusi</span>
               </p>
             </div>
           </div>
         </footer>
 
         {/* Navegación Móvil */}
-        <Navigation variant='mobile' />
+        <Navigation variant="mobile" />
       </div>
     </ProtectedRoute>
   );

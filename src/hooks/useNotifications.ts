@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/database';
-import type { NotificationType, WorkerNotification } from '@/types';
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/database";
+import type { NotificationType, WorkerNotification } from "@/types";
 
 interface UseNotificationsOptions {
   limit?: number;
@@ -26,7 +26,7 @@ interface UseNotificationsReturn {
 }
 
 export function useNotifications(
-  options: UseNotificationsOptions = {}
+  options: UseNotificationsOptions = {},
 ): UseNotificationsReturn {
   const {
     limit = 50,
@@ -50,11 +50,11 @@ export function useNotifications(
 
     try {
       const response = await fetch(
-        `/api/workers/${user.id}/notifications?limit=${limit}`
+        `/api/workers/${user.id}/notifications?limit=${limit}`,
       );
 
       if (!response.ok) {
-        throw new Error('Error al cargar notificaciones');
+        throw new Error("Error al cargar notificaciones");
       }
 
       const data = (await response.json()) as {
@@ -63,7 +63,7 @@ export function useNotifications(
       setNotifications(data.notifications ?? []);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Error desconocido';
+        err instanceof Error ? err.message : "Error desconocido";
       setError(errorMessage);
       // Error loading notifications - silently handle
     } finally {
@@ -77,11 +77,11 @@ export function useNotifications(
 
     try {
       const response = await fetch(
-        `/api/workers/${user.id}/notifications/unread-count`
+        `/api/workers/${user.id}/notifications/unread-count`,
       );
 
       if (!response.ok) {
-        throw new Error('Error al cargar conteo de notificaciones');
+        throw new Error("Error al cargar conteo de notificaciones");
       }
 
       const data = (await response.json()) as { unread_count?: number };
@@ -98,13 +98,13 @@ export function useNotifications(
 
       try {
         const response = await fetch(`/api/workers/${user.id}/notifications`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ notification_ids: [notificationId] }),
         });
 
         if (!response.ok) {
-          throw new Error('Error al marcar notificación como leída');
+          throw new Error("Error al marcar notificación como leída");
         }
 
         // Actualizar estado local
@@ -114,18 +114,18 @@ export function useNotifications(
               return { ...notif, read_at: new Date().toISOString() };
             }
             return notif;
-          })
+          }),
         );
 
         setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (err) {
         const errorMessage =
-          err instanceof Error ? err.message : 'Error desconocido';
+          err instanceof Error ? err.message : "Error desconocido";
         setError(errorMessage);
         // Error marking notification as read - silently handle
       }
     },
-    [user?.id]
+    [user?.id],
   );
 
   // Marcar todas como leídas
@@ -134,24 +134,24 @@ export function useNotifications(
 
     try {
       const response = await fetch(`/api/workers/${user.id}/notifications`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mark_all_read: true }),
       });
 
       if (!response.ok) {
-        throw new Error('Error al marcar todas las notificaciones como leídas');
+        throw new Error("Error al marcar todas las notificaciones como leídas");
       }
 
       // Actualizar estado local
       setNotifications((prev) =>
-        prev.map((notif) => ({ ...notif, read_at: new Date().toISOString() }))
+        prev.map((notif) => ({ ...notif, read_at: new Date().toISOString() })),
       );
 
       setUnreadCount(0);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Error desconocido';
+        err instanceof Error ? err.message : "Error desconocido";
       setError(errorMessage);
       // Error marking all notifications as read - silently handle
     }
@@ -169,20 +169,20 @@ export function useNotifications(
 
       // Mapear tipos de notificación a archivos de sonido disponibles
       const soundFileMap: Record<NotificationType, string> = {
-        new_user: 'notification-user_added_new.wav',
-        user_removed: 'notification-user_removed_new.wav',
-        schedule_change: 'notification-schedule_changed_new.wav',
-        assignment_change: 'notification-assignment_changed_new.wav',
-        route_update: 'notification-route_update_new.wav',
-        system_message: 'notification-system_new.wav',
-        reminder: 'notification-reminder_new.wav',
-        urgent: 'notification-urgent_new.wav',
-        holiday_update: 'notification-holiday_update_new.wav',
-        service_start: 'notification-service_start_new.wav',
-        service_end: 'notification-service_end_new.wav',
+        new_user: "notification-user_added_new.wav",
+        user_removed: "notification-user_removed_new.wav",
+        schedule_change: "notification-schedule_changed_new.wav",
+        assignment_change: "notification-assignment_changed_new.wav",
+        route_update: "notification-route_update_new.wav",
+        system_message: "notification-system_new.wav",
+        reminder: "notification-reminder_new.wav",
+        urgent: "notification-urgent_new.wav",
+        holiday_update: "notification-holiday_update_new.wav",
+        service_start: "notification-service_start_new.wav",
+        service_end: "notification-service_end_new.wav",
       };
 
-      const soundFile = soundFileMap[type] || 'notification-default_new.wav';
+      const soundFile = soundFileMap[type] || "notification-default_new.wav";
 
       const playAudio = async (audioSrc: string) => {
         try {
@@ -193,7 +193,7 @@ export function useNotifications(
           // Esperar a que el audio esté listo
           await new Promise((resolve, reject) => {
             audio.oncanplaythrough = resolve;
-            audio.onerror = () => reject(new Error('Audio load failed'));
+            audio.onerror = () => reject(new Error("Audio load failed"));
             audio.load();
           });
 
@@ -207,12 +207,12 @@ export function useNotifications(
 
       void playAudio(`/sounds/${soundFile}`).catch(() => {
         // Intentar con sonido por defecto si el principal falla
-        void playAudio('/sounds/notification-default.mp3').catch(() => {
+        void playAudio("/sounds/notification-default.mp3").catch(() => {
           // Silenciar completamente si no hay sonido disponible
         });
       });
     },
-    [enableSound]
+    [enableSound],
   );
 
   // Mostrar notificación del navegador con mejor presentación
@@ -220,13 +220,13 @@ export function useNotifications(
     (notification: WorkerNotification) => {
       if (!enableBrowserNotifications) return;
 
-      if ('Notification' in window && Notification.permission === 'granted') {
+      if ("Notification" in window && Notification.permission === "granted") {
         const browserNotification = new Notification(notification.title, {
           body: notification.body,
-          icon: '/favicon.ico',
-          badge: '/favicon.ico',
+          icon: "/favicon.ico",
+          badge: "/favicon.ico",
           tag: notification.id,
-          requireInteraction: notification.priority === 'urgent',
+          requireInteraction: notification.priority === "urgent",
           silent: !enableSound,
           data: {
             notificationId: notification.id,
@@ -236,8 +236,8 @@ export function useNotifications(
         });
 
         // Auto-cerrar notificación después de tiempo según prioridad
-        if (notification.priority !== 'urgent') {
-          const timeout = notification.priority === 'high' ? 8000 : 6000;
+        if (notification.priority !== "urgent") {
+          const timeout = notification.priority === "high" ? 8000 : 6000;
           setTimeout(() => {
             browserNotification.close();
           }, timeout);
@@ -251,19 +251,19 @@ export function useNotifications(
         };
       }
     },
-    [enableBrowserNotifications, enableSound, markAsRead]
+    [enableBrowserNotifications, enableSound, markAsRead],
   );
 
   // Solicitar permisos de notificación
   const requestNotificationPermission = useCallback(async () => {
     if (!enableBrowserNotifications) return;
 
-    if ('Notification' in window && Notification.permission === 'default') {
+    if ("Notification" in window && Notification.permission === "default") {
       const permission = await Notification.requestPermission();
-      return permission === 'granted';
+      return permission === "granted";
     }
 
-    return Notification.permission === 'granted';
+    return Notification.permission === "granted";
   }, [enableBrowserNotifications]);
 
   // Configurar suscripción en tiempo real
@@ -277,7 +277,7 @@ export function useNotifications(
           broadcast: { self: false },
         },
       })
-      .on('broadcast', { event: 'notification' }, (payload) => {
+      .on("broadcast", { event: "notification" }, (payload) => {
         const newNotification = payload.payload as WorkerNotification;
 
         // Agregar nueva notificación al estado

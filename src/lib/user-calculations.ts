@@ -1,7 +1,7 @@
-import type { Assignment } from './assignments-query';
-import { supabase } from './database';
-import { getHolidaysForMonth } from './holidays-query';
-import { getUserById } from './users-query';
+import type { Assignment } from "./assignments-query";
+import { supabase } from "./database";
+import { getHolidaysForMonth } from "./holidays-query";
+import { getUserById } from "./users-query";
 
 export interface UserCalculation {
   userId: string;
@@ -21,11 +21,11 @@ export interface UserCalculation {
 
 export const calculateUserTotalHours = (
   assignments: Assignment[],
-  userId: string
+  userId: string,
 ): UserCalculation | null => {
   const userAssignments = assignments.filter(
     (assignment) =>
-      assignment.user_id === userId && assignment.status === 'active'
+      assignment.user_id === userId && assignment.status === "active",
   );
 
   if (userAssignments.length === 0) {
@@ -44,19 +44,19 @@ export const calculateUserTotalHours = (
   // Calcular horas por tipo de asignación
   userAssignments.forEach((assignment) => {
     switch (assignment.assignment_type) {
-      case 'laborables':
+      case "laborables":
         calculationDetails.laborablesHours += assignment.monthly_hours;
         break;
-      case 'festivos':
+      case "festivos":
         calculationDetails.festivosHours += assignment.monthly_hours;
         break;
-      case 'flexible':
+      case "flexible":
         calculationDetails.flexibleHours += assignment.monthly_hours;
         break;
-      case 'completa':
+      case "completa":
         calculationDetails.completaHours += assignment.monthly_hours;
         break;
-      case 'personalizada':
+      case "personalizada":
         calculationDetails.personalizadaHours += assignment.monthly_hours;
         break;
     }
@@ -64,7 +64,7 @@ export const calculateUserTotalHours = (
 
   const totalAssignedHours = userAssignments.reduce(
     (total, assignment) => total + assignment.monthly_hours,
-    0
+    0,
   );
 
   // Verificar que firstAssignment existe antes de usarlo
@@ -74,8 +74,8 @@ export const calculateUserTotalHours = (
 
   return {
     userId,
-    userName: firstAssignment.user?.name ?? '',
-    userSurname: firstAssignment.user?.surname ?? '',
+    userName: firstAssignment.user?.name ?? "",
+    userSurname: firstAssignment.user?.surname ?? "",
     totalAssignedHours,
     totalWorkers: userAssignments.length,
     assignments: userAssignments,
@@ -84,14 +84,14 @@ export const calculateUserTotalHours = (
 };
 
 export const getAllUserCalculations = (
-  assignments: Assignment[]
+  assignments: Assignment[],
 ): UserCalculation[] => {
   const userIds = [...new Set(assignments.map((a) => a.user_id))];
 
   return userIds
     .map((userId) => calculateUserTotalHours(assignments, userId))
     .filter(
-      (calculation): calculation is UserCalculation => calculation !== null
+      (calculation): calculation is UserCalculation => calculation !== null,
     );
 };
 
@@ -111,14 +111,14 @@ export interface UserMonthlyBalance {
 }
 
 const formatDateKey = (y: number, m: number, d: number): string => {
-  const mm = String(m).padStart(2, '0');
-  const dd = String(d).padStart(2, '0');
+  const mm = String(m).padStart(2, "0");
+  const dd = String(d).padStart(2, "0");
   return `${y}-${mm}-${dd}`;
 };
 
 const getMonthDateRange = (
   year: number,
-  month: number
+  month: number,
 ): { start: string; end: string; daysInMonth: number } => {
   const daysInMonth = new Date(year, month, 0).getDate();
   return {
@@ -129,7 +129,7 @@ const getMonthDateRange = (
 };
 
 const parseTime = (hhmm: string): number => {
-  const [hStr, mStr] = hhmm.split(':');
+  const [hStr, mStr] = hhmm.split(":");
   const h = Number(hStr);
   const m = Number(mStr);
   if (!Number.isFinite(h) || !Number.isFinite(m)) return 0;
@@ -138,13 +138,13 @@ const parseTime = (hhmm: string): number => {
 
 type ParsedSchedule = {
   weekdayHours: Record<
-    | 'monday'
-    | 'tuesday'
-    | 'wednesday'
-    | 'thursday'
-    | 'friday'
-    | 'saturday'
-    | 'sunday',
+    | "monday"
+    | "tuesday"
+    | "wednesday"
+    | "thursday"
+    | "friday"
+    | "saturday"
+    | "sunday",
     number
   >;
   holidayHoursPerDay: number; // desde holiday_config.holiday_timeSlots
@@ -152,27 +152,27 @@ type ParsedSchedule = {
 
 const parseAssignmentSchedule = (schedule: unknown): ParsedSchedule => {
   const weekdays = [
-    'monday',
-    'tuesday',
-    'wednesday',
-    'thursday',
-    'friday',
-    'saturday',
-    'sunday',
+    "monday",
+    "tuesday",
+    "wednesday",
+    "thursday",
+    "friday",
+    "saturday",
+    "sunday",
   ] as const;
 
   let safe: Record<string, unknown> = {};
   if (schedule !== null && schedule !== undefined) {
-    if (typeof schedule === 'string') {
+    if (typeof schedule === "string") {
       try {
         const parsed = JSON.parse(schedule) as unknown;
-        if (parsed !== null && typeof parsed === 'object') {
+        if (parsed !== null && typeof parsed === "object") {
           safe = parsed as Record<string, unknown>;
         }
       } catch {
         safe = {};
       }
-    } else if (typeof schedule === 'object') {
+    } else if (typeof schedule === "object") {
       safe = schedule as Record<string, unknown>;
     }
   }
@@ -185,36 +185,36 @@ const parseAssignmentSchedule = (schedule: unknown): ParsedSchedule => {
     friday: 0,
     saturday: 0,
     sunday: 0,
-  } as ParsedSchedule['weekdayHours'];
+  } as ParsedSchedule["weekdayHours"];
 
   for (const day of weekdays) {
     const dayObj = safe[day];
-    if (dayObj === null || dayObj === undefined || typeof dayObj !== 'object') {
+    if (dayObj === null || dayObj === undefined || typeof dayObj !== "object") {
       continue;
     }
     const d = dayObj as Record<string, unknown>;
-    const enabledVal = d['enabled'];
-    const enabled = typeof enabledVal === 'boolean' ? enabledVal : false;
+    const enabledVal = d["enabled"];
+    const enabled = typeof enabledVal === "boolean" ? enabledVal : false;
     if (!enabled) continue;
-    const slots: unknown[] = Array.isArray(d['timeSlots'])
-      ? (d['timeSlots'] as unknown[])
+    const slots: unknown[] = Array.isArray(d["timeSlots"])
+      ? (d["timeSlots"] as unknown[])
       : [];
     const total = slots.reduce((sum: number, raw: unknown) => {
-      if (raw === null || raw === undefined || typeof raw !== 'object')
+      if (raw === null || raw === undefined || typeof raw !== "object")
         return sum;
       const s = raw as Record<string, unknown>;
-      let startStr = '';
-      if (typeof s['start'] === 'string') startStr = s['start'];
-      else if (typeof s['startTime'] === 'string') startStr = s['startTime'];
-      let endStr = '';
-      if (typeof s['end'] === 'string') endStr = s['end'];
-      else if (typeof s['endTime'] === 'string') endStr = s['endTime'];
-      if (startStr !== '' && endStr !== '') {
+      let startStr = "";
+      if (typeof s["start"] === "string") startStr = s["start"];
+      else if (typeof s["startTime"] === "string") startStr = s["startTime"];
+      let endStr = "";
+      if (typeof s["end"] === "string") endStr = s["end"];
+      else if (typeof s["endTime"] === "string") endStr = s["endTime"];
+      if (startStr !== "" && endStr !== "") {
         const hours = parseTime(endStr) - parseTime(startStr);
         return sum + (Number.isFinite(hours) && hours > 0 ? hours : 0);
       }
-      const hoursVal = s['hours'];
-      const directHours: number = typeof hoursVal === 'number' ? hoursVal : 0;
+      const hoursVal = s["hours"];
+      const directHours: number = typeof hoursVal === "number" ? hoursVal : 0;
       const add =
         Number.isFinite(directHours) && directHours > 0 ? directHours : 0;
       return sum + add;
@@ -223,34 +223,34 @@ const parseAssignmentSchedule = (schedule: unknown): ParsedSchedule => {
   }
 
   let holidayHoursPerDay = 0;
-  const holidayConfig: unknown = safe['holiday_config'];
+  const holidayConfig: unknown = safe["holiday_config"];
   if (
     holidayConfig !== null &&
     holidayConfig !== undefined &&
-    typeof holidayConfig === 'object'
+    typeof holidayConfig === "object"
   ) {
     const hc: Record<string, unknown> = holidayConfig as Record<
       string,
       unknown
     >;
-    const holidaySlots: unknown[] = Array.isArray(hc['holiday_timeSlots'])
-      ? (hc['holiday_timeSlots'] as unknown[])
+    const holidaySlots: unknown[] = Array.isArray(hc["holiday_timeSlots"])
+      ? (hc["holiday_timeSlots"] as unknown[])
       : [];
     holidayHoursPerDay = holidaySlots.reduce((sum: number, raw: unknown) => {
-      if (raw === null || raw === undefined || typeof raw !== 'object')
+      if (raw === null || raw === undefined || typeof raw !== "object")
         return sum;
       const s = raw as Record<string, unknown>;
-      const startVal = s['start'];
-      const startStr = typeof startVal === 'string' ? startVal : '';
-      const endVal = s['end'];
-      const endStr = typeof endVal === 'string' ? endVal : '';
-      if (startStr !== '' && endStr !== '') {
+      const startVal = s["start"];
+      const startStr = typeof startVal === "string" ? startVal : "";
+      const endVal = s["end"];
+      const endStr = typeof endVal === "string" ? endVal : "";
+      if (startStr !== "" && endStr !== "") {
         const hours = parseTime(endStr) - parseTime(startStr);
         const add = Number.isFinite(hours) && hours > 0 ? hours : 0;
         return sum + add;
       }
-      const hoursVal = s['hours'];
-      const directHours: number = typeof hoursVal === 'number' ? hoursVal : 0;
+      const hoursVal = s["hours"];
+      const directHours: number = typeof hoursVal === "number" ? hoursVal : 0;
       const add =
         Number.isFinite(directHours) && directHours > 0 ? directHours : 0;
       return sum + add;
@@ -263,7 +263,7 @@ const parseAssignmentSchedule = (schedule: unknown): ParsedSchedule => {
 export const computeUserMonthlyBalance = async (
   userId: string,
   year: number,
-  month: number
+  month: number,
 ): Promise<UserMonthlyBalance | null> => {
   const { start, end, daysInMonth } = getMonthDateRange(year, month);
 
@@ -280,11 +280,11 @@ export const computeUserMonthlyBalance = async (
 
   // 3) Cargar asignaciones activas del mes (incluye tipo y schedule)
   const { data: rows, error } = await supabase
-    .from('assignments')
-    .select('assignment_type, schedule, start_date, end_date, status')
-    .eq('user_id', userId)
-    .eq('status', 'active')
-    .lte('start_date', end)
+    .from("assignments")
+    .select("assignment_type, schedule, start_date, end_date, status")
+    .eq("user_id", userId)
+    .eq("status", "active")
+    .lte("start_date", end)
     .or(`end_date.is.null,end_date.gte.${start}`);
 
   if (error !== null) {
@@ -325,21 +325,21 @@ export const computeUserMonthlyBalance = async (
     for (const a of activeAssignments) {
       const parsed = parseAssignmentSchedule(a.schedule);
       const type = a.assignment_type as
-        | 'laborables'
-        | 'festivos'
-        | 'flexible'
-        | 'completa'
-        | 'personalizada';
+        | "laborables"
+        | "festivos"
+        | "flexible"
+        | "completa"
+        | "personalizada";
 
-      if (type === 'laborables' && !isHolidayContext && dow >= 1 && dow <= 5) {
+      if (type === "laborables" && !isHolidayContext && dow >= 1 && dow <= 5) {
         const weekdayMap = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
         ] as const;
         const key = weekdayMap[dow];
         const add = parsed.weekdayHours[key];
@@ -347,7 +347,7 @@ export const computeUserMonthlyBalance = async (
         dailyLaborables += add;
       }
 
-      if (type === 'festivos' && isHolidayContext) {
+      if (type === "festivos" && isHolidayContext) {
         dailyHours += parsed.holidayHoursPerDay;
         dailyHolidays += parsed.holidayHoursPerDay;
       }
@@ -374,14 +374,14 @@ export const computeUserMonthlyBalanceByName = async (
   name: string,
   surname: string,
   year: number,
-  month: number
+  month: number,
 ): Promise<UserMonthlyBalance | null> => {
   // Buscar usuario por nombre y apellidos (coincidencia flexible por ILIKE)
   const { data: userRow, error: userErr } = await supabase
-    .from('users')
-    .select('id')
-    .ilike('name', name)
-    .ilike('surname', surname)
+    .from("users")
+    .select("id")
+    .ilike("name", name)
+    .ilike("surname", surname)
     .single();
 
   if (userErr !== null || userRow === null) {
@@ -409,7 +409,7 @@ export interface WorkerUserMonthlyBalanceRow {
 export const computeWorkerUsersMonthlyBalances = async (
   workerId: string,
   year: number,
-  month: number
+  month: number,
 ): Promise<WorkerUserMonthlyBalanceRow[]> => {
   const { start, end, daysInMonth } = getMonthDateRange(year, month);
 
@@ -419,11 +419,11 @@ export const computeWorkerUsersMonthlyBalances = async (
 
   // Asignaciones activas del mes para la trabajadora
   const { data: rows, error } = await supabase
-    .from('assignments')
-    .select('user_id, assignment_type, schedule, start_date, end_date, status')
-    .eq('worker_id', workerId)
-    .eq('status', 'active')
-    .lte('start_date', end)
+    .from("assignments")
+    .select("user_id, assignment_type, schedule, start_date, end_date, status")
+    .eq("worker_id", workerId)
+    .eq("status", "active")
+    .lte("start_date", end)
     .or(`end_date.is.null,end_date.gte.${start}`);
 
   if (error !== null || rows === null) return [];
@@ -443,18 +443,18 @@ export const computeWorkerUsersMonthlyBalances = async (
   // Obtener usuarios involucrados
   const userIds = Array.from(new Set(assignments.map((r) => r.user_id)));
   const { data: userRows } = await supabase
-    .from('users')
-    .select('id, name, surname')
-    .in('id', userIds);
+    .from("users")
+    .select("id, name, surname")
+    .in("id", userIds);
 
   const userMap = new Map<
     string,
     { name: string; surname: string; assigned: number }
   >();
   for (const ur of userRows ?? []) {
-    const uid = typeof ur.id === 'string' ? ur.id : String(ur.id);
-    const uname = typeof ur.name === 'string' ? ur.name : '';
-    const usurname = typeof ur.surname === 'string' ? ur.surname : '';
+    const uid = typeof ur.id === "string" ? ur.id : String(ur.id);
+    const uname = typeof ur.name === "string" ? ur.name : "";
+    const usurname = typeof ur.surname === "string" ? ur.surname : "";
     userMap.set(uid, {
       name: uname,
       surname: usurname,
@@ -466,12 +466,12 @@ export const computeWorkerUsersMonthlyBalances = async (
     userIds.map(async (uid) => {
       const u = await getUserById(uid);
       return [uid, u?.monthly_assigned_hours ?? 0] as const;
-    })
+    }),
   );
   for (const [uid, assigned] of assignedPairs) {
     const cur = userMap.get(uid);
     if (cur !== undefined) cur.assigned = assigned;
-    else userMap.set(uid, { name: '', surname: '', assigned });
+    else userMap.set(uid, { name: "", surname: "", assigned });
   }
 
   // Inicializar acumuladores por usuario
@@ -491,22 +491,22 @@ export const computeWorkerUsersMonthlyBalances = async (
     for (const a of assignments) {
       const parsed = parseAssignmentSchedule(a.schedule);
       const type = a.assignment_type as
-        | 'laborables'
-        | 'festivos'
-        | 'flexible'
-        | 'completa'
-        | 'personalizada';
+        | "laborables"
+        | "festivos"
+        | "flexible"
+        | "completa"
+        | "personalizada";
 
       // Laborables: solo lunes-viernes no festivo
-      if (type === 'laborables' && !isHolidayContext && dow >= 1 && dow <= 5) {
+      if (type === "laborables" && !isHolidayContext && dow >= 1 && dow <= 5) {
         const weekdayMap = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
         ] as const;
         const key = weekdayMap[dow];
         const add = parsed.weekdayHours[key];
@@ -515,7 +515,7 @@ export const computeWorkerUsersMonthlyBalances = async (
       }
 
       // Festivos: fines de semana o festivos
-      if (type === 'festivos' && isHolidayContext) {
+      if (type === "festivos" && isHolidayContext) {
         const cur = acc.get(a.user_id);
         if (cur !== undefined) cur.holidays += parsed.holidayHoursPerDay;
       }
@@ -526,7 +526,7 @@ export const computeWorkerUsersMonthlyBalances = async (
   const rowsOut: WorkerUserMonthlyBalanceRow[] = [];
   for (const uid of userIds) {
     const sums = acc.get(uid) ?? { laborables: 0, holidays: 0 };
-    const uinfo = userMap.get(uid) ?? { name: '', surname: '', assigned: 0 };
+    const uinfo = userMap.get(uid) ?? { name: "", surname: "", assigned: 0 };
     const total = sums.laborables + sums.holidays;
     rowsOut.push({
       userId: uid,
@@ -544,8 +544,8 @@ export const computeWorkerUsersMonthlyBalances = async (
   rowsOut.sort((a, b) =>
     `${a.userName} ${a.userSurname}`.localeCompare(
       `${b.userName} ${b.userSurname}`,
-      'es'
-    )
+      "es",
+    ),
   );
 
   return rowsOut;

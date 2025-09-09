@@ -1,11 +1,11 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useReducer } from 'react';
+import React, { createContext, useContext, useEffect, useReducer } from "react";
 
-import { secureStorage } from '@/utils/secure-storage';
+import { secureStorage } from "@/utils/secure-storage";
 
-import { supabase } from '../lib/database';
-import type { AuthContextType, AuthCredentials, Worker } from '../types';
+import { supabase } from "../lib/database";
+import type { AuthContextType, AuthCredentials, Worker } from "../types";
 
 // Estado inicial
 const initialState = {
@@ -17,22 +17,22 @@ const initialState = {
 
 // Tipos de acciones
 type AuthAction =
-  | { type: 'AUTH_START' }
-  | { type: 'AUTH_SUCCESS'; payload: Worker }
-  | { type: 'AUTH_FAILURE'; payload: string }
-  | { type: 'AUTH_LOGOUT' }
-  | { type: 'CLEAR_ERROR' };
+  | { type: "AUTH_START" }
+  | { type: "AUTH_SUCCESS"; payload: Worker }
+  | { type: "AUTH_FAILURE"; payload: string }
+  | { type: "AUTH_LOGOUT" }
+  | { type: "CLEAR_ERROR" };
 
 // Reducer
 function authReducer(
   state: typeof initialState,
-  action: AuthAction
+  action: AuthAction,
 ): typeof initialState {
   // Debug completado - reducer funcionando correctamente
   switch (action.type) {
-    case 'AUTH_START':
+    case "AUTH_START":
       return { ...state, isLoading: true, error: null };
-    case 'AUTH_SUCCESS':
+    case "AUTH_SUCCESS":
       return {
         ...state,
         isAuthenticated: true,
@@ -40,7 +40,7 @@ function authReducer(
         isLoading: false,
         error: null,
       };
-    case 'AUTH_FAILURE':
+    case "AUTH_FAILURE":
       return {
         ...state,
         isAuthenticated: false,
@@ -48,7 +48,7 @@ function authReducer(
         isLoading: false,
         error: action.payload,
       };
-    case 'AUTH_LOGOUT':
+    case "AUTH_LOGOUT":
       return {
         ...state,
         isAuthenticated: false,
@@ -56,7 +56,7 @@ function authReducer(
         isLoading: false,
         error: null,
       };
-    case 'CLEAR_ERROR':
+    case "CLEAR_ERROR":
       return { ...state, error: null };
     default:
       return state;
@@ -73,24 +73,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Verificar autenticación solo al iniciar - optimizado
   useEffect(() => {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     const initializeAuth = (): void => {
       try {
-        const workerData = secureStorage.getItem<Worker>('worker');
-        const token = secureStorage.getItem<string>('token');
+        const workerData = secureStorage.getItem<Worker>("worker");
+        const token = secureStorage.getItem<string>("token");
 
-        if (workerData != null && token != null && token !== '') {
+        if (workerData != null && token != null && token !== "") {
           // Restaurar sesión previa inmediatamente
-          dispatch({ type: 'AUTH_SUCCESS', payload: workerData });
+          dispatch({ type: "AUTH_SUCCESS", payload: workerData });
         } else {
           // No hay sesión previa - finalizar carga
-          dispatch({ type: 'AUTH_FAILURE', payload: '' });
+          dispatch({ type: "AUTH_FAILURE", payload: "" });
         }
       } catch {
         // Error al restaurar sesión - limpiar y finalizar carga
         secureStorage.clear();
-        dispatch({ type: 'AUTH_FAILURE', payload: '' });
+        dispatch({ type: "AUTH_FAILURE", payload: "" });
       }
     };
 
@@ -99,10 +99,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []); // Solo al montar
 
   const login = async (
-    credentials: AuthCredentials
+    credentials: AuthCredentials,
   ): Promise<Worker | undefined> => {
     try {
-      dispatch({ type: 'AUTH_START' });
+      dispatch({ type: "AUTH_START" });
 
       // Normalizar email a minúsculas para evitar problemas de case
       const normalizedEmail = credentials.email.toLowerCase().trim();
@@ -119,7 +119,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (authData.user == null) {
-        throw new Error('Error de autenticación: Usuario no encontrado');
+        throw new Error("Error de autenticación: Usuario no encontrado");
       }
 
       // Autenticación exitosa con Supabase
@@ -132,27 +132,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       > | null;
 
       // Determinar el rol basado en el email o metadata
-      let role: 'worker' | 'admin' | 'super_admin' = 'worker';
-      if (authData.user.email === 'conectomail@gmail.com') {
-        role = 'super_admin';
-      } else if (authData.user.email === 'webmaster@gusi.dev') {
-        role = 'admin';
+      let role: "worker" | "admin" | "super_admin" = "worker";
+      if (authData.user.email === "conectomail@gmail.com") {
+        role = "super_admin";
+      } else if (authData.user.email === "webmaster@gusi.dev") {
+        role = "admin";
       } else {
         // Para otros usuarios, asumir que son workers
-        role = 'worker';
+        role = "worker";
       }
 
       const worker: Worker = {
         id: authData.user.id,
-        email: authData.user.email ?? '',
+        email: authData.user.email ?? "",
         name:
           (metadata?.name as string) ??
-          authData.user.email?.split('@')[0] ??
-          'Usuario',
-        surname: (metadata?.surname as string) ?? '',
-        phone: (metadata?.phone as string) ?? '',
-        dni: (metadata?.dni as string) ?? '',
-        worker_type: (metadata?.worker_type as string) ?? 'cuidadora',
+          authData.user.email?.split("@")[0] ??
+          "Usuario",
+        surname: (metadata?.surname as string) ?? "",
+        phone: (metadata?.phone as string) ?? "",
+        dni: (metadata?.dni as string) ?? "",
+        worker_type: (metadata?.worker_type as string) ?? "cuidadora",
         role,
         is_active: true,
         monthly_contracted_hours:
@@ -167,24 +167,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       };
 
       // Guardar en almacenamiento seguro
-      if (typeof window !== 'undefined') {
-        secureStorage.setItem('worker', worker);
+      if (typeof window !== "undefined") {
+        secureStorage.setItem("worker", worker);
         if (
           authData.session?.access_token != null &&
-          authData.session.access_token !== ''
+          authData.session.access_token !== ""
         ) {
-          secureStorage.setItem('token', authData.session.access_token);
+          secureStorage.setItem("token", authData.session.access_token);
         }
       }
 
-      dispatch({ type: 'AUTH_SUCCESS', payload: worker });
+      dispatch({ type: "AUTH_SUCCESS", payload: worker });
 
       // Login completado exitosamente
       return worker;
     } catch (error) {
       const errorMessage =
-        error instanceof Error ? error.message : 'Error de autenticación';
-      dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
+        error instanceof Error ? error.message : "Error de autenticación";
+      dispatch({ type: "AUTH_FAILURE", payload: errorMessage });
       throw error; // Re-throw para que signIn pueda capturarlo
     }
   };
@@ -192,24 +192,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async (): Promise<void> => {
     try {
       // Limpiar almacenamiento seguro
-      if (typeof window !== 'undefined') {
-        secureStorage.removeItem('worker');
-        secureStorage.removeItem('token');
+      if (typeof window !== "undefined") {
+        secureStorage.removeItem("worker");
+        secureStorage.removeItem("token");
       }
-      dispatch({ type: 'AUTH_LOGOUT' });
+      dispatch({ type: "AUTH_LOGOUT" });
     } catch {
       // console.error('Error during logout:', error); // Comentado para producción
       // Aún así, limpiar el estado local
-      dispatch({ type: 'AUTH_LOGOUT' });
+      dispatch({ type: "AUTH_LOGOUT" });
     }
   };
 
   const clearError = (): void => {
-    dispatch({ type: 'CLEAR_ERROR' });
+    dispatch({ type: "CLEAR_ERROR" });
   };
 
   const updatePassword = async (
-    _email: string
+    _email: string,
   ): Promise<{
     error?: string;
   }> => {
@@ -221,13 +221,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return {};
     } catch {
       return {
-        error: 'Error al actualizar contraseña',
+        error: "Error al actualizar contraseña",
       };
     }
   };
 
   const signIn = async (
-    credentials: AuthCredentials
+    credentials: AuthCredentials,
   ): Promise<{
     error?: string;
     redirectTo?: string;
@@ -237,16 +237,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       // Determinar redirección basada en el rol del usuario
       const redirectTo =
-        authenticatedUser?.role === 'super_admin'
-          ? '/super-dashboard'
-          : authenticatedUser?.role === 'admin'
-            ? '/dashboard'
-            : '/worker-dashboard';
+        authenticatedUser?.role === "super_admin"
+          ? "/super-dashboard"
+          : authenticatedUser?.role === "admin"
+            ? "/dashboard"
+            : "/worker-dashboard";
 
       return { redirectTo };
     } catch {
       return {
-        error: 'Error de autenticación',
+        error: "Error de autenticación",
       };
     }
   };
@@ -270,7 +270,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

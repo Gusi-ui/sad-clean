@@ -33,7 +33,12 @@
     "typescript": "html",
     "typescriptreact": "html"
   },
-  "eslint.validate": ["javascript", "javascriptreact", "typescript", "typescriptreact"],
+  "eslint.validate": [
+    "javascript",
+    "javascriptreact",
+    "typescript",
+    "typescriptreact"
+  ],
   "eslint.workingDirectories": ["."],
   "files.associations": {
     "*.css": "tailwindcss",

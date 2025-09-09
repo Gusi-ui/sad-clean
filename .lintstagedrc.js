@@ -1,15 +1,15 @@
 module.exports = {
   // Aplicar a todos los archivos TypeScript/JavaScript
-  '*.{js,jsx,ts,tsx}': [
+  "*.{js,jsx,ts,tsx}": [
     // Formatear con Prettier
-    'prettier --write',
+    "prettier --write",
     // Ejecutar ESLint
-    'eslint --fix',
+    "eslint --fix",
     // Verificar tipos TypeScript
-    'tsc --noEmit',
+    "tsc --noEmit",
   ],
   // Aplicar a archivos de configuración
-  '*.{json,md,yml,yaml}': ['prettier --write'],
+  "*.{json,md,yml,yaml}": ["prettier --write"],
   // Aplicar a archivos CSS
-  '*.{css,scss}': ['prettier --write'],
+  "*.{css,scss}": ["prettier --write"],
 };

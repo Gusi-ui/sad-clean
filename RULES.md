@@ -56,17 +56,17 @@ src/
 ```typescript
 // Orden correcto de imports
 // 1. Librerías externas
-import React from 'react';
-import { useEffect, useState } from 'react';
+import React from "react";
+import { useEffect, useState } from "react";
 
 // 2. Módulos internos
-import { Button } from '@/components/ui/button';
-import { useAuth } from '@/hooks/useAuth';
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/hooks/useAuth";
 // 3. Tipos
-import type { User } from '@/types';
+import type { User } from "@/types";
 
 // 4. Estilos
-import './styles.css';
+import "./styles.css";
 ```
 
 ### **Logging**
@@ -174,10 +174,10 @@ try {
   // Operación que puede fallar
 } catch (error) {
   // Log del error para debugging
-  console.error('Error en operación:', error);
+  console.error("Error en operación:", error);
 
   // Mostrar mensaje amigable al usuario
-  setError('Ha ocurrido un error. Inténtalo de nuevo.');
+  setError("Ha ocurrido un error. Inténtalo de nuevo.");
 }
 ```
 

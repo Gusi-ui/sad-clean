@@ -11,7 +11,7 @@ export interface Worker {
   phone: string;
   dni: string;
   worker_type: string;
-  role: 'worker' | 'admin' | 'super_admin';
+  role: "worker" | "admin" | "super_admin";
   is_active: boolean | null;
   monthly_contracted_hours: number;
   weekly_contracted_hours: number;
@@ -30,7 +30,7 @@ export interface WorkerInsert {
   phone: string;
   dni: string;
   worker_type: string;
-  role?: 'worker' | 'admin' | 'super_admin';
+  role?: "worker" | "admin" | "super_admin";
   is_active?: boolean | null;
   monthly_contracted_hours?: number;
   weekly_contracted_hours?: number;
@@ -46,7 +46,7 @@ export interface WorkerUpdate {
   phone?: string;
   dni?: string;
   worker_type?: string;
-  role?: 'worker' | 'admin' | 'super_admin';
+  role?: "worker" | "admin" | "super_admin";
   is_active?: boolean | null;
   monthly_contracted_hours?: number;
   weekly_contracted_hours?: number;
@@ -301,19 +301,19 @@ export type RootStackParamList = {
 
 // Notification Types
 export type NotificationType =
-  | 'new_user' // Nuevo usuario asignado
-  | 'user_removed' // Usuario eliminado
-  | 'schedule_change' // Cambio de horario
-  | 'assignment_change' // Cambio en asignación
-  | 'route_update' // Actualización de ruta
-  | 'system_message' // Mensaje del sistema
-  | 'reminder' // Recordatorio
-  | 'urgent' // Notificación urgente
-  | 'holiday_update' // Actualización de festivos
-  | 'service_start' // Inicio de servicio
-  | 'service_end'; // Fin de servicio
+  | "new_user" // Nuevo usuario asignado
+  | "user_removed" // Usuario eliminado
+  | "schedule_change" // Cambio de horario
+  | "assignment_change" // Cambio en asignación
+  | "route_update" // Actualización de ruta
+  | "system_message" // Mensaje del sistema
+  | "reminder" // Recordatorio
+  | "urgent" // Notificación urgente
+  | "holiday_update" // Actualización de festivos
+  | "service_start" // Inicio de servicio
+  | "service_end"; // Fin de servicio
 
-export type NotificationPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type NotificationPriority = "low" | "normal" | "high" | "urgent";
 
 export interface WorkerNotification {
   id: string;
@@ -380,11 +380,11 @@ export interface NotificationAction {
 
 // WebSocket Types para notificaciones en tiempo real
 export interface WebSocketMessage {
-  type: 'notification' | 'ping' | 'pong' | 'error';
+  type: "notification" | "ping" | "pong" | "error";
   data?: unknown;
 }
 
 export interface NotificationWebSocketMessage extends WebSocketMessage {
-  type: 'notification';
+  type: "notification";
   data: WorkerNotification;
 }

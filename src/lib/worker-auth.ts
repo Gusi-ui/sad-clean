@@ -1,6 +1,6 @@
-'use server';
+"use server";
 
-import { supabaseAdmin } from '@/lib/supabase-admin';
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 interface EnsureWorkerAuthInput {
   email: string;
@@ -20,16 +20,16 @@ export interface EnsureWorkerAuthResult {
  * - Garantiza registro en tabla `auth_users` con role 'worker'.
  */
 export const ensureWorkerAuthAccount = async (
-  input: EnsureWorkerAuthInput
+  input: EnsureWorkerAuthInput,
 ): Promise<EnsureWorkerAuthResult> => {
   const email = input.email.trim();
   const password = input.password;
   const name = input.name.trim();
 
-  if (email === '' || password.length < 6) {
+  if (email === "" || password.length < 6) {
     return {
       success: false,
-      message: 'Email o contraseña inválidos (mín. 6 caracteres).',
+      message: "Email o contraseña inválidos (mín. 6 caracteres).",
     };
   }
 
@@ -47,7 +47,7 @@ export const ensureWorkerAuthAccount = async (
     };
   }
   const found = listData.users.find(
-    (u) => (u.email?.toLowerCase() ?? '') === email.toLowerCase()
+    (u) => (u.email?.toLowerCase() ?? "") === email.toLowerCase(),
   );
 
   if (found !== undefined) {
@@ -56,8 +56,8 @@ export const ensureWorkerAuthAccount = async (
       authUserId,
       {
         password,
-        user_metadata: { ...found.user_metadata, role: 'worker', name },
-      }
+        user_metadata: { ...found.user_metadata, role: "worker", name },
+      },
     );
     if (updErr !== null) {
       return {
@@ -71,7 +71,7 @@ export const ensureWorkerAuthAccount = async (
         email,
         password,
         email_confirm: true,
-        user_metadata: { role: 'worker', name },
+        user_metadata: { role: "worker", name },
       });
     if (createErr !== null) {
       return {
@@ -85,7 +85,7 @@ export const ensureWorkerAuthAccount = async (
   if (authUserId === null) {
     return {
       success: false,
-      message: 'No se pudo determinar el ID del usuario.',
+      message: "No se pudo determinar el ID del usuario.",
     };
   }
 
@@ -93,9 +93,9 @@ export const ensureWorkerAuthAccount = async (
   // Type assertion necesaria para tabla auth_users de Supabase
   /* eslint-disable @typescript-eslint/no-explicit-any */
   const { error: upsertErr } = await supabaseAdmin
-    .from('auth_users')
-    .upsert({ id: authUserId, email, role: 'worker' } as any, {
-      onConflict: 'id',
+    .from("auth_users")
+    .upsert({ id: authUserId, email, role: "worker" } as any, {
+      onConflict: "id",
     });
   /* eslint-enable @typescript-eslint/no-explicit-any */
 
@@ -108,19 +108,19 @@ export const ensureWorkerAuthAccount = async (
 
   return {
     success: true,
-    message: 'Acceso de trabajadora configurado correctamente.',
+    message: "Acceso de trabajadora configurado correctamente.",
   };
 };
 
 export const resetWorkerPasswordByEmail = async (
   email: string,
-  newPassword: string
+  newPassword: string,
 ): Promise<EnsureWorkerAuthResult> => {
   const mail = email.trim();
-  if (mail === '' || newPassword.length < 6) {
+  if (mail === "" || newPassword.length < 6) {
     return {
       success: false,
-      message: 'Email o contraseña inválidos (mín. 6 caracteres).',
+      message: "Email o contraseña inválidos (mín. 6 caracteres).",
     };
   }
   const { data: listData, error: listErr } =
@@ -132,16 +132,16 @@ export const resetWorkerPasswordByEmail = async (
     };
   }
   const found = listData.users.find(
-    (u) => (u.email?.toLowerCase() ?? '') === mail.toLowerCase()
+    (u) => (u.email?.toLowerCase() ?? "") === mail.toLowerCase(),
   );
   if (found === undefined) {
-    return { success: false, message: 'Usuario no encontrado por email.' };
+    return { success: false, message: "Usuario no encontrado por email." };
   }
   const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(
     found.id,
     {
       password: newPassword,
-    }
+    },
   );
   if (updErr !== null) {
     return {
@@ -149,5 +149,5 @@ export const resetWorkerPasswordByEmail = async (
       message: `Error actualizando contraseña: ${updErr.message}`,
     };
   }
-  return { success: true, message: 'Contraseña actualizada.' };
+  return { success: true, message: "Contraseña actualizada." };
 };

@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React from 'react';
+import React from "react";
 
-import WorkerBottomNav from '@/components/layout/WorkerBottomNav';
+import WorkerBottomNav from "@/components/layout/WorkerBottomNav";
 
 export default function WorkerDashboardSectionLayout(
-  props: React.PropsWithChildren
+  props: React.PropsWithChildren,
 ): React.JSX.Element {
   const { children } = props;
   return (
-    <div className='pb-16'>
+    <div className="pb-16">
       {children}
       <WorkerBottomNav />
     </div>

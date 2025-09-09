@@ -68,7 +68,7 @@ el panel administrativo.
 
    // O ejecutar pruebas individuales
    testBasicNotification();
-   checkNotificationStatus('worker-id-real');
+   checkNotificationStatus("worker-id-real");
    ```
 
 ### **Opción 3: Prueba Manual desde Assignments**
@@ -100,8 +100,8 @@ el panel administrativo.
 
 ```javascript
 // En la consola del navegador
-console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
-console.log('User ID:', user?.id); // Desde el contexto de autenticación
+console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log("User ID:", user?.id); // Desde el contexto de autenticación
 ```
 
 ### **Paso 2: Verificar Tablas**
@@ -116,8 +116,8 @@ SELECT * FROM worker_devices LIMIT 5;
 
 ```javascript
 // En la consola del navegador desde worker-dashboard
-const channel = supabase.channel('test-channel');
-channel.subscribe((status) => console.log('Realtime status:', status));
+const channel = supabase.channel("test-channel");
+channel.subscribe((status) => console.log("Realtime status:", status));
 ```
 
 ### **Paso 4: Verificar Permisos**

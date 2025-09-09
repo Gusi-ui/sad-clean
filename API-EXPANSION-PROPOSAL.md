@@ -62,7 +62,7 @@ tiempo real.
 interface JWTPayload {
   sub: string; // Worker ID
   email: string;
-  role: 'worker';
+  role: "worker";
   permissions: string[];
   iat: number; // Issued at
   exp: number; // Expires at
@@ -90,27 +90,33 @@ export async function POST(request: Request) {
     const { email, password, deviceInfo } = await request.json();
 
     // 1. Autenticar con Supabase
-    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { data: authData, error: authError } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
     if (authError) throw new Error(authError.message);
 
     // 2. Verificar que es un trabajador
     const { data: worker } = await supabase
-      .from('auth_users')
-      .select('role')
-      .eq('id', authData.user.id)
+      .from("auth_users")
+      .select("role")
+      .eq("id", authData.user.id)
       .single();
 
-    if (worker?.role !== 'worker') {
-      throw new Error('Acceso denegado: solo trabajadores pueden usar la app móvil');
+    if (worker?.role !== "worker") {
+      throw new Error(
+        "Acceso denegado: solo trabajadores pueden usar la app móvil",
+      );
     }
 
     // 3. Generar tokens
     const accessToken = generateAccessToken(authData.user);
-    const refreshToken = await generateRefreshToken(authData.user.id, deviceInfo);
+    const refreshToken = await generateRefreshToken(
+      authData.user.id,
+      deviceInfo,
+    );
 
     // 4. Registrar sesión
     await logWorkerSession(authData.user.id, deviceInfo);
@@ -124,16 +130,17 @@ export async function POST(request: Request) {
         id: authData.user.id,
         email: authData.user.email,
         name: authData.user.user_metadata?.name,
-        role: 'worker',
+        role: "worker",
       },
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : 'Error de autenticación',
+        message:
+          error instanceof Error ? error.message : "Error de autenticación",
       },
-      { status: 401 }
+      { status: 401 },
     );
   }
 }
@@ -143,9 +150,11 @@ export async function POST(request: Request) {
 
 ```typescript
 // src/middleware/auth.ts
-export async function validateWorkerToken(request: Request): Promise<WorkerAuth | null> {
-  const authHeader = request.headers.get('authorization');
-  if (!authHeader?.startsWith('Bearer ')) return null;
+export async function validateWorkerToken(
+  request: Request,
+): Promise<WorkerAuth | null> {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) return null;
 
   const token = authHeader.substring(7);
 
@@ -157,17 +166,17 @@ export async function validateWorkerToken(request: Request): Promise<WorkerAuth 
 
     // Verificar que el usuario existe y es trabajador
     const { data: worker } = await supabase
-      .from('auth_users')
-      .select('role')
-      .eq('id', decoded.sub)
+      .from("auth_users")
+      .select("role")
+      .eq("id", decoded.sub)
       .single();
 
-    if (worker?.role !== 'worker') return null;
+    if (worker?.role !== "worker") return null;
 
     return {
       id: decoded.sub,
       email: decoded.email,
-      role: 'worker',
+      role: "worker",
       permissions: decoded.permissions,
     };
   } catch {
@@ -184,19 +193,23 @@ export async function validateWorkerToken(request: Request): Promise<WorkerAuth 
 
 ```typescript
 // src/app/api/workers/[id]/assignments/route.ts
-export async function GET(request: Request, { params }: { params: { id: string } }) {
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
   try {
     const worker = await validateWorkerToken(request);
     if (!worker || worker.id !== params.id) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const { searchParams } = new URL(request.url);
-    const date = searchParams.get('date') || new Date().toISOString().split('T')[0];
-    const status = searchParams.get('status');
+    const date =
+      searchParams.get("date") || new Date().toISOString().split("T")[0];
+    const status = searchParams.get("status");
 
     let query = supabase
-      .from('assignments')
+      .from("assignments")
       .select(
         `
         *,
@@ -207,14 +220,14 @@ export async function GET(request: Request, { params }: { params: { id: string }
           phone,
           notes
         )
-      `
+      `,
       )
-      .eq('worker_id', params.id)
-      .eq('date', date)
-      .order('start_time', { ascending: true });
+      .eq("worker_id", params.id)
+      .eq("date", date)
+      .order("start_time", { ascending: true });
 
     if (status) {
-      query = query.eq('status', status);
+      query = query.eq("status", status);
     }
 
     const { data: assignments, error } = await query;
@@ -231,9 +244,12 @@ export async function GET(request: Request, { params }: { params: { id: string }
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : 'Error al obtener asignaciones',
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error al obtener asignaciones",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -243,44 +259,57 @@ export async function GET(request: Request, { params }: { params: { id: string }
 
 ```typescript
 // src/app/api/assignments/[id]/status/route.ts
-export async function PATCH(request: Request, { params }: { params: { id: string } }) {
+export async function PATCH(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
   try {
     const worker = await validateWorkerToken(request);
     if (!worker) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const { status, notes, location } = await request.json();
 
     // Verificar que la asignación pertenece al trabajador
     const { data: assignment } = await supabase
-      .from('assignments')
-      .select('worker_id, status')
-      .eq('id', params.id)
+      .from("assignments")
+      .select("worker_id, status")
+      .eq("id", params.id)
       .single();
 
     if (!assignment || assignment.worker_id !== worker.id) {
-      return NextResponse.json({ error: 'Asignación no encontrada' }, { status: 404 });
+      return NextResponse.json(
+        { error: "Asignación no encontrada" },
+        { status: 404 },
+      );
     }
 
     // Validar transición de estado
     const validTransitions = {
-      pending: ['in_progress', 'cancelled'],
-      in_progress: ['completed', 'cancelled'],
+      pending: ["in_progress", "cancelled"],
+      in_progress: ["completed", "cancelled"],
       completed: [],
       cancelled: [],
     };
 
-    if (!validTransitions[assignment.status as keyof typeof validTransitions]?.includes(status)) {
-      return NextResponse.json({ error: 'Transición de estado inválida' }, { status: 400 });
+    if (
+      !validTransitions[
+        assignment.status as keyof typeof validTransitions
+      ]?.includes(status)
+    ) {
+      return NextResponse.json(
+        { error: "Transición de estado inválida" },
+        { status: 400 },
+      );
     }
 
     // Actualizar asignación
     const updateData: any = { status };
 
-    if (status === 'in_progress') {
+    if (status === "in_progress") {
       updateData.start_time = new Date().toISOString();
-    } else if (status === 'completed') {
+    } else if (status === "completed") {
       updateData.end_time = new Date().toISOString();
     }
 
@@ -289,9 +318,9 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     const { data, error } = await supabase
-      .from('assignments')
+      .from("assignments")
       .update(updateData)
-      .eq('id', params.id)
+      .eq("id", params.id)
       .select()
       .single();
 
@@ -299,7 +328,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
     // Agregar nota si se proporciona
     if (notes) {
-      await supabase.from('worker_notes').insert({
+      await supabase.from("worker_notes").insert({
         worker_id: worker.id,
         assignment_id: params.id,
         content: notes,
@@ -308,7 +337,7 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     }
 
     // Notificar al admin en tiempo real
-    await notifyAdmin('assignment_status_changed', {
+    await notifyAdmin("assignment_status_changed", {
       assignmentId: params.id,
       workerId: worker.id,
       status,
@@ -323,9 +352,12 @@ export async function PATCH(request: Request, { params }: { params: { id: string
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : 'Error al actualizar asignación',
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error al actualizar asignación",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -335,11 +367,14 @@ export async function PATCH(request: Request, { params }: { params: { id: string
 
 ```typescript
 // src/app/api/workers/[id]/location/route.ts
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
   try {
     const worker = await validateWorkerToken(request);
     if (!worker || worker.id !== params.id) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const { latitude, longitude, accuracy, timestamp } = await request.json();
@@ -353,11 +388,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
       longitude < -180 ||
       longitude > 180
     ) {
-      return NextResponse.json({ error: 'Coordenadas inválidas' }, { status: 400 });
+      return NextResponse.json(
+        { error: "Coordenadas inválidas" },
+        { status: 400 },
+      );
     }
 
     // Guardar ubicación
-    const { error } = await supabase.from('worker_locations').insert({
+    const { error } = await supabase.from("worker_locations").insert({
       worker_id: params.id,
       latitude,
       longitude,
@@ -368,7 +406,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
     if (error) throw error;
 
     // Notificar al admin en tiempo real
-    await notifyAdmin('worker_location_updated', {
+    await notifyAdmin("worker_location_updated", {
       workerId: params.id,
       location: { latitude, longitude, accuracy },
       timestamp: new Date().toISOString(),
@@ -379,9 +417,12 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : 'Error al actualizar ubicación',
+        message:
+          error instanceof Error
+            ? error.message
+            : "Error al actualizar ubicación",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -391,11 +432,14 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
 ```typescript
 // src/app/api/workers/[id]/sync/route.ts
-export async function POST(request: Request, { params }: { params: { id: string } }) {
+export async function POST(
+  request: Request,
+  { params }: { params: { id: string } },
+) {
   try {
     const worker = await validateWorkerToken(request);
     if (!worker || worker.id !== params.id) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const { operations, lastSync } = await request.json();
@@ -406,13 +450,13 @@ export async function POST(request: Request, { params }: { params: { id: string 
     for (const operation of operations) {
       try {
         switch (operation.type) {
-          case 'update_assignment_status':
+          case "update_assignment_status":
             await processAssignmentStatusUpdate(operation.data);
             break;
-          case 'add_note':
+          case "add_note":
             await processNoteCreation(operation.data);
             break;
-          case 'update_location':
+          case "update_location":
             await processLocationUpdate(operation.data);
             break;
           default:
@@ -427,23 +471,23 @@ export async function POST(request: Request, { params }: { params: { id: string 
         results.push({
           id: operation.id,
           success: false,
-          error: error instanceof Error ? error.message : 'Error desconocido',
+          error: error instanceof Error ? error.message : "Error desconocido",
         });
       }
     }
 
     // Obtener datos actualizados
     const { data: assignments } = await supabase
-      .from('assignments')
-      .select('*')
-      .eq('worker_id', params.id)
-      .gte('updated_at', lastSync);
+      .from("assignments")
+      .select("*")
+      .eq("worker_id", params.id)
+      .gte("updated_at", lastSync);
 
     const { data: notifications } = await supabase
-      .from('worker_notifications')
-      .select('*')
-      .eq('worker_id', params.id)
-      .gte('created_at', lastSync);
+      .from("worker_notifications")
+      .select("*")
+      .eq("worker_id", params.id)
+      .gte("created_at", lastSync);
 
     return NextResponse.json({
       success: true,
@@ -458,9 +502,10 @@ export async function POST(request: Request, { params }: { params: { id: string 
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : 'Error en sincronización',
+        message:
+          error instanceof Error ? error.message : "Error en sincronización",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -474,7 +519,7 @@ export async function POST(request: Request, { params }: { params: { id: string 
 
 ```typescript
 // src/lib/realtime.ts
-import { createClient } from '@supabase/supabase-js';
+import { createClient } from "@supabase/supabase-js";
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
@@ -488,53 +533,59 @@ export const realtimeClient = createClient(supabaseUrl, supabaseKey, {
 });
 
 // Suscripciones para trabajadores
-export function subscribeToWorkerUpdates(workerId: string, callback: (payload: any) => void) {
+export function subscribeToWorkerUpdates(
+  workerId: string,
+  callback: (payload: any) => void,
+) {
   return realtimeClient
     .channel(`worker:${workerId}`)
     .on(
-      'postgres_changes',
+      "postgres_changes",
       {
-        event: '*',
-        schema: 'public',
-        table: 'assignments',
+        event: "*",
+        schema: "public",
+        table: "assignments",
         filter: `worker_id=eq.${workerId}`,
       },
-      callback
+      callback,
     )
     .on(
-      'postgres_changes',
+      "postgres_changes",
       {
-        event: '*',
-        schema: 'public',
-        table: 'worker_notifications',
+        event: "*",
+        schema: "public",
+        table: "worker_notifications",
         filter: `worker_id=eq.${workerId}`,
       },
-      callback
+      callback,
     )
     .subscribe();
 }
 
 // Notificaciones para administradores
-export function subscribeToAdminUpdates(adminId: string, callback: (payload: any) => void) {
+export function subscribeToAdminUpdates(
+  adminId: string,
+  callback: (payload: any) => void,
+) {
   return realtimeClient
     .channel(`admin:${adminId}`)
     .on(
-      'postgres_changes',
+      "postgres_changes",
       {
-        event: '*',
-        schema: 'public',
-        table: 'assignments',
+        event: "*",
+        schema: "public",
+        table: "assignments",
       },
-      callback
+      callback,
     )
     .on(
-      'postgres_changes',
+      "postgres_changes",
       {
-        event: '*',
-        schema: 'public',
-        table: 'worker_locations',
+        event: "*",
+        schema: "public",
+        table: "worker_locations",
       },
-      callback
+      callback,
     )
     .subscribe();
 }
@@ -548,7 +599,7 @@ export async function POST(request: Request) {
   try {
     const worker = await validateWorkerToken(request);
     if (!worker) {
-      return NextResponse.json({ error: 'No autorizado' }, { status: 401 });
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
     }
 
     const { deviceId } = await request.json();
@@ -557,7 +608,7 @@ export async function POST(request: Request) {
     const connectionToken = generateConnectionToken(worker.id, deviceId);
 
     // Registrar conexión
-    await supabase.from('worker_connections').upsert({
+    await supabase.from("worker_connections").upsert({
       worker_id: worker.id,
       device_id: deviceId,
       connected_at: new Date().toISOString(),
@@ -567,15 +618,19 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       connectionToken,
-      channels: [`worker:${worker.id}`, `notifications:${worker.id}`, `assignments:${worker.id}`],
+      channels: [
+        `worker:${worker.id}`,
+        `notifications:${worker.id}`,
+        `assignments:${worker.id}`,
+      ],
     });
   } catch (error) {
     return NextResponse.json(
       {
         success: false,
-        message: error instanceof Error ? error.message : 'Error al conectar',
+        message: error instanceof Error ? error.message : "Error al conectar",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
@@ -596,7 +651,7 @@ interface QueryParams {
   status?: string[]; // Estados filtrados
   search?: string; // Búsqueda por texto
   sortBy?: string; // Campo de ordenación
-  sortOrder?: 'asc' | 'desc'; // Orden
+  sortOrder?: "asc" | "desc"; // Orden
 }
 ```
 
@@ -626,12 +681,12 @@ interface PaginatedResponse<T> {
 ```typescript
 // Headers optimizados para móvil
 const mobileHeaders = {
-  'Cache-Control': 'public, max-age=300', // 5 minutos
+  "Cache-Control": "public, max-age=300", // 5 minutos
   ETag: generateETag(data),
-  'Last-Modified': new Date().toUTCString(),
-  'Content-Type': 'application/json',
-  'X-API-Version': '1.0',
-  'X-Response-Time': `${responseTime}ms`,
+  "Last-Modified": new Date().toUTCString(),
+  "Content-Type": "application/json",
+  "X-API-Version": "1.0",
+  "X-Response-Time": `${responseTime}ms`,
 };
 ```
 
@@ -643,7 +698,7 @@ const mobileHeaders = {
 
 ```typescript
 // src/lib/rate-limit.ts
-import { Redis } from '@upstash/redis';
+import { Redis } from "@upstash/redis";
 
 const redis = new Redis({
   url: process.env.UPSTASH_REDIS_URL!,
@@ -653,7 +708,7 @@ const redis = new Redis({
 export async function checkRateLimit(
   identifier: string,
   limit: number,
-  window: number
+  window: number,
 ): Promise<boolean> {
   const key = `rate_limit:${identifier}`;
   const current = await redis.incr(key);
@@ -670,12 +725,15 @@ export async function checkRateLimit(
 
 ```typescript
 // Verificar dispositivo autorizado
-export async function validateDevice(workerId: string, deviceId: string): Promise<boolean> {
+export async function validateDevice(
+  workerId: string,
+  deviceId: string,
+): Promise<boolean> {
   const { data } = await supabase
-    .from('worker_devices')
-    .select('authorized')
-    .eq('worker_id', workerId)
-    .eq('device_id', deviceId)
+    .from("worker_devices")
+    .select("authorized")
+    .eq("worker_id", workerId)
+    .eq("device_id", deviceId)
     .single();
 
   return data?.authorized || false;

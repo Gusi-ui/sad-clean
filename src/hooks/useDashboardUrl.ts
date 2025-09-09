@@ -1,4 +1,4 @@
-import { useAuth } from '@/contexts/AuthContext';
+import { useAuth } from "@/contexts/AuthContext";
 
 /**
  * Hook personalizado para obtener la URL del dashboard correcta
@@ -9,22 +9,22 @@ export const useDashboardUrl = () => {
 
   // Determinar la URL del dashboard según el rol del usuario
   const getDashboardUrl = () => {
-    if (user === null || user === undefined) return '/dashboard';
+    if (user === null || user === undefined) return "/dashboard";
 
     // Verificar el rol del usuario
     const userRole = user.role;
 
     switch (userRole) {
-      case 'super_admin':
-        return '/super-dashboard';
-      case 'admin':
-        return '/dashboard';
-      case 'worker':
-        return '/worker-dashboard';
+      case "super_admin":
+        return "/super-dashboard";
+      case "admin":
+        return "/dashboard";
+      case "worker":
+        return "/worker-dashboard";
       case null:
-        return '/dashboard';
+        return "/dashboard";
       default:
-        return '/dashboard';
+        return "/dashboard";
     }
   };
 

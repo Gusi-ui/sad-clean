@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions */
-import type { User, UserInsert } from '@/types';
-import { securityLogger } from '@/utils/security-config';
+import type { User, UserInsert } from "@/types";
+import { securityLogger } from "@/utils/security-config";
 
-import { supabase } from './database';
+import { supabase } from "./database";
 
 /**
  * Consulta todos los usuarios de la base de datos
@@ -10,18 +10,18 @@ import { supabase } from './database';
 export const getAllUsers = async (): Promise<User[]> => {
   try {
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .order('created_at', { ascending: false });
+      .from("users")
+      .select("*")
+      .order("created_at", { ascending: false });
 
     if (error !== null) {
-      securityLogger.error('Error fetching users', error);
+      securityLogger.error("Error fetching users", error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-    securityLogger.error('Error in getAllUsers', error);
+    securityLogger.error("Error in getAllUsers", error);
     throw error;
   }
 };
@@ -32,19 +32,19 @@ export const getAllUsers = async (): Promise<User[]> => {
 export const getActiveUsers = async (): Promise<User[]> => {
   try {
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('is_active', true)
-      .order('name');
+      .from("users")
+      .select("*")
+      .eq("is_active", true)
+      .order("name");
 
     if (error !== null) {
-      securityLogger.error('Error fetching active users:', error);
+      securityLogger.error("Error fetching active users:", error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-    securityLogger.error('Error in getActiveUsers:', error);
+    securityLogger.error("Error in getActiveUsers:", error);
     throw error;
   }
 };
@@ -55,22 +55,22 @@ export const getActiveUsers = async (): Promise<User[]> => {
 export const searchUsers = async (searchTerm: string): Promise<User[]> => {
   try {
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
+      .from("users")
+      .select("*")
       .or(
-        `name.ilike.%${searchTerm}%,surname.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`
+        `name.ilike.%${searchTerm}%,surname.ilike.%${searchTerm}%,email.ilike.%${searchTerm}%`,
       )
-      .eq('is_active', true)
-      .order('name');
+      .eq("is_active", true)
+      .order("name");
 
     if (error !== null) {
-      securityLogger.error('Error searching users:', error);
+      securityLogger.error("Error searching users:", error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-    securityLogger.error('Error in searchUsers:', error);
+    securityLogger.error("Error in searchUsers:", error);
     throw error;
   }
 };
@@ -81,19 +81,19 @@ export const searchUsers = async (searchTerm: string): Promise<User[]> => {
 export const getUserById = async (id: string): Promise<User | null> => {
   try {
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('id', id)
+      .from("users")
+      .select("*")
+      .eq("id", id)
       .single();
 
     if (error !== null) {
-      securityLogger.error('Error fetching user by ID:', error);
+      securityLogger.error("Error fetching user by ID:", error);
       throw error;
     }
 
     return data as User;
   } catch (error) {
-    securityLogger.error('Error in getUserById:', error);
+    securityLogger.error("Error in getUserById:", error);
     throw error;
   }
 };
@@ -103,24 +103,24 @@ export const getUserById = async (id: string): Promise<User | null> => {
  */
 export const updateUser = async (
   id: string,
-  updates: Partial<User>
+  updates: Partial<User>,
 ): Promise<User | null> => {
   try {
     const { data, error } = await supabase
-      .from('users')
+      .from("users")
       .update(updates)
-      .eq('id', id)
+      .eq("id", id)
       .select()
       .single();
 
     if (error) {
-      securityLogger.error('Error updating user:', error);
+      securityLogger.error("Error updating user:", error);
       throw error;
     }
 
     return data as User;
   } catch (error) {
-    securityLogger.error('Error in updateUser:', error);
+    securityLogger.error("Error in updateUser:", error);
     throw error;
   }
 };
@@ -136,35 +136,35 @@ export const createUser = async (user: UserInsert): Promise<User> => {
     userData.user === null ||
     userData.user === undefined
   ) {
-    throw new Error('Usuario no autenticado');
+    throw new Error("Usuario no autenticado");
   }
 
   // Verificar que el usuario tiene permisos (admin o super_admin)
-  const userRole = userData.user.user_metadata?.['role'] as string | undefined;
-  const isAdmin = userRole === 'admin' || userRole === 'super_admin';
+  const userRole = userData.user.user_metadata?.["role"] as string | undefined;
+  const isAdmin = userRole === "admin" || userRole === "super_admin";
   const isSuperAdmin =
-    userRole === 'super_admin' ||
-    userData.user.email === 'conectomail@gmail.com';
+    userRole === "super_admin" ||
+    userData.user.email === "conectomail@gmail.com";
 
   if (!isAdmin && !isSuperAdmin) {
     // Verificar en la tabla auth_users si no está en metadatos
     const { data: roleData, error: roleError } = await supabase
-      .from('auth_users')
-      .select('role')
-      .eq('id', userData.user.id)
+      .from("auth_users")
+      .select("role")
+      .eq("id", userData.user.id)
       .single();
 
     if (
       roleError ||
       !roleData?.role ||
-      (roleData.role !== 'admin' && roleData.role !== 'super_admin')
+      (roleData.role !== "admin" && roleData.role !== "super_admin")
     ) {
-      throw new Error('No tienes permisos para crear usuarios');
+      throw new Error("No tienes permisos para crear usuarios");
     }
   }
 
   const { data, error } = await supabase
-    .from('users')
+    .from("users")
     .insert(user)
     .select()
     .single();
@@ -174,7 +174,7 @@ export const createUser = async (user: UserInsert): Promise<User> => {
   }
 
   if (data === null || data === undefined) {
-    throw new Error('No se pudo crear el usuario');
+    throw new Error("No se pudo crear el usuario");
   }
 
   return data as User;
@@ -185,14 +185,14 @@ export const createUser = async (user: UserInsert): Promise<User> => {
  */
 export const deleteUser = async (id: string): Promise<void> => {
   try {
-    const { error } = await supabase.from('users').delete().eq('id', id);
+    const { error } = await supabase.from("users").delete().eq("id", id);
 
     if (error) {
-      securityLogger.error('Error deleting user:', error);
+      securityLogger.error("Error deleting user:", error);
       throw error;
     }
   } catch (error) {
-    securityLogger.error('Error in deleteUser:', error);
+    securityLogger.error("Error in deleteUser:", error);
     throw error;
   }
 };
@@ -208,11 +208,11 @@ export const getUsersStats = async (): Promise<{
 }> => {
   try {
     const { data, error } = await supabase
-      .from('users')
-      .select('id, is_active');
+      .from("users")
+      .select("id, is_active");
 
     if (error !== null) {
-      securityLogger.error('Error fetching users stats:', error);
+      securityLogger.error("Error fetching users stats:", error);
       throw error;
     }
 
@@ -231,7 +231,7 @@ export const getUsersStats = async (): Promise<{
 
     return stats;
   } catch (error) {
-    securityLogger.error('Error in getUsersStats:', error);
+    securityLogger.error("Error in getUsersStats:", error);
     throw error;
   }
 };

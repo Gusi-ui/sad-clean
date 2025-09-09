@@ -1,12 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
-import { JSDOM } from 'jsdom';
-import fetch from 'node-fetch';
+import { createClient } from "@supabase/supabase-js";
+import { JSDOM } from "jsdom";
+import fetch from "node-fetch";
 
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 
 const supabase = createClient(
-  process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '',
-  process.env['SUPABASE_SERVICE_ROLE_KEY'] ?? ''
+  process.env["NEXT_PUBLIC_SUPABASE_URL"] ?? "",
+  process.env["SUPABASE_SERVICE_ROLE_KEY"] ?? "",
 );
 
 interface HolidayData {
@@ -14,7 +14,7 @@ interface HolidayData {
   month: number;
   year: number;
   name: string;
-  type: 'national' | 'regional' | 'local';
+  type: "national" | "regional" | "local";
 }
 
 // Función para validar y convertir datos de Supabase
@@ -22,16 +22,16 @@ const validateHolidayData = (data: unknown): HolidayData[] | null => {
   if (!Array.isArray(data)) return null;
 
   const isValidHoliday = (item: unknown): item is HolidayData => {
-    if (typeof item !== 'object' || item === null) return false;
+    if (typeof item !== "object" || item === null) return false;
     const holiday = item as Record<string, unknown>;
 
     return (
-      typeof holiday['day'] === 'number' &&
-      typeof holiday['month'] === 'number' &&
-      typeof holiday['year'] === 'number' &&
-      typeof holiday['name'] === 'string' &&
-      typeof holiday['type'] === 'string' &&
-      ['national', 'regional', 'local'].includes(holiday['type'])
+      typeof holiday["day"] === "number" &&
+      typeof holiday["month"] === "number" &&
+      typeof holiday["year"] === "number" &&
+      typeof holiday["name"] === "string" &&
+      typeof holiday["type"] === "string" &&
+      ["national", "regional", "local"].includes(holiday["type"])
     );
   };
 
@@ -39,39 +39,39 @@ const validateHolidayData = (data: unknown): HolidayData[] | null => {
 };
 
 const determineHolidayType = (
-  name: string
-): 'national' | 'regional' | 'local' => {
+  name: string,
+): "national" | "regional" | "local" => {
   const nationalHolidays = [
     "Cap d'Any",
-    'Reis',
-    'Divendres Sant',
-    'Dilluns de Pasqua Florida',
-    'Festa del Treball',
-    'Sant Joan',
+    "Reis",
+    "Divendres Sant",
+    "Dilluns de Pasqua Florida",
+    "Festa del Treball",
+    "Sant Joan",
     "L'Assumpció",
-    'Diada Nacional de Catalunya',
-    'Tots Sants',
-    'Dia de la Constitució',
-    'La Immaculada',
-    'Nadal',
-    'Sant Esteve',
+    "Diada Nacional de Catalunya",
+    "Tots Sants",
+    "Dia de la Constitució",
+    "La Immaculada",
+    "Nadal",
+    "Sant Esteve",
   ];
 
-  const localHolidays = ['Fira a Mataró', 'Festa major de Les Santes'];
+  const localHolidays = ["Fira a Mataró", "Festa major de Les Santes"];
 
   if (nationalHolidays.includes(name)) {
-    return 'national';
+    return "national";
   } else if (localHolidays.includes(name)) {
-    return 'local';
+    return "local";
   }
-  return 'regional';
+  return "regional";
 };
 
 const scrapeHolidaysFromMataroWebsite = async (
-  year: number
+  year: number,
 ): Promise<HolidayData[]> => {
   const MATARO_HOLIDAYS_URL =
-    'https://www.mataro.cat/ca/la-ciutat/festius-locals';
+    "https://www.mataro.cat/ca/la-ciutat/festius-locals";
 
   const response = await fetch(MATARO_HOLIDAYS_URL);
   const html = await response.text();
@@ -79,19 +79,19 @@ const scrapeHolidaysFromMataroWebsite = async (
   const dom = new JSDOM(html);
   const document = dom.window.document;
 
-  const table = document.querySelector('table');
+  const table = document.querySelector("table");
   if (!table) {
-    throw new Error('No se encontró la tabla de festivos en la página');
+    throw new Error("No se encontró la tabla de festivos en la página");
   }
 
-  const rows = table.querySelectorAll('tr');
+  const rows = table.querySelectorAll("tr");
   const holidays: HolidayData[] = [];
 
   for (let i = 1; i < rows.length; i++) {
     const row = rows[i];
     if (row === null || row === undefined) continue;
 
-    const cells = row.querySelectorAll('td');
+    const cells = row.querySelectorAll("td");
 
     if (cells.length >= 2) {
       const dateCell = cells[0]?.textContent?.trim();
@@ -99,14 +99,14 @@ const scrapeHolidaysFromMataroWebsite = async (
 
       if (
         dateCell?.trim() !== undefined &&
-        dateCell.trim() !== '' &&
+        dateCell.trim() !== "" &&
         nameCell?.trim() !== undefined &&
-        nameCell.trim() !== ''
+        nameCell.trim() !== ""
       ) {
         const dateMatch = dateCell.match(/(\d+)\s+(?:de|d['])\s*(\w+)/);
         if (dateMatch) {
-          const day = parseInt(dateMatch[1] ?? '0');
-          const monthName = (dateMatch[2] ?? '').toLowerCase();
+          const day = parseInt(dateMatch[1] ?? "0");
+          const monthName = (dateMatch[2] ?? "").toLowerCase();
 
           const monthMap: { [key: string]: number } = {
             gener: 1,
@@ -148,8 +148,8 @@ export const POST = async (request: NextRequest) => {
     const body = (await request.json()) as { year: number };
     const { year } = body;
 
-    if (typeof year !== 'number' || isNaN(year)) {
-      return NextResponse.json({ error: 'Año requerido' }, { status: 400 });
+    if (typeof year !== "number" || isNaN(year)) {
+      return NextResponse.json({ error: "Año requerido" }, { status: 400 });
     }
 
     // Extraer festivos de la web
@@ -157,25 +157,25 @@ export const POST = async (request: NextRequest) => {
 
     if (holidays.length === 0) {
       return NextResponse.json(
-        { error: 'No se encontraron festivos para importar' },
-        { status: 404 }
+        { error: "No se encontraron festivos para importar" },
+        { status: 404 },
       );
     }
 
     // Eliminar festivos existentes del año
-    await supabase.from('holidays').delete().eq('year', year);
+    await supabase.from("holidays").delete().eq("year", year);
 
     // Insertar nuevos festivos
     const { data, error: dbError } = await supabase
-      .from('holidays')
+      .from("holidays")
       .insert(holidays)
       .select();
 
     if (dbError) {
       // console.error('Error al importar festivos:', dbError);
       return NextResponse.json(
-        { error: 'Error al importar festivos a la base de datos' },
-        { status: 500 }
+        { error: "Error al importar festivos a la base de datos" },
+        { status: 500 },
       );
     }
     const holidaysData = validateHolidayData(data as unknown);
@@ -187,8 +187,8 @@ export const POST = async (request: NextRequest) => {
   } catch {
     // console.error('Error en la importación:', _error);
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 };

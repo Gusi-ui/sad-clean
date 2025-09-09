@@ -1,6 +1,6 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 
-import { supabase } from '@/lib/database';
+import { supabase } from "@/lib/database";
 
 interface NotificationSettingsRequest {
   settings: {
@@ -25,32 +25,32 @@ interface NotificationSettingsRequest {
 // GET - Obtener configuración de notificaciones del trabajador
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: workerId } = await params;
 
     if (!workerId) {
       return NextResponse.json(
-        { error: 'ID de trabajador requerido' },
-        { status: 400 }
+        { error: "ID de trabajador requerido" },
+        { status: 400 },
       );
     }
 
     // Buscar configuración existente
     const { data: settings, error: fetchError } = (await supabase
-      .from('worker_notification_settings')
-      .select('*')
-      .eq('worker_id', workerId)
+      .from("worker_notification_settings")
+      .select("*")
+      .eq("worker_id", workerId)
       .single()) as { data: Record<string, unknown> | null; error: unknown };
 
     if (
       fetchError !== null &&
-      (fetchError as { code?: string })?.code !== 'PGRST116'
+      (fetchError as { code?: string })?.code !== "PGRST116"
     ) {
       return NextResponse.json(
-        { error: 'Error al obtener configuración' },
-        { status: 500 }
+        { error: "Error al obtener configuración" },
+        { status: 500 },
       );
     }
 
@@ -81,8 +81,8 @@ export async function GET(
     return NextResponse.json({ settings });
   } catch {
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }
@@ -90,7 +90,7 @@ export async function GET(
 // POST - Crear o actualizar configuración de notificaciones
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: workerId } = await params;
@@ -99,29 +99,29 @@ export async function POST(
 
     if (!workerId) {
       return NextResponse.json(
-        { error: 'ID de trabajador requerido' },
-        { status: 400 }
+        { error: "ID de trabajador requerido" },
+        { status: 400 },
       );
     }
 
-    if (typeof settings !== 'object' || settings === null) {
+    if (typeof settings !== "object" || settings === null) {
       return NextResponse.json(
-        { error: 'Configuración requerida' },
-        { status: 400 }
+        { error: "Configuración requerida" },
+        { status: 400 },
       );
     }
 
     // Verificar que el trabajador existe
     const { data: worker, error: workerError } = await supabase
-      .from('workers')
-      .select('id')
-      .eq('id', workerId)
+      .from("workers")
+      .select("id")
+      .eq("id", workerId)
       .single();
 
     if (workerError || worker === null) {
       return NextResponse.json(
-        { error: 'Trabajador no encontrado' },
-        { status: 404 }
+        { error: "Trabajador no encontrado" },
+        { status: 404 },
       );
     }
 
@@ -133,32 +133,32 @@ export async function POST(
       vibration_enabled: Boolean(settings.vibration_enabled ?? true),
       new_user_notifications: Boolean(settings.new_user_notifications ?? true),
       schedule_change_notifications: Boolean(
-        settings.schedule_change_notifications ?? true
+        settings.schedule_change_notifications ?? true,
       ),
       assignment_change_notifications: Boolean(
-        settings.assignment_change_notifications ?? true
+        settings.assignment_change_notifications ?? true,
       ),
       route_update_notifications: Boolean(
-        settings.route_update_notifications ?? true
+        settings.route_update_notifications ?? true,
       ),
       service_start_notifications: Boolean(
-        settings.service_start_notifications ?? true
+        settings.service_start_notifications ?? true,
       ),
       service_end_notifications: Boolean(
-        settings.service_end_notifications ?? true
+        settings.service_end_notifications ?? true,
       ),
       reminder_notifications: Boolean(settings.reminder_notifications ?? true),
       urgent_notifications: Boolean(settings.urgent_notifications ?? true),
       holiday_update_notifications: Boolean(
-        settings.holiday_update_notifications ?? true
+        settings.holiday_update_notifications ?? true,
       ),
       system_notifications: Boolean(settings.system_notifications ?? true),
       quiet_hours_start:
-        typeof settings.quiet_hours_start === 'string'
+        typeof settings.quiet_hours_start === "string"
           ? settings.quiet_hours_start
           : null,
       quiet_hours_end:
-        typeof settings.quiet_hours_end === 'string'
+        typeof settings.quiet_hours_end === "string"
           ? settings.quiet_hours_end
           : null,
       updated_at: new Date().toISOString(),
@@ -166,19 +166,19 @@ export async function POST(
 
     // Intentar actualizar primero
     const { data: updatedSettings, error: updateError } = (await supabase
-      .from('worker_notification_settings')
+      .from("worker_notification_settings")
       .update(settingsData)
-      .eq('worker_id', workerId)
+      .eq("worker_id", workerId)
       .select()
       .single()) as {
       data: Record<string, unknown> | null;
       error: { code?: string } | null;
     };
 
-    if (updateError && updateError.code === 'PGRST116') {
+    if (updateError && updateError.code === "PGRST116") {
       // No existe, crear nuevo registro
       const { data: newSettings, error: insertError } = (await supabase
-        .from('worker_notification_settings')
+        .from("worker_notification_settings")
         .insert({
           ...settingsData,
           created_at: new Date().toISOString(),
@@ -188,32 +188,32 @@ export async function POST(
 
       if (insertError !== null) {
         return NextResponse.json(
-          { error: 'Error al crear configuración' },
-          { status: 500 }
+          { error: "Error al crear configuración" },
+          { status: 500 },
         );
       }
 
       return NextResponse.json({
         settings: newSettings as Record<string, unknown>,
-        message: 'Configuración creada correctamente',
+        message: "Configuración creada correctamente",
       });
     }
 
     if (updateError) {
       return NextResponse.json(
-        { error: 'Error al actualizar configuración' },
-        { status: 500 }
+        { error: "Error al actualizar configuración" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
       settings: updatedSettings as Record<string, unknown>,
-      message: 'Configuración actualizada correctamente',
+      message: "Configuración actualizada correctamente",
     });
   } catch {
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }
@@ -221,38 +221,38 @@ export async function POST(
 // DELETE - Eliminar configuración de notificaciones (resetear a valores por defecto)
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: workerId } = await params;
 
     if (!workerId) {
       return NextResponse.json(
-        { error: 'ID de trabajador requerido' },
-        { status: 400 }
+        { error: "ID de trabajador requerido" },
+        { status: 400 },
       );
     }
 
     // Eliminar configuración personalizada
     const { error: deleteError } = await supabase
-      .from('worker_notification_settings')
+      .from("worker_notification_settings")
       .delete()
-      .eq('worker_id', workerId);
+      .eq("worker_id", workerId);
 
     if (deleteError) {
       return NextResponse.json(
-        { error: 'Error al eliminar configuración' },
-        { status: 500 }
+        { error: "Error al eliminar configuración" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
-      message: 'Configuración restablecida a valores por defecto',
+      message: "Configuración restablecida a valores por defecto",
     });
   } catch {
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }

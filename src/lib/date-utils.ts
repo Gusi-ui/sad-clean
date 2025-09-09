@@ -34,7 +34,7 @@ export const getSundayOfWeek = (date: Date = new Date()): Date => {
  * @returns Objeto con start y end en formato YYYY-MM-DD
  */
 export const getWeekRange = (
-  date: Date = new Date()
+  date: Date = new Date(),
 ): {
   start: string;
   end: string;
@@ -43,8 +43,8 @@ export const getWeekRange = (
   const sunday = getSundayOfWeek(date);
 
   return {
-    start: monday.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
-    end: sunday.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
+    start: monday.toLocaleDateString("sv-SE"), // formato YYYY-MM-DD en zona horaria local
+    end: sunday.toLocaleDateString("sv-SE"), // formato YYYY-MM-DD en zona horaria local
   };
 };
 
@@ -54,7 +54,7 @@ export const getWeekRange = (
  * @returns Objeto con start y end en formato YYYY-MM-DD
  */
 export const getNextWeekRange = (
-  date: Date = new Date()
+  date: Date = new Date(),
 ): {
   start: string;
   end: string;
@@ -70,7 +70,7 @@ export const getNextWeekRange = (
  * @returns Objeto con start y end en formato YYYY-MM-DD
  */
 export const getMonthRange = (
-  date: Date = new Date()
+  date: Date = new Date(),
 ): {
   start: string;
   end: string;
@@ -79,8 +79,8 @@ export const getMonthRange = (
   const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
   return {
-    start: start.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
-    end: end.toLocaleDateString('sv-SE'), // formato YYYY-MM-DD en zona horaria local
+    start: start.toLocaleDateString("sv-SE"), // formato YYYY-MM-DD en zona horaria local
+    end: end.toLocaleDateString("sv-SE"), // formato YYYY-MM-DD en zona horaria local
   };
 };
 
@@ -90,7 +90,7 @@ export const getMonthRange = (
  * @returns Objeto con start y end en formato YYYY-MM-DD
  */
 export const getRemainingMonthRange = (
-  date: Date = new Date()
+  date: Date = new Date(),
 ): {
   start: string;
   end: string;
@@ -100,8 +100,8 @@ export const getRemainingMonthRange = (
   const end = new Date(date.getFullYear(), date.getMonth() + 1, 0);
 
   return {
-    start: tomorrow.toISOString().split('T')[0] ?? '',
-    end: end.toISOString().split('T')[0] ?? '',
+    start: tomorrow.toISOString().split("T")[0] ?? "",
+    end: end.toISOString().split("T")[0] ?? "",
   };
 };
 
@@ -126,13 +126,13 @@ export const isSunday = (date: Date): boolean => date.getDay() === 0;
  */
 export const getDayName = (date: Date): string => {
   const days = [
-    'domingo',
-    'lunes',
-    'martes',
-    'miércoles',
-    'jueves',
-    'viernes',
-    'sábado',
+    "domingo",
+    "lunes",
+    "martes",
+    "miércoles",
+    "jueves",
+    "viernes",
+    "sábado",
   ];
-  return days[date.getDay()] ?? 'lunes';
+  return days[date.getDay()] ?? "lunes";
 };

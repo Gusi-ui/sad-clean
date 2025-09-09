@@ -1,19 +1,19 @@
-import type { Activity, ActivityInsert } from '@/types';
-import { logger } from '@/utils/logger';
+import type { Activity, ActivityInsert } from "@/types";
+import { logger } from "@/utils/logger";
 
-import { supabase } from './database';
+import { supabase } from "./database";
 
 /**
  * Convierte una fecha a formato "time ago"
  */
 const toTimeAgo = (dateString: string | null): string => {
-  if (dateString === null) return 'Reciente';
+  if (dateString === null) return "Reciente";
 
   const date = new Date(dateString);
   const now = new Date();
   const diffInSeconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 
-  if (diffInSeconds < 60) return 'Hace un momento';
+  if (diffInSeconds < 60) return "Hace un momento";
   if (diffInSeconds < 3600)
     return `Hace ${Math.floor(diffInSeconds / 60)} minutos`;
   if (diffInSeconds < 86400)
@@ -51,7 +51,7 @@ type LogParams = {
 };
 
 export const logActivity = async (
-  activity: ActivityInsert
+  activity: ActivityInsert,
 ): Promise<string> => {
   try {
     const params: LogParams = {
@@ -70,12 +70,12 @@ export const logActivity = async (
 
     // Usar solo la función RPC (más confiable)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
-    const { data, error } = await supabase.rpc('log_system_activity', params);
+    const { data, error } = await supabase.rpc("log_system_activity", params);
 
     if (error !== null) {
-      logger.error('Error en RPC log_system_activity:', error);
+      logger.error("Error en RPC log_system_activity:", error);
       // Retornar ID temporal en lugar de fallar
-      return 'temp-activity-id';
+      return "temp-activity-id";
     }
 
     if (data !== null && data !== undefined) {
@@ -83,11 +83,11 @@ export const logActivity = async (
     }
 
     // Si no hay data, retornar ID temporal
-    return 'temp-activity-id';
+    return "temp-activity-id";
   } catch (error) {
-    logger.error('Error al registrar actividad:', error);
+    logger.error("Error al registrar actividad:", error);
     // Retornar ID temporal en lugar de fallar
-    return 'temp-activity-id';
+    return "temp-activity-id";
   }
 };
 
@@ -97,7 +97,7 @@ export const logActivity = async (
 export const getActivities = async (): Promise<Activity[]> => {
   try {
     const { data, error } = await supabase
-      .from('system_activities')
+      .from("system_activities")
       .select(
         `
         id,
@@ -107,13 +107,13 @@ export const getActivities = async (): Promise<Activity[]> => {
         entity_name,
         description,
         created_at
-      `
+      `,
       )
-      .order('created_at', { ascending: false })
+      .order("created_at", { ascending: false })
       .limit(6);
 
     if (error !== null) {
-      logger.error('Error al obtener actividades', error);
+      logger.error("Error al obtener actividades", error);
       throw error;
     }
 
@@ -136,12 +136,12 @@ export const getActivities = async (): Promise<Activity[]> => {
         description: activity.description,
         created_at: activity.created_at,
         time_ago: toTimeAgo(activity.created_at),
-      })
+      }),
     );
 
     return activitiesWithTimeAgo as Activity[];
   } catch (error) {
-    logger.error('Error al obtener actividades', error);
+    logger.error("Error al obtener actividades", error);
     throw error;
   }
 };
@@ -152,25 +152,25 @@ export const logWorkerActivity = async (
   adminEmail: string,
   action: string,
   workerName: string,
-  workerId: string
+  workerId: string,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: adminName,
     user_email: adminEmail,
     activity_type:
-      action === 'creó'
-        ? 'worker_created'
-        : action === 'actualizó'
-          ? 'worker_updated'
-          : 'worker_deleted',
-    entity_type: 'worker',
+      action === "creó"
+        ? "worker_created"
+        : action === "actualizó"
+          ? "worker_updated"
+          : "worker_deleted",
+    entity_type: "worker",
     entity_id: workerId, // Este es el ID de la trabajadora (entidad)
     entity_name: workerName,
     description: `${action} trabajador: ${workerName}`,
     details: {
       action,
-      entity: 'worker',
+      entity: "worker",
       worker_name: workerName,
       worker_id: workerId,
       admin_name: adminName,
@@ -184,25 +184,25 @@ export const logUserActivity = async (
   adminEmail: string,
   action: string,
   userName: string,
-  userId: string
+  userId: string,
 ): Promise<void> => {
   await logActivity({
     user_id: userId,
     user_name: adminName,
     user_email: adminEmail,
     activity_type:
-      action === 'creó'
-        ? 'user_created'
-        : action === 'actualizó'
-          ? 'user_updated'
-          : 'user_deleted',
-    entity_type: 'user',
+      action === "creó"
+        ? "user_created"
+        : action === "actualizó"
+          ? "user_updated"
+          : "user_deleted",
+    entity_type: "user",
     entity_id: userId,
     entity_name: userName,
     description: `${action} usuario: ${userName}`,
     details: {
       action,
-      entity: 'user',
+      entity: "user",
       user_name: userName,
       user_id: userId,
     },
@@ -214,22 +214,22 @@ export const logAssignmentActivity = async (
   action: string,
   assignmentType: string,
   workerName: string,
-  userName: string
+  userName: string,
 ): Promise<void> => {
   await logActivity({
-    user_id: '', // No tenemos user_id específico aquí
+    user_id: "", // No tenemos user_id específico aquí
     user_name: createdBy,
-    user_email: '', // No tenemos user_email específico aquí
-    activity_type: 'assignment_created',
-    entity_type: 'assignment',
-    entity_id: '', // No tenemos entity_id específico aquí
+    user_email: "", // No tenemos user_email específico aquí
+    activity_type: "assignment_created",
+    entity_type: "assignment",
+    entity_id: "", // No tenemos entity_id específico aquí
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
     description: `${action} asignación: ${assignmentType} para ${workerName} y ${userName}`,
     details: {
       action,
-      entity: 'assignment',
+      entity: "assignment",
       admin_name: createdBy,
-      admin_email: '', // No tenemos admin_email específico aquí
+      admin_email: "", // No tenemos admin_email específico aquí
       created_by: createdBy,
     },
   });
@@ -240,22 +240,22 @@ export const logAssignmentUpdateActivity = async (
   action: string,
   assignmentType: string,
   workerName: string,
-  userName: string
+  userName: string,
 ): Promise<void> => {
   await logActivity({
-    user_id: '', // No tenemos user_id específico aquí
+    user_id: "", // No tenemos user_id específico aquí
     user_name: updatedBy,
-    user_email: '', // No tenemos user_email específico aquí
-    activity_type: 'assignment_updated',
-    entity_type: 'assignment',
-    entity_id: '', // No tenemos entity_id específico aquí
+    user_email: "", // No tenemos user_email específico aquí
+    activity_type: "assignment_updated",
+    entity_type: "assignment",
+    entity_id: "", // No tenemos entity_id específico aquí
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
     description: `${action} asignación: ${assignmentType} para ${workerName} y ${userName}`,
     details: {
       action,
-      entity: 'assignment',
+      entity: "assignment",
       admin_name: updatedBy,
-      admin_email: '', // No tenemos admin_email específico aquí
+      admin_email: "", // No tenemos admin_email específico aquí
       updated_by: updatedBy,
     },
   });
@@ -269,20 +269,20 @@ export const logAssignmentDeleteActivity = async (
   workerName: string,
   workerId: string,
   userName: string,
-  userId: string
+  userId: string,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: deletedBy,
     user_email: deletedByEmail,
-    activity_type: 'assignment_cancelled',
-    entity_type: 'assignment',
+    activity_type: "assignment_cancelled",
+    entity_type: "assignment",
     entity_id: null, // No tenemos el ID de la asignación al eliminarla
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
     description: `${action} asignación: ${assignmentType} para ${workerName} y ${userName}`,
     details: {
       action,
-      entity: 'assignment',
+      entity: "assignment",
       admin_name: deletedBy,
       admin_email: deletedByEmail,
       deleted_by: deletedBy,
@@ -306,14 +306,14 @@ export const logAssignmentCreationActivity = async (
   userId: string,
   startDate: string,
   endDate: string,
-  weeklyHours: number
+  weeklyHours: number,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'assignment_created',
-    entity_type: 'assignment',
+    activity_type: "assignment_created",
+    entity_type: "assignment",
     entity_id: null, // No tenemos el ID de la asignación al crearla
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
     description: `${action} asignación: ${assignmentType} para ${workerName} y ${userName}`,
@@ -326,7 +326,7 @@ export const logAssignmentCreationActivity = async (
       start_date: startDate,
       end_date: endDate,
       weekly_hours: weeklyHours,
-      entity: 'assignment',
+      entity: "assignment",
       admin_name: adminName,
       admin_email: adminEmail,
     },
@@ -345,14 +345,14 @@ export const logAssignmentUpdateActivityDetailed = async (
   userId: string,
   startDate: string,
   endDate: string,
-  weeklyHours: number
+  weeklyHours: number,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'assignment_updated',
-    entity_type: 'assignment',
+    activity_type: "assignment_updated",
+    entity_type: "assignment",
     entity_id: assignmentId,
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
     description: `${action} asignación: ${assignmentType} para ${workerName} y ${userName}`,
@@ -367,7 +367,7 @@ export const logAssignmentUpdateActivityDetailed = async (
       end_date: endDate,
       weekly_hours: weeklyHours,
       action,
-      entity: 'assignment',
+      entity: "assignment",
       admin_name: adminName,
       admin_email: adminEmail,
     },
@@ -383,14 +383,14 @@ export const logAssignmentStatusChangeActivity = async (
   workerName: string,
   workerId: string,
   userName: string,
-  userId: string
+  userId: string,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'assignment_completed',
-    entity_type: 'assignment',
+    activity_type: "assignment_completed",
+    entity_type: "assignment",
     entity_id: assignmentId,
     entity_name: `${assignmentType} - ${workerName} - ${userName}`,
     description: `${action} asignación: ${assignmentType} para ${workerName} y ${userName}`,
@@ -402,7 +402,7 @@ export const logAssignmentStatusChangeActivity = async (
       user_name: userName,
       user_id: userId, // Este es el ID del usuario de la asignación
       action,
-      entity: 'assignment',
+      entity: "assignment",
       admin_name: adminName,
       admin_email: adminEmail,
     },
@@ -414,25 +414,25 @@ export const logUserManagementActivity = async (
   adminEmail: string,
   action: string,
   userName: string,
-  userId: string
+  userId: string,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: adminName,
     user_email: adminEmail,
     activity_type:
-      action === 'creó'
-        ? 'user_created'
-        : action === 'actualizó'
-          ? 'user_updated'
-          : 'user_deleted',
-    entity_type: 'user',
+      action === "creó"
+        ? "user_created"
+        : action === "actualizó"
+          ? "user_updated"
+          : "user_deleted",
+    entity_type: "user",
     entity_id: userId, // Este es el ID del usuario que se está gestionando
     entity_name: userName,
     description: `${action} usuario: ${userName}`,
     details: {
       action,
-      entity: 'user',
+      entity: "user",
       user_name: userName,
       user_id: userId, // Este es el ID del usuario que se está gestionando
       admin_name: adminName,
@@ -446,20 +446,20 @@ export const logUserUpdateActivity = async (
   adminEmail: string,
   action: string,
   userName: string,
-  userId: string
+  userId: string,
 ): Promise<void> => {
   await logActivity({
     user_id: null, // No tenemos el ID del admin, solo su nombre y email
     user_name: adminName,
     user_email: adminEmail,
-    activity_type: 'user_updated',
-    entity_type: 'user',
+    activity_type: "user_updated",
+    entity_type: "user",
     entity_id: userId, // Este es el ID del usuario que se está actualizando
     entity_name: userName,
     description: `${action} usuario: ${userName}`,
     details: {
       action,
-      entity: 'user',
+      entity: "user",
       user_name: userName,
       user_id: userId, // Este es el ID del usuario que se está actualizando
       admin_name: adminName,

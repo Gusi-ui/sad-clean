@@ -64,10 +64,12 @@ Para verificar que las variables están configuradas correctamente:
 
 ```javascript
 // Abre la consola del navegador (F12) y ejecuta:
-console.log('Supabase URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
 console.log(
-  'Supabase Key:',
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? '✅ Configurada' : '❌ No configurada'
+  "Supabase Key:",
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+    ? "✅ Configurada"
+    : "❌ No configurada",
 );
 ```
 

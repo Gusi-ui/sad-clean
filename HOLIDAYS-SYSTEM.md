@@ -164,7 +164,7 @@ Para agosto 2025 en Mataró:
 ```typescript
 // Verificar si una fecha es festivo
 const isHoliday = (date: Date): boolean => {
-  const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+  const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
   return holidaySet.has(dateKey);
 };
 ```

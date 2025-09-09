@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
-import { useRouter } from 'next/navigation';
+import { useRouter } from "next/navigation";
 
-import { Button, Input } from '@/components/ui';
-import { useAuth } from '@/contexts/AuthContext';
+import { Button, Input } from "@/components/ui";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function LoginForm() {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -21,7 +21,7 @@ export default function LoginForm() {
 
   // Cargar email guardado del localStorage
   useEffect(() => {
-    const savedEmail = localStorage.getItem('sad_last_email');
+    const savedEmail = localStorage.getItem("sad_last_email");
     if (savedEmail !== null) {
       setEmail(savedEmail);
     }
@@ -29,14 +29,14 @@ export default function LoginForm() {
 
   // Validación en tiempo real del email
   useEffect(() => {
-    if (email === '') {
+    if (email === "") {
       setEmailError(null);
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      setEmailError('Por favor, introduce un email válido');
+      setEmailError("Por favor, introduce un email válido");
     } else {
       setEmailError(null);
     }
@@ -44,13 +44,13 @@ export default function LoginForm() {
 
   // Validación en tiempo real de la contraseña
   useEffect(() => {
-    if (password === '') {
+    if (password === "") {
       setPasswordError(null);
       return;
     }
 
     if (password.length < 6) {
-      setPasswordError('La contraseña debe tener al menos 6 caracteres');
+      setPasswordError("La contraseña debe tener al menos 6 caracteres");
     } else {
       setPasswordError(null);
     }
@@ -69,7 +69,7 @@ export default function LoginForm() {
 
     try {
       // Guardar email en localStorage
-      localStorage.setItem('sad_last_email', email);
+      localStorage.setItem("sad_last_email", email);
 
       const { error: signInError, redirectTo } = await signIn({
         email,
@@ -77,17 +77,17 @@ export default function LoginForm() {
       });
 
       if (signInError != null) {
-        setError(signInError ?? 'Error de autenticación');
+        setError(signInError ?? "Error de autenticación");
         setLoading(false);
       } else if (redirectTo !== undefined) {
         // Redirección inmediata sin mantener loading
         router.replace(redirectTo);
       } else {
-        setError('Error de configuración. Contacta con soporte.');
+        setError("Error de configuración. Contacta con soporte.");
         setLoading(false);
       }
     } catch {
-      setError('Error inesperado. Inténtalo de nuevo.');
+      setError("Error inesperado. Inténtalo de nuevo.");
       setLoading(false);
     }
   };
@@ -101,89 +101,89 @@ export default function LoginForm() {
   };
 
   const isFormValid =
-    email !== '' &&
-    password !== '' &&
+    email !== "" &&
+    password !== "" &&
     emailError === null &&
     passwordError === null;
 
   return (
-    <div className='min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8'>
-      <div className='max-w-md w-full space-y-8'>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-md w-full space-y-8">
         {/* Logo y Header */}
-        <div className='text-center'>
-          <div className='flex justify-center mb-6'>
-            <div className='w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600'>
+        <div className="text-center">
+          <div className="flex justify-center mb-6">
+            <div className="w-20 h-20 rounded-2xl flex items-center justify-center shadow-xl overflow-hidden bg-gradient-to-br from-blue-600 to-indigo-600">
               <svg
-                xmlns='http://www.w3.org/2000/svg'
-                viewBox='0 0 64 64'
-                width='48'
-                height='48'
-                className='w-full h-full'
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 64 64"
+                width="48"
+                height="48"
+                className="w-full h-full"
               >
                 <defs>
                   <linearGradient
-                    id='loginLogoGradient'
-                    x1='0%'
-                    y1='0%'
-                    x2='100%'
-                    y2='100%'
+                    id="loginLogoGradient"
+                    x1="0%"
+                    y1="0%"
+                    x2="100%"
+                    y2="100%"
                   >
-                    <stop offset='0%' stopColor='#3b82f6' />
-                    <stop offset='100%' stopColor='#22c55e' />
+                    <stop offset="0%" stopColor="#3b82f6" />
+                    <stop offset="100%" stopColor="#22c55e" />
                   </linearGradient>
                 </defs>
-                <circle cx='32' cy='32' r='30' fill='url(#loginLogoGradient)' />
+                <circle cx="32" cy="32" r="30" fill="url(#loginLogoGradient)" />
                 <path
-                  d='M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z'
-                  fill='white'
-                  stroke='white'
-                  strokeWidth='2'
-                  strokeLinecap='round'
-                  strokeLinejoin='round'
+                  d="M32 50C32 50 12 36.36 12 24.5C12 17.6 17.6 12 24.5 12C28.09 12 31.36 13.94 32 16.35C32.64 13.94 35.91 12 39.5 12C46.4 12 52 17.6 52 24.5C52 36.36 32 50 32 50Z"
+                  fill="white"
+                  stroke="white"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
                 />
               </svg>
             </div>
           </div>
-          <h2 className='text-3xl font-bold text-gray-900 mb-2'>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
             Bienvenido de vuelta
           </h2>
-          <p className='text-gray-600'>
+          <p className="text-gray-600">
             Accede a tu cuenta para gestionar servicios asistenciales
           </p>
         </div>
 
         {/* Formulario */}
-        <div className='bg-white rounded-2xl shadow-xl p-8 border border-gray-100'>
-          <form className='space-y-6' onSubmit={handleFormSubmit}>
+        <div className="bg-white rounded-2xl shadow-xl p-8 border border-gray-100">
+          <form className="space-y-6" onSubmit={handleFormSubmit}>
             {/* Campo Email */}
             <div>
               <label
-                htmlFor='email'
-                className='block text-sm font-semibold text-gray-700 mb-2'
+                htmlFor="email"
+                className="block text-sm font-semibold text-gray-700 mb-2"
               >
                 Correo Electrónico
               </label>
-              <div className='relative'>
+              <div className="relative">
                 <Input
-                  id='email'
-                  name='email'
-                  type='email'
-                  autoComplete='email'
+                  id="email"
+                  name="email"
+                  type="email"
+                  autoComplete="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder='tu@email.com'
+                  placeholder="tu@email.com"
                   className={`mt-1 pr-10 ${
                     emailError !== null
-                      ? 'border-red-300 focus:border-red-500'
-                      : ''
+                      ? "border-red-300 focus:border-red-500"
+                      : ""
                   }`}
                   aria-describedby={
-                    emailError !== null ? 'email-error' : undefined
+                    emailError !== null ? "email-error" : undefined
                   }
                 />
                 {emailError !== null && (
-                  <div id='email-error' className='mt-1 text-sm text-red-600'>
+                  <div id="email-error" className="mt-1 text-sm text-red-600">
                     {emailError}
                   </div>
                 )}
@@ -193,78 +193,78 @@ export default function LoginForm() {
             {/* Campo Contraseña */}
             <div>
               <label
-                htmlFor='password'
-                className='block text-sm font-semibold text-gray-700 mb-2'
+                htmlFor="password"
+                className="block text-sm font-semibold text-gray-700 mb-2"
               >
                 Contraseña
               </label>
-              <div className='relative'>
+              <div className="relative">
                 <Input
-                  id='password'
-                  name='password'
-                  type={showPassword ? 'text' : 'password'}
-                  autoComplete='current-password'
+                  id="password"
+                  name="password"
+                  type={showPassword ? "text" : "password"}
+                  autoComplete="current-password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder='••••••••'
+                  placeholder="••••••••"
                   className={`mt-1 pr-12 ${
                     passwordError !== null
-                      ? 'border-red-300 focus:border-red-500'
-                      : ''
+                      ? "border-red-300 focus:border-red-500"
+                      : ""
                   }`}
                   aria-describedby={
-                    passwordError !== null ? 'password-error' : undefined
+                    passwordError !== null ? "password-error" : undefined
                   }
                 />
                 <button
-                  type='button'
+                  type="button"
                   onClick={togglePasswordVisibility}
-                  className='absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors'
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600 transition-colors"
                   aria-label={
-                    showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'
+                    showPassword ? "Ocultar contraseña" : "Mostrar contraseña"
                   }
                 >
                   {showPassword ? (
                     <svg
-                      className='h-5 w-5'
-                      fill='none'
-                      viewBox='0 0 24 24'
-                      stroke='currentColor'
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
                       <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         strokeWidth={2}
-                        d='M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21'
+                        d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.878 9.878L3 3m6.878 6.878L21 21"
                       />
                     </svg>
                   ) : (
                     <svg
-                      className='h-5 w-5'
-                      fill='none'
-                      viewBox='0 0 24 24'
-                      stroke='currentColor'
+                      className="h-5 w-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
                     >
                       <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         strokeWidth={2}
-                        d='M15 12a3 3 0 11-6 0 3 3 0 016 0z'
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
                       />
                       <path
-                        strokeLinecap='round'
-                        strokeLinejoin='round'
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
                         strokeWidth={2}
-                        d='M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'
+                        d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
                       />
                     </svg>
                   )}
                 </button>
                 {passwordError !== null && (
                   <div
-                    id='password-error'
-                    className='mt-1 text-sm text-red-600'
+                    id="password-error"
+                    className="mt-1 text-sm text-red-600"
                   >
                     {passwordError}
                   </div>
@@ -273,27 +273,27 @@ export default function LoginForm() {
             </div>
 
             {/* Mensaje de Error General */}
-            {error !== null && error !== '' && (
+            {error !== null && error !== "" && (
               <div
-                className='bg-red-50 border border-red-200 rounded-lg p-4'
-                role='alert'
+                className="bg-red-50 border border-red-200 rounded-lg p-4"
+                role="alert"
               >
-                <div className='flex'>
-                  <div className='flex-shrink-0'>
+                <div className="flex">
+                  <div className="flex-shrink-0">
                     <svg
-                      className='h-5 w-5 text-red-400'
-                      viewBox='0 0 20 20'
-                      fill='currentColor'
+                      className="h-5 w-5 text-red-400"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
                     >
                       <path
-                        fillRule='evenodd'
-                        d='M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z'
-                        clipRule='evenodd'
+                        fillRule="evenodd"
+                        d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z"
+                        clipRule="evenodd"
                       />
                     </svg>
                   </div>
-                  <div className='ml-3'>
-                    <p className='text-sm text-red-600'>{error}</p>
+                  <div className="ml-3">
+                    <p className="text-sm text-red-600">{error}</p>
                   </div>
                 </div>
               </div>
@@ -301,17 +301,17 @@ export default function LoginForm() {
 
             {/* Botón de Inicio de Sesión */}
             <Button
-              type='submit'
+              type="submit"
               disabled={!isFormValid || loading}
-              className='w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
             >
               {loading ? (
-                <div className='flex items-center justify-center space-x-2'>
-                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+                <div className="flex items-center justify-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                   <span>Verificando credenciales...</span>
                 </div>
               ) : (
-                <div className='flex items-center justify-center space-x-2'>
+                <div className="flex items-center justify-center space-x-2">
                   <span>🔐</span>
                   <span>Iniciar Sesión</span>
                 </div>
@@ -319,12 +319,12 @@ export default function LoginForm() {
             </Button>
 
             {/* Información de Ayuda */}
-            <div className='text-center'>
-              <p className='text-sm text-gray-600'>
-                ¿Necesitas ayuda?{' '}
+            <div className="text-center">
+              <p className="text-sm text-gray-600">
+                ¿Necesitas ayuda?{" "}
                 <a
-                  href='mailto:info@alamia.es?subject=Ayuda con acceso a SAD'
-                  className='text-blue-600 hover:text-blue-800 font-medium transition-colors'
+                  href="mailto:info@alamia.es?subject=Ayuda con acceso a SAD"
+                  className="text-blue-600 hover:text-blue-800 font-medium transition-colors"
                 >
                   Contacta con administración
                 </a>
@@ -334,24 +334,24 @@ export default function LoginForm() {
         </div>
 
         {/* Footer */}
-        <div className='text-center'>
-          <div className='relative'>
-            <div className='absolute inset-0 flex items-center'>
-              <div className='w-full border-t border-gray-300' />
+        <div className="text-center">
+          <div className="relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300" />
             </div>
-            <div className='relative flex justify-center text-sm'>
-              <span className='px-4 bg-gradient-to-br from-blue-50 via-white to-indigo-50 text-gray-500 font-medium'>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-4 bg-gradient-to-br from-blue-50 via-white to-indigo-50 text-gray-500 font-medium">
                 Sistema de Ayuda a Domicilio
               </span>
             </div>
           </div>
-          <p className='mt-4 text-xs text-gray-400'>
+          <p className="mt-4 text-xs text-gray-400">
             © 2025 SAD - Sistema de Gestión de Servicios Asistenciales
             Domiciliarios
           </p>
-          <p className='mt-1 text-xs text-gray-400'>
-            Hecho con mucho ❤️ por{' '}
-            <span className='font-medium text-gray-600'>Gusi</span>
+          <p className="mt-1 text-xs text-gray-400">
+            Hecho con mucho ❤️ por{" "}
+            <span className="font-medium text-gray-600">Gusi</span>
           </p>
         </div>
       </div>

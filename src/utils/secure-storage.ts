@@ -8,9 +8,9 @@ interface SecureStorageData {
 }
 
 class SecureStorage {
-  private readonly storageKey = 'sad_secure_storage';
+  private readonly storageKey = "sad_secure_storage";
   private readonly encryptionKey =
-    process.env.NEXT_PUBLIC_SECURE_STORAGE_KEY ?? 'sad_secure_key_2025'; // En producción, configurar NEXT_PUBLIC_SECURE_STORAGE_KEY
+    process.env.NEXT_PUBLIC_SECURE_STORAGE_KEY ?? "sad_secure_key_2025"; // En producción, configurar NEXT_PUBLIC_SECURE_STORAGE_KEY
 
   /**
    * Encripta datos básicos (en producción usar librería de encriptación)
@@ -27,7 +27,7 @@ class SecureStorage {
     try {
       return decodeURIComponent(atob(encryptedData));
     } catch {
-      return '';
+      return "";
     }
   }
 
@@ -35,11 +35,11 @@ class SecureStorage {
    * Obtiene todos los datos almacenados de forma segura
    */
   private getStorageData(): SecureStorageData {
-    if (typeof window === 'undefined') return {};
+    if (typeof window === "undefined") return {};
 
     try {
       const encryptedData = localStorage.getItem(this.storageKey);
-      if (encryptedData === null || encryptedData === '') return {};
+      if (encryptedData === null || encryptedData === "") return {};
 
       const decryptedData = this.decrypt(encryptedData);
       return JSON.parse(decryptedData) as SecureStorageData;
@@ -52,7 +52,7 @@ class SecureStorage {
    * Guarda datos de forma segura
    */
   private setStorageData(data: SecureStorageData): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
 
     try {
       const jsonData = JSON.stringify(data);
@@ -94,7 +94,7 @@ class SecureStorage {
    * Limpia todos los datos almacenados
    */
   clear(): void {
-    if (typeof window === 'undefined') return;
+    if (typeof window === "undefined") return;
     localStorage.removeItem(this.storageKey);
   }
 

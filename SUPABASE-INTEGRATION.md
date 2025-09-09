@@ -30,19 +30,19 @@ resumen de lo que se ha implementado:
 ### **Gestión de Workers**
 
 ```typescript
-import { createWorker, getActiveWorkers, updateWorker } from '@/lib/database';
+import { createWorker, getActiveWorkers, updateWorker } from "@/lib/database";
 
 // Obtener workers activos
 const workers = await getActiveWorkers();
 
 // Crear nuevo worker
 const newWorker = await createWorker({
-  name: 'Juan',
-  surname: 'Pérez',
-  email: 'juan@example.com',
-  phone: '123456789',
-  dni: '12345678A',
-  worker_type: 'caregiver',
+  name: "Juan",
+  surname: "Pérez",
+  email: "juan@example.com",
+  phone: "123456789",
+  dni: "12345678A",
+  worker_type: "caregiver",
   is_active: true,
 });
 ```
@@ -50,31 +50,31 @@ const newWorker = await createWorker({
 ### **Gestión de Asignaciones**
 
 ```typescript
-import { createAssignment, getWorkerAssignments } from '@/lib/database';
+import { createAssignment, getWorkerAssignments } from "@/lib/database";
 
 // Obtener asignaciones de un worker
-const assignments = await getWorkerAssignments('worker-id');
+const assignments = await getWorkerAssignments("worker-id");
 
 // Crear nueva asignación
 const newAssignment = await createAssignment({
-  worker_id: 'worker-id',
-  user_id: 'user-id',
-  assignment_type: 'daily_care',
-  start_date: '2024-01-01',
-  end_date: '2024-12-31',
+  worker_id: "worker-id",
+  user_id: "user-id",
+  assignment_type: "daily_care",
+  start_date: "2024-01-01",
+  end_date: "2024-12-31",
   weekly_hours: 40,
   priority: 1,
-  status: 'pending',
+  status: "pending",
 });
 ```
 
 ### **Estadísticas y Reportes**
 
 ```typescript
-import { getWorkerStats } from '@/lib/database';
+import { getWorkerStats } from "@/lib/database";
 
 // Obtener estadísticas de un worker
-const stats = await getWorkerStats('worker-id', '2024-01-01', '2024-12-31');
+const stats = await getWorkerStats("worker-id", "2024-01-01", "2024-12-31");
 // Retorna: { totalHours, completedTasks, totalTasks, completionRate }
 ```
 

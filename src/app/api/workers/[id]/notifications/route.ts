@@ -1,8 +1,8 @@
-import { type NextRequest, NextResponse } from 'next/server';
+import { type NextRequest, NextResponse } from "next/server";
 
-import { supabase } from '@/lib/database';
-import type { NotificationPriority, NotificationType } from '@/types';
-import type { WorkerNotificationInsert } from '@/types/database-types';
+import { supabase } from "@/lib/database";
+import type { NotificationPriority, NotificationType } from "@/types";
+import type { WorkerNotificationInsert } from "@/types/database-types";
 
 interface CreateNotificationRequest {
   title?: string;
@@ -20,45 +20,45 @@ interface UpdateNotificationsRequest {
 // GET /api/workers/[id]/notifications - Obtener notificaciones del trabajador
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: workerId } = await params;
     const { searchParams } = new URL(request.url);
-    const unreadOnly = searchParams.get('unread') === 'true';
-    const limit = parseInt(searchParams.get('limit') ?? '50');
-    const offset = parseInt(searchParams.get('offset') ?? '0');
+    const unreadOnly = searchParams.get("unread") === "true";
+    const limit = parseInt(searchParams.get("limit") ?? "50");
+    const offset = parseInt(searchParams.get("offset") ?? "0");
 
     let query = supabase
-      .from('worker_notifications')
-      .select('*')
-      .eq('worker_id', workerId)
-      .order('sent_at', { ascending: false })
+      .from("worker_notifications")
+      .select("*")
+      .eq("worker_id", workerId)
+      .order("sent_at", { ascending: false })
       .range(offset, offset + limit - 1);
 
     if (unreadOnly) {
-      query = query.is('read_at', null);
+      query = query.is("read_at", null);
     }
 
     // Filtrar notificaciones no expiradas
     query = query.or(
-      `expires_at.is.null,expires_at.gt.${new Date().toISOString()}`
+      `expires_at.is.null,expires_at.gt.${new Date().toISOString()}`,
     );
 
     const { data: notifications, error } = await query;
 
     if (error !== null) {
       return NextResponse.json(
-        { error: 'Error al obtener notificaciones' },
-        { status: 500 }
+        { error: "Error al obtener notificaciones" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({ notifications });
   } catch {
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }
@@ -66,7 +66,7 @@ export async function GET(
 // POST /api/workers/[id]/notifications - Crear nueva notificación
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: workerId } = await params;
@@ -77,17 +77,17 @@ export async function POST(
       type,
       data,
       expires_at,
-      priority = 'normal',
+      priority = "normal",
     } = body;
 
     if (
-      typeof title !== 'string' ||
-      typeof notificationBody !== 'string' ||
-      typeof type !== 'string'
+      typeof title !== "string" ||
+      typeof notificationBody !== "string" ||
+      typeof type !== "string"
     ) {
       return NextResponse.json(
-        { error: 'Faltan campos requeridos: title, body, type' },
-        { status: 400 }
+        { error: "Faltan campos requeridos: title, body, type" },
+        { status: 400 },
       );
     }
 
@@ -103,48 +103,48 @@ export async function POST(
 
     // Debug logging for notification creation (remove in production)
     // eslint-disable-next-line no-console
-    console.log('Intentando crear notificación:', notificationData);
+    console.log("Intentando crear notificación:", notificationData);
     // eslint-disable-next-line no-console
-    console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log("SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL);
     // Debug logging for service role key (remove in production)
     // eslint-disable-next-line no-console
     console.log(
-      'SERVICE_ROLE_KEY length:',
-      process.env.SUPABASE_SERVICE_ROLE_KEY?.length
+      "SERVICE_ROLE_KEY length:",
+      process.env.SUPABASE_SERVICE_ROLE_KEY?.length,
     );
 
     const { data: notification, error } = (await supabase
-      .from('worker_notifications')
+      .from("worker_notifications")
       .insert(notificationData)
       .select()
       .single()) as { data: Record<string, unknown> | null; error: unknown };
 
     if (error !== null) {
       // eslint-disable-next-line no-console
-      console.error('Error al crear notificación:', error);
+      console.error("Error al crear notificación:", error);
       return NextResponse.json(
         {
-          error: 'Error al crear notificación',
+          error: "Error al crear notificación",
           details: error,
         },
-        { status: 500 }
+        { status: 500 },
       );
     }
 
     // eslint-disable-next-line no-console
-    console.log('Notificación creada exitosamente:', notification);
+    console.log("Notificación creada exitosamente:", notification);
 
     // Enviar notificación push en tiempo real aquí
     // await sendPushNotification(notification);
 
     return NextResponse.json(
       { notification: notification as Record<string, unknown> },
-      { status: 201 }
+      { status: 201 },
     );
   } catch {
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }
@@ -152,7 +152,7 @@ export async function POST(
 // PATCH /api/workers/[id]/notifications - Marcar notificaciones como leídas
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
     const { id: workerId } = await params;
@@ -160,36 +160,36 @@ export async function PATCH(
     const { notification_ids: notificationIds } = body;
 
     let query = supabase
-      .from('worker_notifications')
+      .from("worker_notifications")
       .update({ read_at: new Date().toISOString() })
-      .eq('worker_id', workerId);
+      .eq("worker_id", workerId);
 
     if (!Array.isArray(notificationIds) || notificationIds.length === 0) {
       return NextResponse.json(
-        { error: 'notification_ids es requerido y debe ser un array no vacío' },
-        { status: 400 }
+        { error: "notification_ids es requerido y debe ser un array no vacío" },
+        { status: 400 },
       );
     }
 
-    query = query.in('id', notificationIds);
+    query = query.in("id", notificationIds);
 
     const { data, error } = await query.select();
 
     if (error) {
       return NextResponse.json(
-        { error: 'Error al actualizar notificaciones' },
-        { status: 500 }
+        { error: "Error al actualizar notificaciones" },
+        { status: 500 },
       );
     }
 
     return NextResponse.json({
-      message: 'Notificaciones actualizadas correctamente',
+      message: "Notificaciones actualizadas correctamente",
       updated_count: data?.length ?? 0,
     });
   } catch {
     return NextResponse.json(
-      { error: 'Error interno del servidor' },
-      { status: 500 }
+      { error: "Error interno del servidor" },
+      { status: 500 },
     );
   }
 }

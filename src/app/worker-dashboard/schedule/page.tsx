@@ -1,18 +1,18 @@
-'use client';
+"use client";
 
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 
-import Link from 'next/link';
+import Link from "next/link";
 
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import { Button } from '@/components/ui';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/database';
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import { Button } from "@/components/ui";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/database";
 import {
   getMonthRange,
   getNextWeekRange,
   getWeekRange,
-} from '@/lib/date-utils';
+} from "@/lib/date-utils";
 
 interface AssignmentRow {
   id: string;
@@ -35,7 +35,7 @@ const WeeklySchedule = (props: {
   getScheduleSlots: (
     schedule: unknown,
     assignmentType: string,
-    date: Date
+    date: Date,
   ) => Array<{ start: string; end: string }>;
   weekStart: Date;
   weekEnd: Date;
@@ -53,21 +53,21 @@ const WeeklySchedule = (props: {
     dayName: string;
   };
   const toMinutes = (hhmm: string): number => {
-    const [h, m] = hhmm.split(':');
+    const [h, m] = hhmm.split(":");
     return Number(h) * 60 + Number(m);
   };
   const formatDate = (dateStr: string): string => {
     const date = new Date(dateStr);
-    return date.toLocaleDateString('es-ES', {
-      weekday: 'short',
-      day: 'numeric',
-      month: 'short',
+    return date.toLocaleDateString("es-ES", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
     });
   };
   // Función para verificar si una fecha es festivo (solo desde BD)
   // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return holidaySet?.has(dateKey) ?? false;
   };
   // Función para verificar si una trabajadora debe trabajar en una fecha específica
@@ -77,20 +77,20 @@ const WeeklySchedule = (props: {
     // Domingo (0) y Sábado (6)
     const isSunday = dayOfWeek === 0;
     const isSaturday = dayOfWeek === 6;
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     const isHoliday = holidaySet?.has(dateKey) === true || isKnownHoliday(date);
     // Lógica según tipo de trabajadora
     switch (type) {
-      case 'laborables':
+      case "laborables":
         // Solo trabaja lunes a viernes, NO festivos
         return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
-      case 'festivos':
+      case "festivos":
         // Solo trabaja festivos y fines de semana (sábado y domingo)
         return isSaturday || isSunday || isHoliday;
-      case 'flexible':
+      case "flexible":
         // Trabaja todos los días
         return true;
-      case 'daily':
+      case "daily":
         // Trabaja todos los días
         return true;
       default:
@@ -101,13 +101,13 @@ const WeeklySchedule = (props: {
   // Generar slots para toda la semana
   const allSlots: TimeSlot[] = assignments.flatMap((a) => {
     const label =
-      `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() || 'Servicio';
+      `${a.users?.name ?? ""} ${a.users?.surname ?? ""}`.trim() || "Servicio";
     const slots: TimeSlot[] = [];
     const current = new Date(weekStart);
     while (current.getTime() <= weekEnd.getTime()) {
       const currentDate = new Date(current);
       // Verificar si la trabajadora debe trabajar en esta fecha
-      const assignmentType = a.assignment_type ?? '';
+      const assignmentType = a.assignment_type ?? "";
       if (!shouldWorkOnDate(currentDate, assignmentType)) {
         current.setDate(current.getDate() + 1);
         continue;
@@ -115,13 +115,13 @@ const WeeklySchedule = (props: {
       const daySlots = getScheduleSlots(
         a.schedule,
         a.assignment_type,
-        currentDate
+        currentDate,
       );
       // Solo agregar servicios si hay slots para este día
       if (daySlots.length > 0) {
         daySlots.forEach((s) => {
           const sm = toMinutes(s.start);
-          const dateStr = currentDate.toISOString().split('T')[0] ?? '';
+          const dateStr = currentDate.toISOString().split("T")[0] ?? "";
           slots.push({
             assignmentId: a.id,
             userLabel: label,
@@ -155,55 +155,55 @@ const WeeklySchedule = (props: {
       }
       return acc;
     },
-    {}
+    {},
   );
   const dayNames = [
-    'Lunes',
-    'Martes',
-    'Miércoles',
-    'Jueves',
-    'Viernes',
-    'Sábado',
-    'Domingo',
+    "Lunes",
+    "Martes",
+    "Miércoles",
+    "Jueves",
+    "Viernes",
+    "Sábado",
+    "Domingo",
   ];
   return (
-    <div className='space-y-4 sm:space-y-6'>
+    <div className="space-y-4 sm:space-y-6">
       {dayNames.map((dayName, index) => {
         const currentDate = new Date(weekStart);
         currentDate.setDate(weekStart.getDate() + index);
-        const dateKey = currentDate.toISOString().split('T')[0];
-        const daySlots = groupedByDay[dateKey ?? ''] ?? [];
+        const dateKey = currentDate.toISOString().split("T")[0];
+        const daySlots = groupedByDay[dateKey ?? ""] ?? [];
         return (
-          <div key={dayName} className='bg-gray-50 rounded-xl p-3 sm:p-4'>
-            <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3'>
-              <span className='block sm:inline'>{dayName}</span>
-              <span className='block sm:inline text-sm sm:text-base font-normal text-gray-600 sm:ml-2'>
-                {currentDate.toLocaleDateString('es-ES', {
-                  day: 'numeric',
-                  month: 'long',
+          <div key={dayName} className="bg-gray-50 rounded-xl p-3 sm:p-4">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-2 sm:mb-3">
+              <span className="block sm:inline">{dayName}</span>
+              <span className="block sm:inline text-sm sm:text-base font-normal text-gray-600 sm:ml-2">
+                {currentDate.toLocaleDateString("es-ES", {
+                  day: "numeric",
+                  month: "long",
                 })}
               </span>
             </h3>
             {daySlots.length === 0 ? (
-              <div className='text-center py-4'>
-                <p className='text-gray-500 italic text-sm sm:text-base'>
+              <div className="text-center py-4">
+                <p className="text-gray-500 italic text-sm sm:text-base">
                   Sin servicios programados
                 </p>
               </div>
             ) : (
-              <div className='space-y-2 sm:space-y-3'>
+              <div className="space-y-2 sm:space-y-3">
                 {daySlots.map((slot, slotIndex) => {
                   // Lógica simple de colores basada en la fecha
                   const now = new Date();
                   const today = new Date(
                     now.getFullYear(),
                     now.getMonth(),
-                    now.getDate()
+                    now.getDate(),
                   );
                   const serviceDate = new Date(
                     currentDate.getFullYear(),
                     currentDate.getMonth(),
-                    currentDate.getDate()
+                    currentDate.getDate(),
                   );
 
                   // Determinar colores y textos de estado
@@ -221,44 +221,44 @@ const WeeklySchedule = (props: {
                   const isCompleted = isToday && nowMinutes >= endMinutes;
 
                   const bgColor = isPastDay
-                    ? 'bg-rose-100 border-rose-300'
+                    ? "bg-rose-100 border-rose-300"
                     : isFutureDay || (isToday && !isInProgress && !isCompleted)
-                      ? 'bg-amber-100 border-amber-300'
+                      ? "bg-amber-100 border-amber-300"
                       : isInProgress
-                        ? 'bg-green-100 border-green-300'
-                        : 'bg-rose-100 border-rose-300';
+                        ? "bg-green-100 border-green-300"
+                        : "bg-rose-100 border-rose-300";
 
                   const badgeText = isPastDay
-                    ? 'Completado'
+                    ? "Completado"
                     : isFutureDay || (isToday && !isInProgress && !isCompleted)
-                      ? 'Pendiente'
+                      ? "Pendiente"
                       : isInProgress
-                        ? 'En curso'
-                        : 'Completado';
+                        ? "En curso"
+                        : "Completado";
 
                   const badgeColor = isPastDay
-                    ? 'bg-white/80 text-rose-800 ring-1 ring-rose-300'
+                    ? "bg-white/80 text-rose-800 ring-1 ring-rose-300"
                     : isFutureDay || (isToday && !isInProgress && !isCompleted)
-                      ? 'bg-white/80 text-amber-800 ring-1 ring-amber-300'
+                      ? "bg-white/80 text-amber-800 ring-1 ring-amber-300"
                       : isInProgress
-                        ? 'bg-white/80 text-green-800 ring-1 ring-green-300'
-                        : 'bg-white/80 text-rose-800 ring-1 ring-rose-300';
+                        ? "bg-white/80 text-green-800 ring-1 ring-green-300"
+                        : "bg-white/80 text-rose-800 ring-1 ring-rose-300";
 
                   return (
                     <div
                       key={`${slot.assignmentId}-${slot.start}-${slot.end}-${slotIndex}`}
                       className={`${bgColor} rounded-lg p-3 sm:p-4 border shadow-sm hover:bg-opacity-80`}
                     >
-                      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
-                        <div className='flex-1'>
-                          <p className='font-medium text-gray-900 text-sm sm:text-base'>
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0">
+                        <div className="flex-1">
+                          <p className="font-medium text-gray-900 text-sm sm:text-base">
                             {slot.userLabel}
                           </p>
-                          <p className='text-xs sm:text-sm text-gray-600'>
+                          <p className="text-xs sm:text-sm text-gray-600">
                             {slot.start} - {slot.end}
                           </p>
                         </div>
-                        <div className='flex justify-end sm:text-right'>
+                        <div className="flex justify-end sm:text-right">
                           <span
                             className={`inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-full text-xs font-medium ${badgeColor}`}
                           >
@@ -290,7 +290,7 @@ const MobileMonthList = (props: {
   getScheduleSlots: (
     schedule: unknown,
     assignmentType: string,
-    date: Date
+    date: Date,
   ) => Array<{ start: string; end: string }>;
   monthStart: Date;
   monthEnd: Date;
@@ -301,32 +301,32 @@ const MobileMonthList = (props: {
 
   // Función auxiliar para convertir hora a minutos
   const toMinutes = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    const [hours, minutes] = timeStr.split(":").map(Number);
     return hours * 60 + minutes;
   };
 
   // Función para verificar si una fecha es festivo
   const isKnownHoliday = (date: Date): boolean => {
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return holidaySet?.has(dateKey) ?? false;
   };
 
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
-    const type = (assignmentType ?? '').toLowerCase();
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const type = (assignmentType ?? "").toLowerCase();
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
 
-    if (type === 'laborables')
+    if (type === "laborables")
       return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
-    if (type === 'festivos')
+    if (type === "festivos")
       return dayOfWeek === 0 || dayOfWeek === 6 || isHoliday;
-    if (type === 'flexible' || type === 'daily') return true;
+    if (type === "flexible" || type === "daily") return true;
     return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
   };
 
   const getDateKeyLocal = (d: Date): string =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
   const firstDayOfMonth = new Date(
     monthStart.getFullYear(),
@@ -334,7 +334,7 @@ const MobileMonthList = (props: {
     1,
     12,
     0,
-    0
+    0,
   );
   const lastDayOfMonth = new Date(
     monthEnd.getFullYear(),
@@ -342,7 +342,7 @@ const MobileMonthList = (props: {
     monthEnd.getDate(),
     12,
     0,
-    0
+    0,
   );
   const daysInMonth = lastDayOfMonth.getDate();
 
@@ -370,15 +370,15 @@ const MobileMonthList = (props: {
     for (const a of assignments) {
       const aStart = new Date(a.start_date);
       const aEnd =
-        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+        a.end_date !== null ? new Date(a.end_date) : new Date("2099-12-31");
       if (date < aStart || date > aEnd) continue;
-      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+      if (!shouldWorkOnDate(date, a.assignment_type ?? "")) continue;
 
       const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
       if (slots.length > 0) {
         const userLabel =
-          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-          'Servicio';
+          `${a.users?.name ?? ""} ${a.users?.surname ?? ""}`.trim() ||
+          "Servicio";
         slots.forEach((s) => {
           entries.push({
             assignmentId: a.id,
@@ -393,8 +393,8 @@ const MobileMonthList = (props: {
     if (entries.length > 0) {
       // Ordenar entradas por hora de inicio
       entries.sort((a, b) => {
-        const timeA = a.start.replace(':', '');
-        const timeB = b.start.replace(':', '');
+        const timeA = a.start.replace(":", "");
+        const timeB = b.start.replace(":", "");
         return timeA.localeCompare(timeB);
       });
       daysWithServices.push({ date, key, isHoliday, entries });
@@ -403,55 +403,55 @@ const MobileMonthList = (props: {
 
   return (
     <div>
-      <div className='mb-4'>
-        <h3 className='text-lg font-semibold text-gray-900 mb-2'>Este Mes</h3>
-        <p className='text-base text-gray-600'>
-          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
-          {lastDayOfMonth.toLocaleDateString('es-ES')}
+      <div className="mb-4">
+        <h3 className="text-lg font-semibold text-gray-900 mb-2">Este Mes</h3>
+        <p className="text-base text-gray-600">
+          Desde {firstDayOfMonth.toLocaleDateString("es-ES")} hasta{" "}
+          {lastDayOfMonth.toLocaleDateString("es-ES")}
         </p>
       </div>
 
       {daysWithServices.length === 0 ? (
-        <div className='text-center py-8'>
-          <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
-            <span className='text-2xl'>📅</span>
+        <div className="text-center py-8">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <span className="text-2xl">📅</span>
           </div>
-          <p className='text-gray-600 mb-4'>
+          <p className="text-gray-600 mb-4">
             No tienes servicios programados este mes.
           </p>
         </div>
       ) : (
-        <div className='space-y-3'>
+        <div className="space-y-3">
           {daysWithServices.map((day) => (
             <div
               key={day.key}
-              className='bg-white border rounded-lg p-4 shadow-sm'
+              className="bg-white border rounded-lg p-4 shadow-sm"
             >
-              <div className='flex items-center justify-between mb-3'>
-                <h4 className='font-semibold text-gray-900'>
-                  {day.date.toLocaleDateString('es-ES', {
-                    weekday: 'long',
-                    day: 'numeric',
-                    month: 'short',
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="font-semibold text-gray-900">
+                  {day.date.toLocaleDateString("es-ES", {
+                    weekday: "long",
+                    day: "numeric",
+                    month: "short",
                   })}
                 </h4>
                 {day.isHoliday && (
-                  <span className='text-red-600 text-sm'>🎉 Festivo</span>
+                  <span className="text-red-600 text-sm">🎉 Festivo</span>
                 )}
               </div>
-              <div className='space-y-2'>
+              <div className="space-y-2">
                 {day.entries.map((entry, i) => {
                   // Determinar colores y textos de estado
                   const now = new Date();
                   const today = new Date(
                     now.getFullYear(),
                     now.getMonth(),
-                    now.getDate()
+                    now.getDate(),
                   );
                   const serviceDate = new Date(
                     day.date.getFullYear(),
                     day.date.getMonth(),
-                    day.date.getDate()
+                    day.date.getDate(),
                   );
 
                   const nowMinutes = now.getHours() * 60 + now.getMinutes();
@@ -468,35 +468,35 @@ const MobileMonthList = (props: {
                   const isCompleted = isToday && nowMinutes >= endMinutes;
 
                   const bgColor = isPastDay
-                    ? 'bg-rose-100 border-rose-300'
+                    ? "bg-rose-100 border-rose-300"
                     : isFutureDay || (isToday && !isInProgress && !isCompleted)
-                      ? 'bg-amber-100 border-amber-300'
+                      ? "bg-amber-100 border-amber-300"
                       : isInProgress
-                        ? 'bg-green-100 border-green-300'
-                        : 'bg-rose-100 border-rose-300';
+                        ? "bg-green-100 border-green-300"
+                        : "bg-rose-100 border-rose-300";
 
                   const badgeText = isPastDay
-                    ? 'Completado'
+                    ? "Completado"
                     : isFutureDay || (isToday && !isInProgress && !isCompleted)
-                      ? 'Pendiente'
+                      ? "Pendiente"
                       : isInProgress
-                        ? 'En curso'
-                        : 'Completado';
+                        ? "En curso"
+                        : "Completado";
 
                   const badgeColor = isPastDay
-                    ? 'bg-white/80 text-rose-800 ring-1 ring-rose-300'
+                    ? "bg-white/80 text-rose-800 ring-1 ring-rose-300"
                     : isFutureDay || (isToday && !isInProgress && !isCompleted)
-                      ? 'bg-white/80 text-amber-800 ring-1 ring-amber-300'
+                      ? "bg-white/80 text-amber-800 ring-1 ring-amber-300"
                       : isInProgress
-                        ? 'bg-white/80 text-green-800 ring-1 ring-green-300'
-                        : 'bg-white/80 text-rose-800 ring-1 ring-rose-300';
+                        ? "bg-white/80 text-green-800 ring-1 ring-green-300"
+                        : "bg-white/80 text-rose-800 ring-1 ring-rose-300";
 
                   return (
                     <div
                       key={i}
                       className={`flex items-center justify-between p-3 rounded-lg border-l-4 shadow-sm ${bgColor}`}
                     >
-                      <span className='font-medium text-sm text-gray-700'>
+                      <span className="font-medium text-sm text-gray-700">
                         {entry.userLabel}
                       </span>
                       <span
@@ -527,75 +527,75 @@ const DayServicesModal = (props: {
     start: string;
     end: string;
   }>;
-  dayStatus?: 'pending' | 'inprogress' | 'completed';
+  dayStatus?: "pending" | "inprogress" | "completed";
 }): React.JSX.Element => {
-  const { isOpen, onClose, date, services, dayStatus = 'pending' } = props;
+  const { isOpen, onClose, date, services, dayStatus = "pending" } = props;
 
   if (!isOpen) return <div />;
 
   return (
-    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className='absolute inset-0 bg-black bg-opacity-50'
+        className="absolute inset-0 bg-black bg-opacity-50"
         onClick={onClose}
       />
-      <div className='relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-4 md:p-6 max-h-96 md:max-h-[60vh] overflow-y-auto'>
-        <div className='flex justify-between items-center mb-4'>
-          <h2 className='text-lg font-semibold bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm'>
-            {date.toLocaleDateString('es-ES', {
-              weekday: 'long',
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
+      <div className="relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-4 md:p-6 max-h-96 md:max-h-[60vh] overflow-y-auto">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-semibold bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm">
+            {date.toLocaleDateString("es-ES", {
+              weekday: "long",
+              year: "numeric",
+              month: "long",
+              day: "numeric",
             })}
           </h2>
           <button
             onClick={onClose}
-            className='text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-full transition-colors'
+            className="text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-full transition-colors"
           >
             ✕
           </button>
         </div>
-        <div className='space-y-2'>
+        <div className="space-y-2">
           {services.length === 0 ? (
-            <div className='p-4 bg-gray-50 rounded-lg border border-gray-200 text-center'>
-              <p className='text-gray-600 font-medium'>
+            <div className="p-4 bg-gray-50 rounded-lg border border-gray-200 text-center">
+              <p className="text-gray-600 font-medium">
                 No hay servicios programados
               </p>
-              <p className='text-sm text-gray-500 mt-1'>Este día está libre</p>
+              <p className="text-sm text-gray-500 mt-1">Este día está libre</p>
             </div>
           ) : (
             services.map((service, index) => {
               // Aplicar colores tenues si el día está completado
-              const isCompletedDay = dayStatus === 'completed';
-              const isInProgressDay = dayStatus === 'inprogress';
-              const isPendingDay = dayStatus === 'pending';
+              const isCompletedDay = dayStatus === "completed";
+              const isInProgressDay = dayStatus === "inprogress";
+              const isPendingDay = dayStatus === "pending";
 
-              let serviceClasses = 'p-3 rounded border-l-4';
+              let serviceClasses = "p-3 rounded border-l-4";
               let userLabelClasses =
-                'font-semibold px-2 py-1 rounded shadow-sm inline-block mb-1';
-              let timeClasses = 'text-sm font-medium';
+                "font-semibold px-2 py-1 rounded shadow-sm inline-block mb-1";
+              let timeClasses = "text-sm font-medium";
 
               if (isCompletedDay) {
                 // Días completados: rojo pastel (igual que tomorrow)
-                serviceClasses += ' bg-rose-100 border-rose-300';
-                userLabelClasses += ' text-rose-800 bg-white/80';
-                timeClasses += ' text-rose-800';
+                serviceClasses += " bg-rose-100 border-rose-300";
+                userLabelClasses += " text-rose-800 bg-white/80";
+                timeClasses += " text-rose-800";
               } else if (isInProgressDay) {
                 // Días en progreso: verde (igual que tomorrow)
-                serviceClasses += ' bg-green-100 border-green-300';
-                userLabelClasses += ' text-green-800 bg-white/80';
-                timeClasses += ' text-green-800';
+                serviceClasses += " bg-green-100 border-green-300";
+                userLabelClasses += " text-green-800 bg-white/80";
+                timeClasses += " text-green-800";
               } else if (isPendingDay) {
                 // Días pendientes: amarillo (igual que tomorrow)
-                serviceClasses += ' bg-amber-100 border-amber-300';
-                userLabelClasses += ' text-amber-800 bg-white/80';
-                timeClasses += ' text-amber-800';
+                serviceClasses += " bg-amber-100 border-amber-300";
+                userLabelClasses += " text-amber-800 bg-white/80";
+                timeClasses += " text-amber-800";
               } else {
                 // Estado por defecto
-                serviceClasses += ' bg-blue-50 border-blue-400';
-                userLabelClasses += ' text-gray-900 bg-white';
-                timeClasses += ' text-gray-700';
+                serviceClasses += " bg-blue-50 border-blue-400";
+                userLabelClasses += " text-gray-900 bg-white";
+                timeClasses += " text-gray-700";
               }
 
               return (
@@ -626,7 +626,7 @@ const WorkerMonthCalendar = (props: {
   getScheduleSlots: (
     schedule: unknown,
     assignmentType: string,
-    date: Date
+    date: Date,
   ) => Array<{ start: string; end: string }>;
   monthStart: Date;
   monthEnd: Date;
@@ -649,22 +649,22 @@ const WorkerMonthCalendar = (props: {
   const [isModalOpen, setIsModalOpen] = useState(false);
   // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
-    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
     return holidaySet?.has(dateKey) ?? false;
   };
   const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
     const dayOfWeek = date.getDay();
-    const type = (assignmentType ?? '').toLowerCase();
+    const type = (assignmentType ?? "").toLowerCase();
     const isSunday = dayOfWeek === 0;
     const isSaturday = dayOfWeek === 6;
-    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(
-      date.getDate()
-    ).padStart(2, '0')}`;
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(
+      date.getDate(),
+    ).padStart(2, "0")}`;
     const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
-    if (type === 'laborables')
+    if (type === "laborables")
       return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
-    if (type === 'festivos') return isSaturday || isSunday || isHoliday;
-    if (type === 'flexible' || type === 'daily') return true;
+    if (type === "festivos") return isSaturday || isSunday || isHoliday;
+    if (type === "flexible" || type === "daily") return true;
     return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
   };
   type ExpandedEntry = {
@@ -674,38 +674,38 @@ const WorkerMonthCalendar = (props: {
     end: string;
   };
   const getDateKeyLocal = (d: Date): string =>
-    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(
-      d.getDate()
-    ).padStart(2, '0')}`;
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
+      d.getDate(),
+    ).padStart(2, "0")}`;
   const todayKey = getDateKeyLocal(new Date());
 
   // Función auxiliar para convertir hora a minutos
   const toMinutes = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    const [hours, minutes] = timeStr.split(":").map(Number);
     return hours * 60 + minutes;
   };
 
   // Función para determinar el estado de un día basado en sus servicios
   const getDayStatus = (
     services: ExpandedEntry[],
-    date: Date
-  ): 'pending' | 'inprogress' | 'completed' => {
-    if (services.length === 0) return 'pending';
+    date: Date,
+  ): "pending" | "inprogress" | "completed" => {
+    if (services.length === 0) return "pending";
 
     const now = new Date();
     const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const targetDate = new Date(
       date.getFullYear(),
       date.getMonth(),
-      date.getDate()
+      date.getDate(),
     );
 
     // Si es un día futuro, está pendiente
-    if (targetDate > today) return 'pending';
+    if (targetDate > today) return "pending";
 
     // Si es un día pasado, asumir que está completado
     if (targetDate < today) {
-      return 'completed';
+      return "completed";
     }
 
     // Es hoy, determinar el estado basado en los servicios actuales
@@ -724,48 +724,48 @@ const WorkerMonthCalendar = (props: {
       }
     }
 
-    if (hasInProgress) return 'inprogress';
-    if (hasPending) return 'pending';
+    if (hasInProgress) return "inprogress";
+    if (hasPending) return "pending";
 
     // Todos los servicios de hoy han terminado
-    return 'completed';
+    return "completed";
   };
 
   // Función para obtener clases CSS basadas en el estado del día
   const getDayClasses = (day: (typeof calendarDays)[0]): string => {
     const baseClasses = [
-      'h-16 md:h-20 flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-colors relative',
+      "h-16 md:h-20 flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-colors relative",
       day.isCurrentMonth
-        ? 'bg-white border-gray-200'
-        : 'bg-gray-50 border-gray-100',
-      day.isToday ? 'ring-2 ring-blue-500 bg-blue-50' : '',
-      day.isHoliday || day.isWeekend ? 'border-red-200' : '',
+        ? "bg-white border-gray-200"
+        : "bg-gray-50 border-gray-100",
+      day.isToday ? "ring-2 ring-blue-500 bg-blue-50" : "",
+      day.isHoliday || day.isWeekend ? "border-red-200" : "",
       day.entries.length > 0
-        ? 'cursor-pointer hover:bg-blue-50'
-        : 'cursor-pointer hover:bg-gray-50',
+        ? "cursor-pointer hover:bg-blue-50"
+        : "cursor-pointer hover:bg-gray-50",
     ];
 
     // NO aplicar colores para días completados en la rejilla
     // (para evitar confusión con festivos que son rojos)
     // Solo mantener colores para días en progreso y pendientes
-    if (day.status === 'inprogress') {
+    if (day.status === "inprogress") {
       // Días en progreso: verde
-      baseClasses.push('bg-green-100 border-green-300');
-    } else if (day.status === 'pending' && day.entries.length > 0) {
+      baseClasses.push("bg-green-100 border-green-300");
+    } else if (day.status === "pending" && day.entries.length > 0) {
       // Días pendientes con servicios: amarillo
-      baseClasses.push('bg-amber-100 border-amber-300');
+      baseClasses.push("bg-amber-100 border-amber-300");
     }
     // Días completados no tienen colores especiales en la rejilla
 
-    return baseClasses.filter(Boolean).join(' ');
+    return baseClasses.filter(Boolean).join(" ");
   };
 
   // Función para manejar clic en día
   const handleDayClick = (date: Date, services: ExpandedEntry[]) => {
     // Ordenar servicios por hora antes de mostrar el modal
     const sortedServices = [...services].sort((a, b) => {
-      const timeA = a.start.replace(':', '');
-      const timeB = b.start.replace(':', '');
+      const timeA = a.start.replace(":", "");
+      const timeB = b.start.replace(":", "");
       return timeA.localeCompare(timeB);
     });
     setSelectedDate(date);
@@ -779,7 +779,7 @@ const WorkerMonthCalendar = (props: {
     1,
     12,
     0,
-    0
+    0,
   );
   const lastDayOfMonth = new Date(
     monthEnd.getFullYear(),
@@ -787,7 +787,7 @@ const WorkerMonthCalendar = (props: {
     monthEnd.getDate(),
     12,
     0,
-    0
+    0,
   );
 
   // Para calendario convencional, necesitamos incluir días de semanas anteriores y posteriores
@@ -811,12 +811,12 @@ const WorkerMonthCalendar = (props: {
     isWeekend: boolean;
     isHoliday: boolean;
     entries: ExpandedEntry[];
-    status: 'pending' | 'inprogress' | 'completed';
+    status: "pending" | "inprogress" | "completed";
   }> = [];
   const totalDays =
     Math.ceil(
       (endOfCalendar.getTime() - startOfCalendar.getTime()) /
-        (1000 * 60 * 60 * 24)
+        (1000 * 60 * 60 * 24),
     ) + 1;
 
   for (let i = 0; i < totalDays; i++) {
@@ -833,14 +833,14 @@ const WorkerMonthCalendar = (props: {
       for (const a of assignments) {
         const aStart = new Date(a.start_date);
         const aEnd =
-          a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+          a.end_date !== null ? new Date(a.end_date) : new Date("2099-12-31");
         if (date < aStart || date > aEnd) continue;
-        if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+        if (!shouldWorkOnDate(date, a.assignment_type ?? "")) continue;
         const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
         if (slots.length > 0) {
           const userLabel =
-            `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-            'Servicio';
+            `${a.users?.name ?? ""} ${a.users?.surname ?? ""}`.trim() ||
+            "Servicio";
           slots.forEach((s) => {
             entries.push({
               assignmentId: a.id,
@@ -855,8 +855,8 @@ const WorkerMonthCalendar = (props: {
 
     // Ordenar entradas por hora de inicio
     entries.sort((a, b) => {
-      const timeA = a.start.replace(':', '');
-      const timeB = b.start.replace(':', '');
+      const timeA = a.start.replace(":", "");
+      const timeB = b.start.replace(":", "");
       return timeA.localeCompare(timeB);
     });
 
@@ -884,24 +884,24 @@ const WorkerMonthCalendar = (props: {
   {
     return (
       <div>
-        <div className='mb-4 md:mb-6'>
-          <h3 className='text-lg md:text-xl font-semibold text-gray-900 mb-2'>
-            📅{' '}
-            {firstDayOfMonth.toLocaleDateString('es-ES', {
-              month: 'long',
-              year: 'numeric',
+        <div className="mb-4 md:mb-6">
+          <h3 className="text-lg md:text-xl font-semibold text-gray-900 mb-2">
+            📅{" "}
+            {firstDayOfMonth.toLocaleDateString("es-ES", {
+              month: "long",
+              year: "numeric",
             })}
           </h3>
-          <p className='text-sm md:text-base text-gray-600'>
+          <p className="text-sm md:text-base text-gray-600">
             Toca un día para ver los servicios
           </p>
         </div>
 
         {/* Encabezados de días de la semana */}
-        <div className='grid grid-cols-7 gap-1 md:gap-2 mb-2 md:mb-4'>
-          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, index) => (
-            <div key={index} className='text-center py-2 md:py-3'>
-              <span className='text-xs md:text-sm font-semibold text-gray-600'>
+        <div className="grid grid-cols-7 gap-1 md:gap-2 mb-2 md:mb-4">
+          {["L", "M", "X", "J", "V", "S", "D"].map((day, index) => (
+            <div key={index} className="text-center py-2 md:py-3">
+              <span className="text-xs md:text-sm font-semibold text-gray-600">
                 {day}
               </span>
             </div>
@@ -909,9 +909,9 @@ const WorkerMonthCalendar = (props: {
         </div>
 
         {/* Grid del calendario */}
-        <div className='space-y-1 md:space-y-2'>
+        <div className="space-y-1 md:space-y-2">
           {weeks.map((week, weekIndex) => (
-            <div key={weekIndex} className='grid grid-cols-7 gap-1 md:gap-2'>
+            <div key={weekIndex} className="grid grid-cols-7 gap-1 md:gap-2">
               {week.map((day, dayIndex) => {
                 const dayClasses = getDayClasses(day);
 
@@ -924,18 +924,18 @@ const WorkerMonthCalendar = (props: {
                   >
                     <span
                       className={`text-sm md:text-base font-medium ${
-                        day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
-                      } ${day.isToday ? 'text-blue-600' : ''}`}
+                        day.isCurrentMonth ? "text-gray-900" : "text-gray-400"
+                      } ${day.isToday ? "text-blue-600" : ""}`}
                     >
                       {day.date.getDate()}
                     </span>
 
                     {/* Indicador de servicios */}
                     {day.entries.length > 0 && (
-                      <div className='flex items-center justify-center mt-1'>
-                        <div className='w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full'></div>
+                      <div className="flex items-center justify-center mt-1">
+                        <div className="w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full"></div>
                         {day.entries.length > 1 && (
-                          <span className='text-[10px] md:text-xs text-blue-600 font-medium ml-1'>
+                          <span className="text-[10px] md:text-xs text-blue-600 font-medium ml-1">
                             {day.entries.length}
                           </span>
                         )}
@@ -944,8 +944,8 @@ const WorkerMonthCalendar = (props: {
 
                     {/* Indicador de festivo */}
                     {day.isHoliday && (
-                      <div className='absolute top-1 right-1'>
-                        <span className='text-[8px] md:text-xs'>🎉</span>
+                      <div className="absolute top-1 right-1">
+                        <span className="text-[8px] md:text-xs">🎉</span>
                       </div>
                     )}
                   </button>
@@ -964,7 +964,7 @@ const WorkerMonthCalendar = (props: {
           dayStatus={
             selectedDate
               ? getDayStatus(selectedServices, selectedDate)
-              : 'pending'
+              : "pending"
           }
         />
       </div>
@@ -1174,10 +1174,10 @@ export default function SchedulePage(): React.JSX.Element {
   const currentUser = user;
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>(
-    'week'
+  const [selectedPeriod, setSelectedPeriod] = useState<"week" | "month">(
+    "week",
   );
-  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [viewMode, setViewMode] = useState<"calendar" | "list">("calendar");
   const [isMobile, setIsMobile] = useState(false);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   type TimeSlotRange = { start: string; end: string };
@@ -1185,37 +1185,37 @@ export default function SchedulePage(): React.JSX.Element {
     (
       schedule: unknown,
       assignmentType: string,
-      date: Date
+      date: Date,
     ): TimeSlotRange[] => {
       try {
         const sc =
-          typeof schedule === 'string'
+          typeof schedule === "string"
             ? (JSON.parse(schedule) as Record<string, unknown>)
             : (schedule as Record<string, unknown>);
         const dayOfWeek = date.getDay();
         const dayNames = [
-          'sunday',
-          'monday',
-          'tuesday',
-          'wednesday',
-          'thursday',
-          'friday',
-          'saturday',
+          "sunday",
+          "monday",
+          "tuesday",
+          "wednesday",
+          "thursday",
+          "friday",
+          "saturday",
         ];
-        const dayName = dayNames[dayOfWeek] ?? 'monday';
+        const dayName = dayNames[dayOfWeek] ?? "monday";
         const parseSlots = (raw: unknown[]): TimeSlotRange[] =>
           raw
             .map((s: unknown) => {
               const slot = s as Record<string, unknown>;
-              const start = (slot?.['start'] as string | undefined) ?? '';
-              const end = (slot?.['end'] as string | undefined) ?? '';
+              const start = (slot?.["start"] as string | undefined) ?? "";
+              const end = (slot?.["end"] as string | undefined) ?? "";
               const ok = (t: string): boolean => /^\d{1,2}:\d{2}$/.test(t);
               if (ok(start) && ok(end)) {
                 const pad = (t: string) =>
                   t
-                    .split(':')
-                    .map((p, i) => (i === 0 ? p.padStart(2, '0') : p))
-                    .join(':');
+                    .split(":")
+                    .map((p, i) => (i === 0 ? p.padStart(2, "0") : p))
+                    .join(":");
                 return { start: pad(start), end: pad(end) };
               }
               return null;
@@ -1223,22 +1223,22 @@ export default function SchedulePage(): React.JSX.Element {
             .filter((v): v is TimeSlotRange => v !== null);
         // Tramos del día normal
         const dayConfig = (sc?.[dayName] as Record<string, unknown>) ?? {};
-        const enabled = (dayConfig?.['enabled'] as boolean) ?? true;
-        const daySlotsRaw = Array.isArray(dayConfig?.['timeSlots'])
-          ? (dayConfig['timeSlots'] as unknown[])
+        const enabled = (dayConfig?.["enabled"] as boolean) ?? true;
+        const daySlotsRaw = Array.isArray(dayConfig?.["timeSlots"])
+          ? (dayConfig["timeSlots"] as unknown[])
           : [];
         const daySlots = enabled ? parseSlots(daySlotsRaw) : [];
         // Festivos: soportar schedule.holiday.timeSlots y holiday_config.holiday_timeSlots
-        const holidayDay = (sc?.['holiday'] as Record<string, unknown>) ?? {};
-        const holidayEnabled = (holidayDay?.['enabled'] as boolean) ?? false;
-        const holidaySlotsRaw = Array.isArray(holidayDay?.['timeSlots'])
-          ? (holidayDay['timeSlots'] as unknown[])
+        const holidayDay = (sc?.["holiday"] as Record<string, unknown>) ?? {};
+        const holidayEnabled = (holidayDay?.["enabled"] as boolean) ?? false;
+        const holidaySlotsRaw = Array.isArray(holidayDay?.["timeSlots"])
+          ? (holidayDay["timeSlots"] as unknown[])
           : [];
         const holidayCfg =
-          (sc?.['holiday_config'] as Record<string, unknown> | undefined) ??
+          (sc?.["holiday_config"] as Record<string, unknown> | undefined) ??
           undefined;
-        const holidayCfgRaw = Array.isArray(holidayCfg?.['holiday_timeSlots'])
-          ? (holidayCfg?.['holiday_timeSlots'] as unknown[])
+        const holidayCfgRaw = Array.isArray(holidayCfg?.["holiday_timeSlots"])
+          ? (holidayCfg?.["holiday_timeSlots"] as unknown[])
           : [];
         const combinedHolidayRaw =
           holidayCfgRaw.length > 0 ? holidayCfgRaw : holidaySlotsRaw;
@@ -1248,13 +1248,13 @@ export default function SchedulePage(): React.JSX.Element {
         // Determinar qué slots usar: festivos = fines de semana o festivo oficial o tipo 'festivos'
         const dow = date.getDay();
         const isWeekend = dow === 0 || dow === 6;
-        const type = (assignmentType ?? '').toLowerCase();
+        const type = (assignmentType ?? "").toLowerCase();
         const dateKey = `${date.getFullYear()}-${String(
-          date.getMonth() + 1
-        ).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+          date.getMonth() + 1,
+        ).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
         const isOfficialHoliday = holidaySet.has(dateKey);
         const mustUseHoliday =
-          isWeekend || isOfficialHoliday || type === 'festivos';
+          isWeekend || isOfficialHoliday || type === "festivos";
         if (mustUseHoliday && parsedHolidaySlots.length > 0)
           return parsedHolidaySlots;
         if (daySlots.length > 0) return daySlots;
@@ -1264,7 +1264,7 @@ export default function SchedulePage(): React.JSX.Element {
         return [];
       }
     },
-    [holidaySet]
+    [holidaySet],
   );
   // Calcular rangos de fechas
   const weekRange = useMemo(() => getWeekRange(), []);
@@ -1280,19 +1280,19 @@ export default function SchedulePage(): React.JSX.Element {
   }, []);
   const currentWeekStart = useMemo(
     () => new Date(weekRange.start),
-    [weekRange.start]
+    [weekRange.start],
   );
   const currentWeekEnd = useMemo(
     () => new Date(weekRange.end),
-    [weekRange.end]
+    [weekRange.end],
   );
   const nextWeekStart = useMemo(
     () => new Date(nextWeekRange.start),
-    [nextWeekRange.start]
+    [nextWeekRange.start],
   );
   const nextWeekEnd = useMemo(
     () => new Date(nextWeekRange.end),
-    [nextWeekRange.end]
+    [nextWeekRange.end],
   );
   useEffect(() => {
     const load = async (): Promise<void> => {
@@ -1305,9 +1305,9 @@ export default function SchedulePage(): React.JSX.Element {
         setLoading(true);
         // Buscar trabajadora por email
         const { data: workerData, error: workerError } = await supabase
-          .from('workers')
-          .select('id')
-          .ilike('email', currentUser?.email)
+          .from("workers")
+          .select("id")
+          .ilike("email", currentUser?.email)
           .maybeSingle();
         if (workerError !== null || workerData === null) {
           setAssignments([]);
@@ -1320,35 +1320,35 @@ export default function SchedulePage(): React.JSX.Element {
           Math.min(
             new Date(weekRange.start).getTime(),
             new Date(nextWeekRange.start).getTime(),
-            new Date(monthRange.start).getTime()
-          )
+            new Date(monthRange.start).getTime(),
+          ),
         );
         const holidayEnd = new Date(
           Math.max(
             new Date(weekRange.end).getTime(),
             new Date(nextWeekRange.end).getTime(),
-            new Date(monthRange.end).getTime()
-          )
+            new Date(monthRange.end).getTime(),
+          ),
         );
         const startYear = holidayStart.getFullYear();
         const endYear = holidayEnd.getFullYear();
         const { data: holidayRows } = await supabase
-          .from('holidays')
-          .select('day, month, year')
-          .gte('year', startYear)
-          .lte('year', endYear);
+          .from("holidays")
+          .select("day, month, year")
+          .gte("year", startYear)
+          .lte("year", endYear);
         const hset = new Set<string>();
         (holidayRows ?? []).forEach((row) => {
           const r = row as { day: number; month: number; year: number };
-          const key = `${r.year}-${String(r.month).padStart(2, '0')}-${String(
-            r.day
-          ).padStart(2, '0')}`;
+          const key = `${r.year}-${String(r.month).padStart(2, "0")}-${String(
+            r.day,
+          ).padStart(2, "0")}`;
           hset.add(key);
         });
         setHolidaySet(hset);
         // Obtener todas las asignaciones activas de la trabajadora
         const { data: rows, error: err } = await supabase
-          .from('assignments')
+          .from("assignments")
           .select(
             `
             id,
@@ -1357,16 +1357,16 @@ export default function SchedulePage(): React.JSX.Element {
             start_date,
             end_date,
             users!inner(name, surname)
-          `
+          `,
           )
-          .eq('worker_id', workerId)
-          .eq('status', 'active');
+          .eq("worker_id", workerId)
+          .eq("status", "active");
         if (err === null && rows !== null) {
           const filtered = rows.filter((a) => {
             const assignmentType =
-              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+              typeof a.assignment_type === "string" ? a.assignment_type : "";
             const t = assignmentType.toLowerCase();
-            return t === 'laborables' || t === 'flexible' || t === 'festivos';
+            return t === "laborables" || t === "flexible" || t === "festivos";
           });
           setAssignments(filtered as unknown as AssignmentRow[]);
         } else {
@@ -1395,46 +1395,46 @@ export default function SchedulePage(): React.JSX.Element {
       setIsMobile(window.innerWidth < 1024); // Incluir tablets hasta 1024px
     };
     checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
+    window.addEventListener("resize", checkMobile);
+    return () => window.removeEventListener("resize", checkMobile);
   }, []);
   const formatLongDate = (d: Date): string =>
-    d.toLocaleDateString('es-ES', {
-      weekday: 'long',
-      day: 'numeric',
-      month: 'long',
+    d.toLocaleDateString("es-ES", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
     });
   return (
-    <ProtectedRoute requiredRole='worker'>
-      <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
+    <ProtectedRoute requiredRole="worker">
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
         {/* Header */}
-        <header className='bg-white shadow-sm border-b border-gray-200'>
-          <div className='w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8'>
-            <div className='flex items-center justify-between'>
-              <div className='flex items-center space-x-4'>
+        <header className="bg-white shadow-sm border-b border-gray-200">
+          <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
                 <Link
-                  href='/worker-dashboard'
-                  className='text-gray-600 hover:text-gray-900'
+                  href="/worker-dashboard"
+                  className="text-gray-600 hover:text-gray-900"
                 >
                   <svg
-                    className='w-6 h-6'
-                    fill='none'
-                    stroke='currentColor'
-                    viewBox='0 0 24 24'
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
                   >
                     <path
-                      strokeLinecap='round'
-                      strokeLinejoin='round'
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
                       strokeWidth={2}
-                      d='M15 19l-7-7 7-7'
+                      d="M15 19l-7-7 7-7"
                     />
                   </svg>
                 </Link>
                 <div>
-                  <h1 className='text-xl font-bold text-gray-900'>
+                  <h1 className="text-xl font-bold text-gray-900">
                     Mi Horario Completo
                   </h1>
-                  <p className='text-gray-600'>
+                  <p className="text-gray-600">
                     Vista detallada de todos tus servicios
                   </p>
                 </div>
@@ -1442,63 +1442,63 @@ export default function SchedulePage(): React.JSX.Element {
             </div>
           </div>
         </header>
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8'>
-          <div className='bg-white rounded-2xl shadow-sm'>
-            <div className='p-4 sm:p-6 border-b border-gray-200'>
-              <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0'>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6 lg:py-8">
+          <div className="bg-white rounded-2xl shadow-sm">
+            <div className="p-4 sm:p-6 border-b border-gray-200">
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-4 sm:space-y-0">
                 <div>
-                  <h2 className='text-lg sm:text-xl font-bold text-gray-900'>
+                  <h2 className="text-lg sm:text-xl font-bold text-gray-900">
                     📅 Horario Detallado
                   </h2>
-                  <p className='text-sm sm:text-base text-gray-600'>
+                  <p className="text-sm sm:text-base text-gray-600">
                     {assignments.length} asignaciones activas
                   </p>
                 </div>
                 {/* Selector de período */}
-                <div className='flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-2'>
-                  <div className='flex space-x-2'>
+                <div className="flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-2">
+                  <div className="flex space-x-2">
                     <Button
                       variant={
-                        selectedPeriod === 'week' ? 'primary' : 'outline'
+                        selectedPeriod === "week" ? "primary" : "outline"
                       }
-                      size='sm'
-                      onClick={() => setSelectedPeriod('week')}
-                      className='flex-1 sm:flex-none'
+                      size="sm"
+                      onClick={() => setSelectedPeriod("week")}
+                      className="flex-1 sm:flex-none"
                     >
-                      <span className='hidden sm:inline'>Esta Semana</span>
-                      <span className='sm:hidden'>Semana</span>
+                      <span className="hidden sm:inline">Esta Semana</span>
+                      <span className="sm:hidden">Semana</span>
                     </Button>
                     <Button
                       variant={
-                        selectedPeriod === 'month' ? 'primary' : 'outline'
+                        selectedPeriod === "month" ? "primary" : "outline"
                       }
-                      size='sm'
-                      onClick={() => setSelectedPeriod('month')}
-                      className='flex-1 sm:flex-none'
+                      size="sm"
+                      onClick={() => setSelectedPeriod("month")}
+                      className="flex-1 sm:flex-none"
                     >
-                      <span className='hidden sm:inline'>Este Mes</span>
-                      <span className='sm:hidden'>Mes</span>
+                      <span className="hidden sm:inline">Este Mes</span>
+                      <span className="sm:hidden">Mes</span>
                     </Button>
                   </div>
 
                   {/* Toggle de vista para todas las pantallas en vista de mes */}
-                  {selectedPeriod === 'month' && (
-                    <div className='flex space-x-2'>
+                  {selectedPeriod === "month" && (
+                    <div className="flex space-x-2">
                       <Button
                         variant={
-                          viewMode === 'calendar' ? 'primary' : 'outline'
+                          viewMode === "calendar" ? "primary" : "outline"
                         }
-                        size='sm'
-                        onClick={() => setViewMode('calendar')}
-                        className='flex-1 sm:flex-none'
+                        size="sm"
+                        onClick={() => setViewMode("calendar")}
+                        className="flex-1 sm:flex-none"
                       >
                         📅 Calendario
                       </Button>
                       <Button
-                        variant={viewMode === 'list' ? 'primary' : 'outline'}
-                        size='sm'
-                        onClick={() => setViewMode('list')}
-                        className='flex-1 sm:flex-none'
+                        variant={viewMode === "list" ? "primary" : "outline"}
+                        size="sm"
+                        onClick={() => setViewMode("list")}
+                        className="flex-1 sm:flex-none"
                       >
                         📋 Lista
                       </Button>
@@ -1507,42 +1507,42 @@ export default function SchedulePage(): React.JSX.Element {
                 </div>
               </div>
             </div>
-            <div className='w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8'>
+            <div className="w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8">
               {loading ? (
-                <div className='text-center py-8'>
-                  <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
-                  <p className='text-gray-600 text-sm sm:text-base'>
+                <div className="text-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                  <p className="text-gray-600 text-sm sm:text-base">
                     Cargando horario completo...
                   </p>
                 </div>
               ) : assignments.length === 0 ? (
-                <div className='text-center py-8'>
-                  <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
-                    <span className='text-2xl'>📅</span>
+                <div className="text-center py-8">
+                  <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+                    <span className="text-2xl">📅</span>
                   </div>
-                  <p className='text-gray-600 mb-4 text-sm sm:text-base'>
+                  <p className="text-gray-600 mb-4 text-sm sm:text-base">
                     No tienes asignaciones activas.
                   </p>
-                  <Link href='/worker-dashboard'>
+                  <Link href="/worker-dashboard">
                     <Button
-                      variant='outline'
-                      size='sm'
-                      className='sm:text-base'
+                      variant="outline"
+                      size="sm"
+                      className="sm:text-base"
                     >
                       Volver al Dashboard
                     </Button>
                   </Link>
                 </div>
               ) : (
-                <div className='space-y-6'>
-                  {selectedPeriod === 'week' ? (
+                <div className="space-y-6">
+                  {selectedPeriod === "week" ? (
                     <div>
-                      <div className='mb-4 sm:mb-6'>
-                        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
+                      <div className="mb-4 sm:mb-6">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">
                           Semana Actual
                         </h3>
-                        <p className='text-sm sm:text-base text-gray-600'>
-                          {formatLongDate(currentWeekStart)} -{' '}
+                        <p className="text-sm sm:text-base text-gray-600">
+                          {formatLongDate(currentWeekStart)} -{" "}
                           {formatLongDate(currentWeekEnd)}
                         </p>
                       </div>
@@ -1553,12 +1553,12 @@ export default function SchedulePage(): React.JSX.Element {
                         weekEnd={currentWeekEnd}
                         holidaySet={holidaySet}
                       />
-                      <div className='mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200'>
-                        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
+                      <div className="mt-6 sm:mt-8 pt-4 sm:pt-6 border-t border-gray-200">
+                        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2">
                           Próxima Semana
                         </h3>
-                        <p className='text-sm sm:text-base text-gray-600 mb-4'>
-                          {formatLongDate(nextWeekStart)} -{' '}
+                        <p className="text-sm sm:text-base text-gray-600 mb-4">
+                          {formatLongDate(nextWeekStart)} -{" "}
                           {formatLongDate(nextWeekEnd)}
                         </p>
                         <WeeklySchedule
@@ -1572,7 +1572,7 @@ export default function SchedulePage(): React.JSX.Element {
                     </div>
                   ) : (
                     <div>
-                      {viewMode === 'list' ? (
+                      {viewMode === "list" ? (
                         <MobileMonthList
                           assignments={assignments}
                           getScheduleSlots={getScheduleSlots}

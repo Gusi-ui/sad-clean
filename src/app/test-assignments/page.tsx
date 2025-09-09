@@ -1,13 +1,13 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState } from "react";
 
-import ProtectedRoute from '@/components/auth/ProtectedRoute';
-import Button from '@/components/ui/Button';
-import Card from '@/components/ui/Card';
-import { useAuth } from '@/contexts/AuthContext';
-import { supabase } from '@/lib/database';
-import { getHolidaysForMonth } from '@/lib/holidays-query';
+import ProtectedRoute from "@/components/auth/ProtectedRoute";
+import Button from "@/components/ui/Button";
+import Card from "@/components/ui/Card";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/lib/database";
+import { getHolidaysForMonth } from "@/lib/holidays-query";
 
 interface TestResult {
   userId: string;
@@ -48,7 +48,7 @@ export default function TestAssignmentsPage() {
       try {
         const monthHolidays = await getHolidaysForMonth(
           currentYear,
-          currentMonth
+          currentMonth,
         );
         setHolidays(monthHolidays);
       } catch {
@@ -69,20 +69,20 @@ export default function TestAssignmentsPage() {
       try {
         // Obtener usuarios reales
         const { data: users, error: usersError } = await supabase
-          .from('users')
-          .select('id, name, surname')
+          .from("users")
+          .select("id, name, surname")
           .limit(3);
 
         if (usersError) {
           // eslint-disable-next-line no-console
-          console.error('Error obteniendo usuarios:', usersError);
+          console.error("Error obteniendo usuarios:", usersError);
           setLoading(false);
           return;
         }
 
         if (users.length === 0) {
           // eslint-disable-next-line no-console
-          console.log('No hay usuarios disponibles para probar');
+          console.log("No hay usuarios disponibles para probar");
           setLoading(false);
           return;
         }
@@ -91,11 +91,11 @@ export default function TestAssignmentsPage() {
           (userData: { id: string; name: string; surname: string }) => ({
             id: userData.id,
             name: `${userData.name} ${userData.surname}`,
-          })
+          }),
         );
 
         // eslint-disable-next-line no-console
-        console.log('Usuarios para probar:', testUsers);
+        console.log("Usuarios para probar:", testUsers);
 
         Promise.all(
           testUsers.map((testUser: { id: string; name: string }) => {
@@ -124,11 +124,11 @@ export default function TestAssignmentsPage() {
               // Error silencioso para no mostrar alertas innecesarias
               return Promise.resolve(null);
             }
-          })
+          }),
         )
           .then((promiseResults) => {
             const validResults = promiseResults.filter(
-              (result: TestResult | null) => result !== null
+              (result: TestResult | null) => result !== null,
             ) as TestResult[];
             setResults(validResults);
           })
@@ -140,7 +140,7 @@ export default function TestAssignmentsPage() {
           });
       } catch (error) {
         // eslint-disable-next-line no-console
-        console.error('Error en testHourCalculation:', error);
+        console.error("Error en testHourCalculation:", error);
         setLoading(false);
       }
     };
@@ -163,7 +163,7 @@ export default function TestAssignmentsPage() {
         // Recargar festivos del mes
         const monthHolidays = await getHolidaysForMonth(
           currentYear,
-          currentMonth
+          currentMonth,
         );
         setHolidays(monthHolidays);
 
@@ -182,46 +182,46 @@ export default function TestAssignmentsPage() {
 
   return (
     <ProtectedRoute>
-      <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
-        <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8'>
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
           {/* Header */}
-          <div className='mb-8'>
-            <h1 className='text-3xl font-bold text-gray-900 mb-2'>
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
               🧪 Prueba del Sistema de Asignaciones
             </h1>
-            <p className='text-gray-700 text-lg'>
+            <p className="text-gray-700 text-lg">
               Verificación de la funcionalidad del nuevo sistema
             </p>
           </div>
 
           {/* Controles */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-4 mb-8'>
-            <Card className='p-6'>
-              <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Configuración
               </h3>
-              <div className='space-y-4'>
+              <div className="space-y-4">
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Año
                   </label>
                   <input
-                    type='number'
+                    type="number"
                     value={currentYear}
                     onChange={(e) => setCurrentYear(parseInt(e.target.value))}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder-gray-500'
-                    style={{ color: '#111827' }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900 placeholder-gray-500"
+                    style={{ color: "#111827" }}
                   />
                 </div>
                 <div>
-                  <label className='block text-sm font-medium text-gray-700 mb-2'>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
                     Mes
                   </label>
                   <select
                     value={currentMonth}
                     onChange={(e) => setCurrentMonth(parseInt(e.target.value))}
-                    className='w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900'
-                    style={{ color: '#111827' }}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-900"
+                    style={{ color: "#111827" }}
                   >
                     <option value={1}>Enero</option>
                     <option value={2}>Febrero</option>
@@ -240,33 +240,33 @@ export default function TestAssignmentsPage() {
               </div>
             </Card>
 
-            <Card className='p-6'>
-              <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Acciones
               </h3>
-              <div className='space-y-3'>
+              <div className="space-y-3">
                 <Button
                   onClick={testHourCalculation}
                   disabled={loading}
-                  className='w-full bg-blue-600 hover:bg-blue-700 text-white'
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white"
                 >
-                  {loading ? 'Calculando...' : '🧮 Probar Cálculo de Horas'}
+                  {loading ? "Calculando..." : "🧮 Probar Cálculo de Horas"}
                 </Button>
                 <Button
                   onClick={loadHolidaysFromExternalAPI}
                   disabled={loading}
-                  className='w-full bg-green-600 hover:bg-green-700 text-white'
+                  className="w-full bg-green-600 hover:bg-green-700 text-white"
                 >
-                  {loading ? 'Cargando...' : '📅 Cargar Festivos desde API'}
+                  {loading ? "Cargando..." : "📅 Cargar Festivos desde API"}
                 </Button>
               </div>
             </Card>
 
-            <Card className='p-6'>
-              <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Información
               </h3>
-              <div className='text-sm text-gray-600 space-y-2'>
+              <div className="text-sm text-gray-600 space-y-2">
                 <p>• Año actual: {currentYear}</p>
                 <p>• Mes actual: {currentMonth}</p>
                 <p>• Festivos cargados: {holidays.length}</p>
@@ -277,69 +277,69 @@ export default function TestAssignmentsPage() {
 
           {/* Resultados */}
           {results.length > 0 && (
-            <Card className='p-6 mb-8'>
-              <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+            <Card className="p-6 mb-8">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
                 Resultados del Cálculo
               </h3>
-              <div className='space-y-4'>
+              <div className="space-y-4">
                 {results.map((result, index) => (
                   <div
                     key={index}
-                    className='border border-gray-200 rounded-lg p-4'
+                    className="border border-gray-200 rounded-lg p-4"
                   >
-                    <h4 className='font-medium text-gray-900 mb-2'>
+                    <h4 className="font-medium text-gray-900 mb-2">
                       {result.userName ?? `Usuario ${result.userId}`}
                     </h4>
-                    <div className='grid grid-cols-2 md:grid-cols-4 gap-4 text-sm'>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
-                        <span className='text-gray-600'>Horas Asignadas:</span>
-                        <p className='font-semibold'>{result.assignedHours}h</p>
+                        <span className="text-gray-600">Horas Asignadas:</span>
+                        <p className="font-semibold">{result.assignedHours}h</p>
                       </div>
                       <div>
-                        <span className='text-gray-600'>Horas Calculadas:</span>
-                        <p className='font-semibold'>
+                        <span className="text-gray-600">Horas Calculadas:</span>
+                        <p className="font-semibold">
                           {result.calculatedHours}h
                         </p>
                       </div>
                       <div>
-                        <span className='text-gray-600'>Diferencia:</span>
+                        <span className="text-gray-600">Diferencia:</span>
                         <p
                           className={`font-semibold ${
                             result.difference > 0
-                              ? 'text-green-600'
+                              ? "text-green-600"
                               : result.difference < 0
-                                ? 'text-red-600'
-                                : 'text-gray-600'
+                                ? "text-red-600"
+                                : "text-gray-600"
                           }`}
                         >
-                          {result.difference > 0 ? '+' : ''}
+                          {result.difference > 0 ? "+" : ""}
                           {result.difference}h
                         </p>
                       </div>
                       <div>
-                        <span className='text-gray-600'>Estado:</span>
+                        <span className="text-gray-600">Estado:</span>
                         <p
                           className={`font-semibold ${
                             result.difference > 0
-                              ? 'text-green-600'
+                              ? "text-green-600"
                               : result.difference < 0
-                                ? 'text-red-600'
-                                : 'text-gray-600'
+                                ? "text-red-600"
+                                : "text-gray-600"
                           }`}
                         >
                           {result.difference > 0
-                            ? 'Exceso'
+                            ? "Exceso"
                             : result.difference < 0
-                              ? 'Defecto'
-                              : 'Exacto'}
+                              ? "Defecto"
+                              : "Exacto"}
                         </p>
                       </div>
                     </div>
-                    <div className='mt-3 text-xs text-gray-500'>
+                    <div className="mt-3 text-xs text-gray-500">
                       <p>
                         Días laborables: {result.details.laborableDays} |
                         Festivos: {result.details.holidayDays} | Fines de
-                        semana: {result.details.weekendDays} | Total:{' '}
+                        semana: {result.details.weekendDays} | Total:{" "}
                         {result.details.totalDays}
                       </p>
                     </div>
@@ -351,30 +351,30 @@ export default function TestAssignmentsPage() {
 
           {/* Festivos del mes */}
           {holidays.length > 0 && (
-            <Card className='p-6'>
-              <h3 className='text-lg font-semibold text-gray-900 mb-4'>
-                Festivos de{' '}
+            <Card className="p-6">
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">
+                Festivos de{" "}
                 {new Date(currentYear, currentMonth - 1).toLocaleDateString(
-                  'es-ES',
-                  { month: 'long', year: 'numeric' }
+                  "es-ES",
+                  { month: "long", year: "numeric" },
                 )}
               </h3>
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                 {holidays.map((holiday, index) => (
                   <div
                     key={index}
-                    className='flex items-center space-x-3 p-3 bg-gray-50 rounded-lg'
+                    className="flex items-center space-x-3 p-3 bg-gray-50 rounded-lg"
                   >
-                    <div className='w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center'>
-                      <span className='text-xs font-bold text-blue-600'>
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <span className="text-xs font-bold text-blue-600">
                         {holiday.day}
                       </span>
                     </div>
                     <div>
-                      <p className='font-medium text-gray-900'>
+                      <p className="font-medium text-gray-900">
                         {holiday.name}
                       </p>
-                      <p className='text-xs text-gray-500'>{holiday.type}</p>
+                      <p className="text-xs text-gray-500">{holiday.type}</p>
                     </div>
                   </div>
                 ))}
@@ -383,17 +383,17 @@ export default function TestAssignmentsPage() {
           )}
 
           {/* Información del sistema */}
-          <Card className='p-6 mt-8'>
-            <h3 className='text-lg font-semibold text-gray-900 mb-4'>
+          <Card className="p-6 mt-8">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Información del Sistema
             </h3>
-            <div className='space-y-3 text-sm'>
-              <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <h4 className='font-medium text-gray-900 mb-2'>
+                  <h4 className="font-medium text-gray-900 mb-2">
                     Tipos de Asignación
                   </h4>
-                  <ul className='space-y-1 text-gray-600'>
+                  <ul className="space-y-1 text-gray-600">
                     <li>
                       • <strong>Laborables:</strong> Lunes a viernes (excluyendo
                       festivos)
@@ -409,10 +409,10 @@ export default function TestAssignmentsPage() {
                   </ul>
                 </div>
                 <div>
-                  <h4 className='font-medium text-gray-900 mb-2'>
+                  <h4 className="font-medium text-gray-900 mb-2">
                     Lógica de Cálculo
                   </h4>
-                  <ul className='space-y-1 text-gray-600'>
+                  <ul className="space-y-1 text-gray-600">
                     <li>• Horas asignadas vs calculadas</li>
                     <li>• Consideración de festivos de Mataró</li>
                     <li>• Diferencia para trabajadoras</li>

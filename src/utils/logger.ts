@@ -17,21 +17,21 @@ interface Logger {
  */
 export const logger: Logger = {
   log: (message: string, ...args: unknown[]) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
       console.log(message, ...args);
     }
   },
 
   warn: (message: string, ...args: unknown[]) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
       console.warn(message, ...args);
     }
   },
 
   error: (message: string, ...args: unknown[]) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (process.env.NODE_ENV === "development") {
       // eslint-disable-next-line no-console
       console.error(message, ...args);
     }
@@ -43,69 +43,69 @@ export const logger: Logger = {
  */
 export const authLogger = {
   userRole: (email: string | null | undefined) => {
-    logger.log('Checking user role for:', email);
+    logger.log("Checking user role for:", email);
   },
 
   metadata: (role: string | undefined) => {
-    logger.log('User metadata role:', role);
+    logger.log("User metadata role:", role);
   },
 
   usingRole: (role: string) => {
-    logger.log('Using metadata role:', role);
+    logger.log("Using metadata role:", role);
   },
 
   signInStart: (email: string) => {
-    logger.log('Starting sign in for:', email);
+    logger.log("Starting sign in for:", email);
   },
 
   signInSuccess: () => {
-    logger.log('Supabase auth successful, useEffect will handle user setup');
+    logger.log("Supabase auth successful, useEffect will handle user setup");
   },
 
   quickRedirect: (redirectTo: string) => {
-    logger.log('Quick redirect determined:', redirectTo);
+    logger.log("Quick redirect determined:", redirectTo);
   },
 
   authError: (error: unknown) => {
-    logger.error('Supabase auth error:', error);
+    logger.error("Supabase auth error:", error);
   },
 
   superAdminByEmail: () => {
-    logger.log('User identified as super_admin by email');
+    logger.log("User identified as super_admin by email");
   },
 
   adminDefault: () => {
-    logger.log('User identified as admin (default)');
+    logger.log("User identified as admin (default)");
   },
 
   workerDefault: () => {
-    logger.log('User identified as worker (default)');
+    logger.log("User identified as worker (default)");
   },
 
   fetchingUserFromDb: (userId: string) => {
     logger.log(
-      'User role not in metadata, checking auth_users table for user:',
-      userId
+      "User role not in metadata, checking auth_users table for user:",
+      userId,
     );
   },
 
   userRoleFromDb: (role: string | undefined) => {
-    logger.log('User role from auth_users:', role);
+    logger.log("User role from auth_users:", role);
   },
 
   userNotFoundInDb: (error: unknown) => {
     logger.warn(
-      'User not found in auth_users or error fetching role, treating as worker:',
-      error
+      "User not found in auth_users or error fetching role, treating as worker:",
+      error,
     );
   },
 
   checkUserRoleError: (error: unknown) => {
-    logger.error('Error in checkUserRole:', error);
+    logger.error("Error in checkUserRole:", error);
   },
 
   sessionError: (error: unknown) => {
-    logger.error('Error getting initial session:', error);
+    logger.error("Error getting initial session:", error);
   },
 };
 
@@ -114,14 +114,14 @@ export const authLogger = {
  */
 export const workerLogger = {
   sendingData: (data: unknown) => {
-    logger.log('Enviando datos de trabajadora:', data);
+    logger.log("Enviando datos de trabajadora:", data);
   },
 
   created: (worker: unknown) => {
-    logger.log('Trabajadora creada exitosamente:', worker);
+    logger.log("Trabajadora creada exitosamente:", worker);
   },
 
   error: (error: unknown) => {
-    logger.error('Error al crear trabajadora:', error);
+    logger.error("Error al crear trabajadora:", error);
   },
 };

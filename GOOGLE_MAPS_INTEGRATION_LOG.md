@@ -291,11 +291,11 @@ w-full px-2 sm:px-4 lg:px-8
 {
   /* Versión móvil */
 }
-<span className='sm:hidden'>Viajes</span>;
+<span className="sm:hidden">Viajes</span>;
 {
   /* Versión desktop */
 }
-<span className='hidden sm:inline'>Segmentos de Viaje</span>;
+<span className="hidden sm:inline">Segmentos de Viaje</span>;
 ```
 
 #### 🎨 **Visual Indicators**
@@ -306,7 +306,7 @@ w-full px-2 sm:px-4 lg:px-8
 }
 {
   travelMode === key && (
-    <div className='absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white'></div>
+    <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
   );
 }
 ```
@@ -428,11 +428,11 @@ abordando específicamente las secciones que el usuario identificó como problem
 {
   /* Versión Móvil - Tarjetas apiladas */
 }
-<div className='sm:hidden space-y-3'>
-  <div className='bg-white rounded-lg p-3 border border-blue-200'>
-    <div className='flex items-center justify-between'>
+<div className="sm:hidden space-y-3">
+  <div className="bg-white rounded-lg p-3 border border-blue-200">
+    <div className="flex items-center justify-between">
       <span>Tiempo total</span>
-      <span className='font-bold'>1h 6min</span>
+      <span className="font-bold">1h 6min</span>
     </div>
   </div>
 </div>;

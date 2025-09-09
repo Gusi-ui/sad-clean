@@ -86,13 +86,16 @@ interface Worker {
   name: string;
   email: string;
   phone: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   created_at: string;
 }
 
 // Y queries como:
 const getActiveWorkers = async () => {
-  const { data, error } = await supabase.from('workers').select('*').eq('status', 'active');
+  const { data, error } = await supabase
+    .from("workers")
+    .select("*")
+    .eq("status", "active");
   return data;
 };
 ```
@@ -106,7 +109,7 @@ interface Assignment {
   worker_id: string;
   task_id: string;
   scheduled_date: string;
-  status: 'pending' | 'in_progress' | 'completed';
+  status: "pending" | "in_progress" | "completed";
   hours_worked?: number;
 }
 ```

@@ -92,7 +92,7 @@ interface WorkerAuth {
   id: string;
   email: string;
   name: string;
-  role: 'worker';
+  role: "worker";
   permissions: string[];
 }
 ```
@@ -101,15 +101,15 @@ interface WorkerAuth {
 
 ```typescript
 // Usar Expo SecureStore para tokens
-import * as SecureStore from 'expo-secure-store';
+import * as SecureStore from "expo-secure-store";
 
 class SecureStorage {
   static async setToken(token: string): Promise<void> {
-    await SecureStore.setItemAsync('auth_token', token);
+    await SecureStore.setItemAsync("auth_token", token);
   }
 
   static async getToken(): Promise<string | null> {
-    return await SecureStore.getItemAsync('auth_token');
+    return await SecureStore.getItemAsync("auth_token");
   }
 }
 ```
@@ -125,7 +125,7 @@ class SecureStorage {
 // 4. Resolución de conflictos
 
 interface SyncStrategy {
-  mode: 'online' | 'offline' | 'syncing';
+  mode: "online" | "offline" | "syncing";
   lastSync: Date;
   pendingOperations: Operation[];
 }
@@ -393,7 +393,7 @@ interface OfflineMode {
   autoSync: () => Promise<void>;
 
   // Indicador de estado
-  connectionStatus: 'online' | 'offline' | 'syncing';
+  connectionStatus: "online" | "offline" | "syncing";
 }
 ```
 
@@ -409,7 +409,7 @@ interface Reports {
   statistics: () => Promise<WorkerStats>;
 
   // Exportar datos
-  exportData: (format: 'pdf' | 'csv') => Promise<string>;
+  exportData: (format: "pdf" | "csv") => Promise<string>;
 }
 ```
 

@@ -372,8 +372,8 @@ describe('Button', () => {
 
 ```typescript
 // src/__tests__/auth-flow.test.tsx
-describe('Authentication Flow', () => {
-  it('allows user to login', async () => {
+describe("Authentication Flow", () => {
+  it("allows user to login", async () => {
     // Test completo de login
   });
 });
@@ -383,13 +383,13 @@ describe('Authentication Flow', () => {
 
 ```typescript
 // cypress/integration/auth.spec.ts
-describe('Authentication', () => {
-  it('should login user', () => {
-    cy.visit('/login');
-    cy.get('[data-cy=email]').type('user@example.com');
-    cy.get('[data-cy=password]').type('password');
-    cy.get('[data-cy=submit]').click();
-    cy.url().should('include', '/dashboard');
+describe("Authentication", () => {
+  it("should login user", () => {
+    cy.visit("/login");
+    cy.get("[data-cy=email]").type("user@example.com");
+    cy.get("[data-cy=password]").type("password");
+    cy.get("[data-cy=submit]").click();
+    cy.url().should("include", "/dashboard");
   });
 });
 ```
@@ -423,7 +423,7 @@ describe('Authentication', () => {
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
-  variant?: 'primary' | 'secondary';
+  variant?: "primary" | "secondary";
   disabled?: boolean;
 }
 ```
@@ -438,9 +438,9 @@ Reusable button component with multiple variants.
 ## Usage
 
 ```tsx
-import Button from '@/components/Button';
+import Button from "@/components/Button";
 
-<Button variant='primary' onClick={handleClick}>
+<Button variant="primary" onClick={handleClick}>
   Click me
 </Button>;
 ```

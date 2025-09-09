@@ -411,48 +411,48 @@ export interface Database {
 
 // Tipos helper para compatibilidad
 export type WorkerNotification =
-  Database['public']['Tables']['worker_notifications']['Row'];
+  Database["public"]["Tables"]["worker_notifications"]["Row"];
 export type WorkerNotificationInsert =
-  Database['public']['Tables']['worker_notifications']['Insert'];
+  Database["public"]["Tables"]["worker_notifications"]["Insert"];
 export type WorkerNotificationUpdate =
-  Database['public']['Tables']['worker_notifications']['Update'];
+  Database["public"]["Tables"]["worker_notifications"]["Update"];
 
 export type WorkerNotificationSettings =
-  Database['public']['Tables']['worker_notification_settings']['Row'];
+  Database["public"]["Tables"]["worker_notification_settings"]["Row"];
 export type WorkerNotificationSettingsInsert =
-  Database['public']['Tables']['worker_notification_settings']['Insert'];
+  Database["public"]["Tables"]["worker_notification_settings"]["Insert"];
 export type WorkerNotificationSettingsUpdate =
-  Database['public']['Tables']['worker_notification_settings']['Update'];
+  Database["public"]["Tables"]["worker_notification_settings"]["Update"];
 
 export type WorkerDevice =
-  Database['public']['Tables']['worker_devices']['Row'];
+  Database["public"]["Tables"]["worker_devices"]["Row"];
 export type WorkerDeviceInsert =
-  Database['public']['Tables']['worker_devices']['Insert'];
+  Database["public"]["Tables"]["worker_devices"]["Insert"];
 export type WorkerDeviceUpdate =
-  Database['public']['Tables']['worker_devices']['Update'];
+  Database["public"]["Tables"]["worker_devices"]["Update"];
 
 // Tipos adicionales para compatibilidad
-export type Worker = Database['public']['Tables']['workers']['Row'];
-export type WorkerInsert = Database['public']['Tables']['workers']['Insert'];
-export type WorkerUpdate = Database['public']['Tables']['workers']['Update'];
+export type Worker = Database["public"]["Tables"]["workers"]["Row"];
+export type WorkerInsert = Database["public"]["Tables"]["workers"]["Insert"];
+export type WorkerUpdate = Database["public"]["Tables"]["workers"]["Update"];
 
-export type User = Database['public']['Tables']['users']['Row'];
-export type UserInsert = Database['public']['Tables']['users']['Insert'];
-export type UserUpdate = Database['public']['Tables']['users']['Update'];
+export type User = Database["public"]["Tables"]["users"]["Row"];
+export type UserInsert = Database["public"]["Tables"]["users"]["Insert"];
+export type UserUpdate = Database["public"]["Tables"]["users"]["Update"];
 
-export type Assignment = Database['public']['Tables']['assignments']['Row'];
+export type Assignment = Database["public"]["Tables"]["assignments"]["Row"];
 export type AssignmentInsert =
-  Database['public']['Tables']['assignments']['Insert'];
+  Database["public"]["Tables"]["assignments"]["Insert"];
 export type AssignmentUpdate =
-  Database['public']['Tables']['assignments']['Update'];
+  Database["public"]["Tables"]["assignments"]["Update"];
 
 export type HoursBalance =
-  Database['public']['Tables']['hours_balances']['Row'];
+  Database["public"]["Tables"]["hours_balances"]["Row"];
 export type HoursBalanceInsert =
-  Database['public']['Tables']['hours_balances']['Insert'];
+  Database["public"]["Tables"]["hours_balances"]["Insert"];
 export type HoursBalanceUpdate =
-  Database['public']['Tables']['hours_balances']['Update'];
+  Database["public"]["Tables"]["hours_balances"]["Update"];
 
-export type Holiday = Database['public']['Tables']['holidays']['Row'];
-export type HolidayInsert = Database['public']['Tables']['holidays']['Insert'];
-export type HolidayUpdate = Database['public']['Tables']['holidays']['Update'];
+export type Holiday = Database["public"]["Tables"]["holidays"]["Row"];
+export type HolidayInsert = Database["public"]["Tables"]["holidays"]["Insert"];
+export type HolidayUpdate = Database["public"]["Tables"]["holidays"]["Update"];

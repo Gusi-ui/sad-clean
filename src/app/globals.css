@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 
 :root {
   --background: #ffffff;
@@ -42,17 +42,17 @@ textarea::placeholder {
 }
 
 /* Placeholders específicos para campos con fondo claro */
-input[class*='bg-white']::placeholder,
-input[class*='bg-gray-50']::placeholder,
-textarea[class*='bg-white']::placeholder,
-textarea[class*='bg-gray-50']::placeholder {
+input[class*="bg-white"]::placeholder,
+input[class*="bg-gray-50"]::placeholder,
+textarea[class*="bg-white"]::placeholder,
+textarea[class*="bg-gray-50"]::placeholder {
   color: #4b5563 !important; /* gray-600 */
   opacity: 1 !important;
 }
 
 /* Placeholders para campos con bordes */
-input[class*='border']::placeholder,
-textarea[class*='border']::placeholder {
+input[class*="border"]::placeholder,
+textarea[class*="border"]::placeholder {
   color: #6b7280 !important; /* gray-500 */
   opacity: 1 !important;
 }
