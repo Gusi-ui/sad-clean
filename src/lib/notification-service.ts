@@ -125,13 +125,32 @@ export class NotificationService {
   ): Promise<void> {
     try {
       // Usar Supabase Realtime para enviar la notificación
-      const channel = supabase.channel(`worker-${workerId}`);
-
-      void channel.send({
-        type: 'broadcast',
-        event: 'notification',
-        payload: notification,
+      // Crear canal temporal para broadcast
+      const channel = supabase.channel(`worker-${workerId}-notifications`, {
+        config: {
+          broadcast: { self: false },
+        },
       });
+
+      // Suscribirse temporalmente y enviar
+      channel.subscribe((status) => {
+        if (status === 'SUBSCRIBED') {
+          // Enviar la notificación por broadcast
+          await channel.send({
+            type: 'broadcast',
+            event: 'notification',
+            payload: notification,
+          });
+
+          // Desconectar después de enviar
+          void supabase.removeChannel(channel);
+        }
+      });
+
+      // Timeout para evitar que el canal quede abierto
+      setTimeout(() => {
+        void supabase.removeChannel(channel);
+      }, 5000);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error sending realtime notification:', error);

@@ -241,7 +241,11 @@ export default function NotificationCenter({
     if (user?.id == null) return;
 
     const channel = supabase
-      .channel(`worker-${user.id}`)
+      .channel(`worker-${user.id}-notifications`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
       .on('broadcast', { event: 'notification' }, (payload) => {
         const newNotification = payload.payload as WorkerNotification;
         setNotifications((prev) => [newNotification, ...prev]);

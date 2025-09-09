@@ -98,11 +98,56 @@ async function sendAssignmentChangeNotification(
 
     // Verificar que las tablas existan antes de enviar notificación
     try {
-      await supabase.from('worker_notifications').select('id').limit(1);
-    } catch {
+      const { data: testData, error: tableError } = await supabase
+        .from('worker_notifications')
+        .select('id')
+        .limit(1);
+
+      if (tableError) {
+        logger.warn(
+          'Tabla worker_notifications no encontrada o inaccesible, creando notificación básica',
+          { workerId, userId, error: tableError }
+        );
+        // Crear notificación básica sin usar el servicio completo
+        const { error: basicError } = await supabase
+          .from('worker_notifications')
+          .insert({
+            worker_id: workerId,
+            title: '📋 Asignación modificada',
+            body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+            type: 'assignment_change',
+            priority: 'high',
+            data: {
+              userName,
+              oldHours,
+              newHours,
+              difference: changeAmount,
+              changeType: hoursChange,
+            },
+          });
+
+        if (basicError) {
+          logger.error(
+            'Error creando notificación básica de cambio de asignación',
+            { workerId, userId, error: basicError }
+          );
+          return false;
+        }
+
+        // eslint-disable-next-line no-console
+        console.log(`✅ Notificación básica creada para ${workerName}`);
+        return true;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(
+        '✅ Tabla worker_notifications accesible, datos de prueba:',
+        testData
+      );
+    } catch (tableCheckError) {
       logger.warn(
-        'Tabla worker_notifications no encontrada, creando notificación básica',
-        { workerId, userId }
+        'Error verificando tabla worker_notifications, intentando crear notificación básica',
+        { workerId, userId, error: tableCheckError }
       );
       // Crear notificación básica sin usar el servicio completo
       const { error: basicError } = await supabase
@@ -136,6 +181,11 @@ async function sendAssignmentChangeNotification(
     }
 
     // Enviar notificación completa usando el servicio
+    // eslint-disable-next-line no-console
+    console.log(
+      `🚀 Intentando enviar notificación completa usando notificationService para worker ${workerName} (${workerId})`
+    );
+
     const notificationResult =
       await notificationService.createAndSendNotification(workerId, {
         title: '📋 Asignación modificada',
@@ -155,10 +205,30 @@ async function sendAssignmentChangeNotification(
     if (notificationResult !== null) {
       // eslint-disable-next-line no-console
       console.log(
-        `✅ Notificación enviada a ${workerName}: ${oldHours}h → ${newHours}h`
+        `✅ Notificación enviada exitosamente a ${workerName}: ${oldHours}h → ${newHours}h`
       );
+      // eslint-disable-next-line no-console
+      console.log('📋 Detalles de la notificación:', {
+        workerId,
+        userName,
+        workerName,
+        oldHours,
+        newHours,
+        notificationId: notificationResult.id,
+        sentAt: notificationResult.sent_at,
+      });
       return true;
     }
+
+    // eslint-disable-next-line no-console
+    console.error('❌ Error enviando notificación de cambio de asignación', {
+      workerId,
+      userId,
+      workerName,
+      userName,
+      oldHours,
+      newHours,
+    });
 
     logger.error('Error enviando notificación de cambio de asignación', {
       workerId,

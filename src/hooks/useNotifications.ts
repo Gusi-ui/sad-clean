@@ -272,7 +272,11 @@ export function useNotifications(
       return;
 
     const channel = supabase
-      .channel(`worker-${user.id}`)
+      .channel(`worker-${user.id}-notifications`, {
+        config: {
+          broadcast: { self: false },
+        },
+      })
       .on('broadcast', { event: 'notification' }, (payload) => {
         const newNotification = payload.payload as WorkerNotification;
 
