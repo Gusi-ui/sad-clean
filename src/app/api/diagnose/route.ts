@@ -11,10 +11,14 @@ export async function GET() {
     const results = {
       timestamp: new Date().toISOString(),
       supabase: {
-        url: process.env.NEXT_PUBLIC_SUPABASE_URL ? 'Configurado' : 'No configurado',
-        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? 'Configurado' : 'No configurado'
+        url: process.env.NEXT_PUBLIC_SUPABASE_URL
+          ? 'Configurado'
+          : 'No configurado',
+        key: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+          ? 'Configurado'
+          : 'No configurado',
       },
-      tests: {} as Record<string, unknown>
+      tests: {} as Record<string, unknown>,
     };
 
     // Test 1: Conexión básica
@@ -28,18 +32,18 @@ export async function GET() {
         results.tests.connection = {
           status: 'ERROR',
           error: connectionError.message,
-          code: connectionError.code
+          code: connectionError.code,
         };
       } else {
         results.tests.connection = {
           status: 'OK',
-          data: connectionTest
+          data: connectionTest,
         };
       }
     } catch (error) {
       results.tests.connection = {
         status: 'ERROR',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
 
@@ -54,32 +58,34 @@ export async function GET() {
         results.tests.worker_notifications = {
           status: 'ERROR',
           error: tableError.message,
-          code: tableError.code
+          code: tableError.code,
         };
       } else {
         results.tests.worker_notifications = {
           status: 'OK',
-          data: tableTest
+          data: tableTest,
         };
       }
     } catch (error) {
       results.tests.worker_notifications = {
         status: 'ERROR',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
 
     // Test 3: Servicio de notificaciones
     try {
-      const { notificationService } = await import('@/lib/notification-service');
+      const { notificationService } = await import(
+        '@/lib/notification-service'
+      );
       results.tests.notification_service = {
         status: 'OK',
-        available: !!notificationService
+        available: !!notificationService,
       };
     } catch (error) {
       results.tests.notification_service = {
         status: 'ERROR',
-        error: error instanceof Error ? error.message : String(error)
+        error: error instanceof Error ? error.message : String(error),
       };
     }
 
@@ -93,7 +99,7 @@ export async function GET() {
     return NextResponse.json(
       {
         error: 'Error interno en diagnóstico',
-        details: error instanceof Error ? error.message : String(error)
+        details: error instanceof Error ? error.message : String(error),
       },
       { status: 500 }
     );

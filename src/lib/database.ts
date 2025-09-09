@@ -21,17 +21,23 @@ import { securityLogger } from '@/utils/security-config';
 const DEFAULT_SUPABASE_URL = 'https://placeholder.supabase.co';
 const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.placeholder';
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_KEY;
+const supabaseUrl =
+  process.env.NEXT_PUBLIC_SUPABASE_URL ?? DEFAULT_SUPABASE_URL;
+const supabaseKey =
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? DEFAULT_SUPABASE_KEY;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 // Validar que al menos tengamos valores por defecto o valores reales
 if (supabaseUrl === DEFAULT_SUPABASE_URL) {
-  console.warn('⚠️ WARNING: Using placeholder Supabase URL. Please set NEXT_PUBLIC_SUPABASE_URL in your .env.local file');
+  console.warn(
+    '⚠️ WARNING: Using placeholder Supabase URL. Please set NEXT_PUBLIC_SUPABASE_URL in your .env.local file'
+  );
 }
 
 if (supabaseKey === DEFAULT_SUPABASE_KEY) {
-  console.warn('⚠️ WARNING: Using placeholder Supabase key. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file');
+  console.warn(
+    '⚠️ WARNING: Using placeholder Supabase key. Please set NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local file'
+  );
 }
 
 // Configurar cliente de Supabase con manejo de auth
@@ -45,15 +51,18 @@ export const supabase = createClient(supabaseUrl, supabaseKey, {
 
 // Cliente con service role para operaciones que requieren acceso completo
 // Solo crear si tenemos la clave de service role válida
-export const supabaseAdmin = serviceRoleKey && serviceRoleKey !== 'your-service-role-key-here' && serviceRoleKey !== 'tu_clave_de_servicio_aqui'
-  ? createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: true,
-        persistSession: true,
-        detectSessionInUrl: true,
-      },
-    })
-  : null;
+export const supabaseAdmin =
+  serviceRoleKey &&
+  serviceRoleKey !== 'your-service-role-key-here' &&
+  serviceRoleKey !== 'tu_clave_de_servicio_aqui'
+    ? createClient(supabaseUrl, serviceRoleKey, {
+        auth: {
+          autoRefreshToken: true,
+          persistSession: true,
+          detectSessionInUrl: true,
+        },
+      })
+    : null;
 
 // Función helper para verificar si tenemos configuración válida
 export const hasValidSupabaseConfig = (): boolean =>
@@ -75,7 +84,7 @@ export type {
   UserUpdate,
   Worker,
   WorkerInsert,
-  WorkerUpdate
+  WorkerUpdate,
 };
 
 // Funciones helper para SAD LAS

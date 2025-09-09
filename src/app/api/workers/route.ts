@@ -20,7 +20,7 @@ export async function GET() {
     console.log('📊 Resultado de consulta:', {
       workersCount: workers?.length ?? 0,
       hasWorkers: !!workers,
-      error: error ? error.message : null
+      error: error ? error.message : null,
     });
 
     if (error) {
@@ -38,7 +38,9 @@ export async function GET() {
     if (workers && workers.length > 0) {
       workers.forEach((worker, index) => {
         // eslint-disable-next-line no-console
-        console.log(`  ${index + 1}. ${worker.name} ${worker.surname} (${worker.email})`);
+        console.log(
+          `  ${index + 1}. ${worker.name} ${worker.surname} (${worker.email})`
+        );
       });
     }
 
@@ -47,13 +49,16 @@ export async function GET() {
       success: true,
       workers: workers || [],
       isTestData: false,
-      count: workers?.length || 0
+      count: workers?.length || 0,
     });
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('❌ Error en GET /api/workers:', error);
     return NextResponse.json(
-      { error: 'Error interno del servidor', details: error instanceof Error ? error.message : String(error) },
+      {
+        error: 'Error interno del servidor',
+        details: error instanceof Error ? error.message : String(error),
+      },
       { status: 500 }
     );
   }

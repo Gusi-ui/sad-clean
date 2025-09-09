@@ -135,8 +135,8 @@ export class NotificationService {
       // Suscribirse temporalmente y enviar
       channel.subscribe((status) => {
         if (status === 'SUBSCRIBED') {
-          // Enviar la notificación por broadcast
-          await channel.send({
+          // Enviar la notificación por broadcast (sin await para evitar Promise en callback)
+          void channel.send({
             type: 'broadcast',
             event: 'notification',
             payload: notification,

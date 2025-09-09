@@ -8,7 +8,7 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line no-console
     console.log('🚀 Iniciando petición POST /api/test-notifications');
 
-    const body = await request.json() as {
+    const body = (await request.json()) as {
       workerId: string;
       title?: string;
       body?: string;
@@ -18,7 +18,12 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line no-console
     console.log('📋 Body recibido:', body);
 
-    const { workerId, title = '🧪 Notificación de Prueba', body: notificationBody = 'Esta es una notificación de prueba', type = 'system_message' } = body;
+    const {
+      workerId,
+      title = '🧪 Notificación de Prueba',
+      body: notificationBody = 'Esta es una notificación de prueba',
+      type = 'system_message',
+    } = body;
 
     if (!workerId) {
       // eslint-disable-next-line no-console
@@ -32,7 +37,11 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line no-console
     console.log(`🧪 Creando notificación de prueba para worker ${workerId}`);
     // eslint-disable-next-line no-console
-    console.log('📝 Datos de notificación:', { title, body: notificationBody, type });
+    console.log('📝 Datos de notificación:', {
+      title,
+      body: notificationBody,
+      type,
+    });
 
     // Verificar que el servicio esté disponible
     if (!notificationService) {
@@ -66,12 +75,15 @@ export async function POST(request: NextRequest) {
 
     if (notification) {
       // eslint-disable-next-line no-console
-      console.log('✅ Notificación de prueba creada exitosamente:', notification);
+      console.log(
+        '✅ Notificación de prueba creada exitosamente:',
+        notification
+      );
       return NextResponse.json(
         {
           success: true,
           notification,
-          message: 'Notificación de prueba enviada exitosamente'
+          message: 'Notificación de prueba enviada exitosamente',
         },
         { status: 201 }
       );
@@ -87,9 +99,14 @@ export async function POST(request: NextRequest) {
     // eslint-disable-next-line no-console
     console.error('❌ Error en test-notifications:', error);
     // eslint-disable-next-line no-console
-    console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace');
+    console.error(
+      'Stack trace:',
+      error instanceof Error ? error.stack : 'No stack trace'
+    );
     return NextResponse.json(
-      { error: `Error interno del servidor: ${error instanceof Error ? error.message : String(error)}` },
+      {
+        error: `Error interno del servidor: ${error instanceof Error ? error.message : String(error)}`,
+      },
       { status: 500 }
     );
   }
