@@ -26,6 +26,13 @@ export class NotificationService {
     notification: Omit<WorkerNotificationInsert, 'worker_id'>
   ): Promise<WorkerNotification | null> {
     try {
+      // eslint-disable-next-line no-console
+      console.log(
+        '🔔 Creando notificación para trabajador:',
+        workerId,
+        notification.title
+      );
+
       // Crear notificación en la base de datos
       // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
       const { data: createdNotification, error } = await supabase
@@ -39,9 +46,15 @@ export class NotificationService {
 
       if (error) {
         // eslint-disable-next-line no-console
-        console.error('Error creating notification:', error);
+        console.error('❌ Error creating notification:', error);
         return null;
       }
+
+      // eslint-disable-next-line no-console
+      console.log(
+        '✅ Notificación creada en BD:',
+        (createdNotification as { id: string }).id
+      );
 
       // Enviar notificación push
       await this.sendPushNotification(createdNotification);
@@ -49,11 +62,14 @@ export class NotificationService {
       // Enviar notificación en tiempo real via WebSocket
       await this.sendRealtimeNotification(workerId, createdNotification);
 
+      // eslint-disable-next-line no-console
+      console.log('🚀 Notificación enviada completamente');
+
       // eslint-disable-next-line @typescript-eslint/no-unsafe-return
       return createdNotification;
     } catch (error) {
       // eslint-disable-next-line no-console
-      console.error('Error in createAndSendNotification:', error);
+      console.error('❌ Error in createAndSendNotification:', error);
       return null;
     }
   }
@@ -124,14 +140,42 @@ export class NotificationService {
     notification: WorkerNotification
   ): Promise<void> {
     try {
-      // Usar Supabase Realtime para enviar la notificación
-      const channel = supabase.channel(`worker-${workerId}`);
-
-      void channel.send({
-        type: 'broadcast',
-        event: 'notification',
-        payload: notification,
+      // Crear canal temporal para broadcasting
+      const channel = supabase.channel(`worker-${workerId}`, {
+        config: {
+          broadcast: { self: false },
+        },
       });
+
+      // Suscribirse al canal para poder enviar
+      await new Promise<void>((resolve, reject) => {
+        const subscription = channel.subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            // Una vez suscrito, enviar la notificación
+            void channel.send({
+              type: 'broadcast',
+              event: 'notification',
+              payload: notification,
+            });
+
+            // Pequeña pausa para asegurar que se envíe
+            setTimeout(() => {
+              resolve();
+            }, 100);
+          } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            reject(new Error(`Channel subscription failed: ${status}`));
+          }
+        });
+
+        // Timeout de seguridad (5 segundos)
+        setTimeout(() => {
+          void subscription.unsubscribe();
+          reject(new Error('Channel subscription timeout'));
+        }, 5000);
+      });
+
+      // Limpiar el canal después de enviar
+      void supabase.removeChannel(channel);
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error('Error sending realtime notification:', error);
@@ -357,7 +401,11 @@ export class NotificationService {
     ) => {
       void this.createAndSendNotification(workerId, {
         title: '⏹️ Servicio finalizado',
-        body: `Servicio con ${userName} a las ${serviceTime} ha terminado${nextServiceInfo != null && nextServiceInfo.length > 0 ? `. ${nextServiceInfo}` : ''}`,
+        body: `Servicio con ${userName} a las ${serviceTime} ha terminado${
+          nextServiceInfo != null && nextServiceInfo.length > 0
+            ? `. ${nextServiceInfo}`
+            : ''
+        }`,
         type: 'service_end',
         priority: 'normal',
         data: { userName, serviceTime, nextServiceInfo },

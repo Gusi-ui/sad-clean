@@ -268,12 +268,24 @@ export function useNotifications(
 
   // Configurar suscripción en tiempo real
   useEffect(() => {
-    if (user?.id === null || user?.id === undefined || autoRefresh === false)
+    if (user?.id === null || user?.id === undefined || autoRefresh === false) {
       return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log(
+      '🔌 Configurando suscripción en tiempo real para trabajador:',
+      user.id
+    );
 
     const channel = supabase
       .channel(`worker-${user.id}`)
       .on('broadcast', { event: 'notification' }, (payload) => {
+        // eslint-disable-next-line no-console
+        console.log(
+          '📨 Notificación en tiempo real recibida:',
+          payload.payload
+        );
         const newNotification = payload.payload as WorkerNotification;
 
         // Agregar nueva notificación al estado
@@ -285,10 +297,15 @@ export function useNotifications(
 
         // Mostrar notificación del navegador
         showBrowserNotification(newNotification);
+
+        // eslint-disable-next-line no-console
+        console.log('✅ Notificación procesada en cliente');
       })
       .subscribe();
 
     return () => {
+      // eslint-disable-next-line no-console
+      console.log('🔌 Limpiando suscripción en tiempo real');
       void supabase.removeChannel(channel);
     };
   }, [user?.id, autoRefresh, playNotificationSound, showBrowserNotification]);
@@ -301,14 +318,15 @@ export function useNotifications(
     }
   }, [user?.id, refresh, requestNotificationPermission]);
 
-  // Auto-refresh cada 30 segundos
+  // Auto-refresh cada 10 segundos como respaldo para tiempo real
   useEffect(() => {
-    if (autoRefresh === false || user?.id === null || user?.id === undefined)
+    if (autoRefresh === false || user?.id === null || user?.id === undefined) {
       return;
+    }
 
     const interval = setInterval(() => {
       void loadUnreadCount();
-    }, 30000);
+    }, 10000); // Reducido de 30s a 10s para mejor respuesta
 
     return () => clearInterval(interval);
   }, [autoRefresh, user?.id, loadUnreadCount]);
