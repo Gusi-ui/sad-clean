@@ -43,6 +43,133 @@ interface Assignment {
   worker?: { name: string | null; surname: string | null };
 }
 
+// Función para enviar notificación de nueva asignación
+async function sendNewAssignmentNotification(
+  workerId: string,
+  userId: string,
+  weeklyHours: number
+): Promise<boolean> {
+  try {
+    // Obtener información del usuario y trabajadora
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('name, surname')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      logger.warn('Error obteniendo datos del usuario para notificación', {
+        userId,
+        error: userError,
+      });
+      return false;
+    }
+
+    const { data: workerData, error: workerError } = await supabase
+      .from('workers')
+      .select('name, surname')
+      .eq('id', workerId)
+      .single();
+
+    if (workerError) {
+      logger.warn(
+        'Error obteniendo datos de la trabajadora para notificación',
+        { workerId, error: workerError }
+      );
+      return false;
+    }
+
+    if (userData === null || workerData === null) {
+      logger.warn(
+        'Datos incompletos para enviar notificación de nueva asignación',
+        { userId, workerId }
+      );
+      return false;
+    }
+
+    const userName = `${userData.name ?? ''} ${userData.surname ?? ''}`.trim();
+    const workerName =
+      `${workerData.name ?? ''} ${workerData.surname ?? ''}`.trim();
+
+    // Verificar que las tablas existan antes de enviar notificación
+    try {
+      await supabase.from('worker_notifications').select('id').limit(1);
+    } catch {
+      logger.warn(
+        'Tabla worker_notifications no encontrada, creando notificación básica',
+        { workerId, userId }
+      );
+      // Crear notificación básica sin usar el servicio completo
+      const { error: basicError } = await supabase
+        .from('worker_notifications')
+        .insert({
+          worker_id: workerId,
+          title: '👤 Nueva asignación',
+          body: `Se te ha asignado un nuevo usuario: ${userName} con ${weeklyHours}h semanales`,
+          type: 'new_user',
+          priority: 'high',
+          data: {
+            userName,
+            weeklyHours,
+            assignmentType: 'nueva asignación',
+          },
+        });
+
+      if (basicError) {
+        logger.error('Error creando notificación básica de nueva asignación', {
+          workerId,
+          userId,
+          error: basicError,
+        });
+        return false;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`✅ Notificación básica creada para ${workerName}`);
+      return true;
+    }
+
+    // Enviar notificación completa usando el servicio
+    const notificationResult =
+      await notificationService.createAndSendNotification(workerId, {
+        title: '👤 Nueva asignación',
+        body: `Se te ha asignado un nuevo usuario: ${userName} con ${weeklyHours}h semanales`,
+        type: 'new_user' as NotificationType,
+        priority: 'high',
+        data: {
+          userName,
+          weeklyHours,
+          assignmentType: 'nueva asignación',
+        },
+      });
+
+    if (notificationResult !== null) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `✅ Notificación enviada a ${workerName}: Nueva asignación con ${userName}`
+      );
+      return true;
+    }
+
+    logger.error('Error enviando notificación de nueva asignación', {
+      workerId,
+      userId,
+      workerName,
+      userName,
+    });
+    return false;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error general en notificación de nueva asignación', {
+      workerId,
+      userId,
+      error: errorMessage,
+    });
+    // No relanzar el error para no interrumpir el flujo principal
+    return false;
+  }
+}
+
 // Función para enviar notificación de cambio de asignación
 async function sendAssignmentChangeNotification(
   workerId: string,
@@ -1057,6 +1184,40 @@ export default function AssignmentsPage() {
                   setAssignments(transformedData);
                   setShowAddModal(false);
                   setSuccessMessage('Asignación creada correctamente');
+
+                  // Enviar notificación a la trabajadora sobre la nueva asignación
+                  try {
+                    const newAssignment = transformedData.find(
+                      (a) =>
+                        a.worker_id === data.worker_id &&
+                        a.user_id === data.user_id
+                    );
+
+                    if (newAssignment) {
+                      const notificationSent =
+                        await sendNewAssignmentNotification(
+                          data.worker_id,
+                          data.user_id,
+                          totalHours
+                        );
+
+                      if (!notificationSent) {
+                        logger.warn(
+                          'No se pudo enviar notificación de nueva asignación, pero la asignación se creó correctamente',
+                          { workerId: data.worker_id, userId: data.user_id }
+                        );
+                      }
+                    }
+                  } catch (notificationError) {
+                    logger.warn(
+                      'Error enviando notificación de nueva asignación, pero la asignación se creó correctamente',
+                      {
+                        workerId: data.worker_id,
+                        userId: data.user_id,
+                        error: notificationError,
+                      }
+                    );
+                  }
 
                   // Log de creación de asignación
                   const nameMeta = user?.user_metadata?.['name'];
