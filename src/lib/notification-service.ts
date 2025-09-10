@@ -23,14 +23,14 @@ export class NotificationService {
    */
   async createAndSendNotification(
     workerId: string,
-    notification: Omit<WorkerNotificationInsert, 'worker_id'>,
+    notification: Omit<WorkerNotificationInsert, 'worker_id'>
   ): Promise<WorkerNotification | null> {
     try {
       // eslint-disable-next-line no-console
       console.log(
         '🔔 Creando notificación para trabajador:',
         workerId,
-        notification.title,
+        notification.title
       );
 
       // Crear notificación en la base de datos
@@ -53,7 +53,7 @@ export class NotificationService {
       // eslint-disable-next-line no-console
       console.log(
         '✅ Notificación creada en BD:',
-        (createdNotification as { id: string }).id,
+        (createdNotification as { id: string }).id
       );
 
       // Enviar notificación push
@@ -78,7 +78,7 @@ export class NotificationService {
    * Enviar notificación push usando Service Worker
    */
   private async sendPushNotification(
-    notification: WorkerNotification,
+    notification: WorkerNotification
   ): Promise<void> {
     try {
       // Obtener el token de push del dispositivo del trabajador
@@ -109,18 +109,16 @@ export class NotificationService {
           ...notification.data,
         },
         actions: this.getNotificationActions(
-          notification.type as NotificationType,
+          notification.type as NotificationType
         ),
       };
 
       // Aquí se integraría con un servicio de push notifications como Firebase FCM
       // Por ahora, usaremos la Web Push API del navegador
-      for (
-        const device of devices as {
-          push_token: string;
-          platform: string;
-        }[]
-      ) {
+      for (const device of devices as {
+        push_token: string;
+        platform: string;
+      }[]) {
         if (
           typeof device.push_token === 'string' &&
           device.push_token.length > 0
@@ -139,7 +137,7 @@ export class NotificationService {
    */
   private async sendRealtimeNotification(
     workerId: string,
-    notification: WorkerNotification,
+    notification: WorkerNotification
   ): Promise<void> {
     try {
       // Crear canal temporal para broadcasting
@@ -189,7 +187,7 @@ export class NotificationService {
    */
   private async sendWebPushNotification(
     pushToken: string,
-    payload: PushNotificationPayload,
+    payload: PushNotificationPayload
   ): Promise<void> {
     try {
       // Aquí se implementaría la lógica para enviar la notificación
@@ -337,12 +335,11 @@ export class NotificationService {
     const createNewUserNotification = async (
       workerId: string,
       userName: string,
-      userAddress: string,
+      userAddress: string
     ) => {
       void this.createAndSendNotification(workerId, {
         title: '👤 Nuevo usuario asignado',
-        body:
-          `Se te ha asignado un nuevo usuario: ${userName} en ${userAddress}`,
+        body: `Se te ha asignado un nuevo usuario: ${userName} en ${userAddress}`,
         type: 'new_user',
         priority: 'high',
         data: { userName, userAddress },
@@ -352,7 +349,7 @@ export class NotificationService {
     // Notificación de usuario eliminado
     const createUserRemovedNotification = async (
       workerId: string,
-      userName: string,
+      userName: string
     ) => {
       void this.createAndSendNotification(workerId, {
         title: '❌ Usuario eliminado',
@@ -368,7 +365,7 @@ export class NotificationService {
       workerId: string,
       userName: string,
       oldTime: string,
-      newTime: string,
+      newTime: string
     ) => {
       void this.createAndSendNotification(workerId, {
         title: '⏰ Cambio de horario',
@@ -384,12 +381,11 @@ export class NotificationService {
       workerId: string,
       userName: string,
       serviceTime: string,
-      serviceAddress: string,
+      serviceAddress: string
     ) => {
       void this.createAndSendNotification(workerId, {
         title: '▶️ Servicio iniciado',
-        body:
-          `Servicio con ${userName} a las ${serviceTime} en ${serviceAddress} ha comenzado`,
+        body: `Servicio con ${userName} a las ${serviceTime} en ${serviceAddress} ha comenzado`,
         type: 'service_start',
         priority: 'high',
         data: { userName, serviceTime, serviceAddress },
@@ -401,7 +397,7 @@ export class NotificationService {
       workerId: string,
       userName: string,
       serviceTime: string,
-      nextServiceInfo?: string,
+      nextServiceInfo?: string
     ) => {
       void this.createAndSendNotification(workerId, {
         title: '⏹️ Servicio finalizado',

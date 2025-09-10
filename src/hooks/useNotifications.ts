@@ -26,7 +26,7 @@ interface UseNotificationsReturn {
 }
 
 export function useNotifications(
-  options: UseNotificationsOptions = {},
+  options: UseNotificationsOptions = {}
 ): UseNotificationsReturn {
   const {
     limit = 50,
@@ -50,7 +50,7 @@ export function useNotifications(
 
     try {
       const response = await fetch(
-        `/api/workers/${user.id}/notifications?limit=${limit}`,
+        `/api/workers/${user.id}/notifications?limit=${limit}`
       );
 
       if (!response.ok) {
@@ -62,9 +62,8 @@ export function useNotifications(
       };
       setNotifications(data.notifications ?? []);
     } catch (err) {
-      const errorMessage = err instanceof Error
-        ? err.message
-        : 'Error desconocido';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
       // Error loading notifications - silently handle
     } finally {
@@ -78,7 +77,7 @@ export function useNotifications(
 
     try {
       const response = await fetch(
-        `/api/workers/${user.id}/notifications/unread-count`,
+        `/api/workers/${user.id}/notifications/unread-count`
       );
 
       if (!response.ok) {
@@ -120,14 +119,13 @@ export function useNotifications(
 
         setUnreadCount((prev) => Math.max(0, prev - 1));
       } catch (err) {
-        const errorMessage = err instanceof Error
-          ? err.message
-          : 'Error desconocido';
+        const errorMessage =
+          err instanceof Error ? err.message : 'Error desconocido';
         setError(errorMessage);
         // Error marking notification as read - silently handle
       }
     },
-    [user?.id],
+    [user?.id]
   );
 
   // Marcar todas como leídas
@@ -152,9 +150,8 @@ export function useNotifications(
 
       setUnreadCount(0);
     } catch (err) {
-      const errorMessage = err instanceof Error
-        ? err.message
-        : 'Error desconocido';
+      const errorMessage =
+        err instanceof Error ? err.message : 'Error desconocido';
       setError(errorMessage);
       // Error marking all notifications as read - silently handle
     }
@@ -215,7 +212,7 @@ export function useNotifications(
         });
       });
     },
-    [enableSound],
+    [enableSound]
   );
 
   // Mostrar notificación del navegador con mejor presentación
@@ -254,7 +251,7 @@ export function useNotifications(
         };
       }
     },
-    [enableBrowserNotifications, enableSound, markAsRead],
+    [enableBrowserNotifications, enableSound, markAsRead]
   );
 
   // Solicitar permisos de notificación
@@ -278,7 +275,7 @@ export function useNotifications(
     // eslint-disable-next-line no-console
     console.log(
       '🔌 Configurando suscripción en tiempo real para trabajador:',
-      user.id,
+      user.id
     );
 
     const channel = supabase
@@ -287,7 +284,7 @@ export function useNotifications(
         // eslint-disable-next-line no-console
         console.log(
           '📨 Notificación en tiempo real recibida:',
-          payload.payload,
+          payload.payload
         );
         const newNotification = payload.payload as WorkerNotification;
 
