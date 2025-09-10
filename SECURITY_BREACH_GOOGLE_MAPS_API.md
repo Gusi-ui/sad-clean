@@ -165,8 +165,8 @@ Responsable:** Desarrollador **Estado de Verificación:** ✅ Completado
 
 ## ✅ VERIFICACIÓN FINAL
 
-**Fecha de Resolución:** ✅ $(date) **Nueva Clave API:** ✅ Configurada con restricciones **Persona
-Responsable:** ✅ Desarrollador **Estado de Verificación:** ✅ Completado
+<<<<<<< HEAD **Fecha de Resolución:** ✅ $(date) **Nueva Clave API:** ✅ Configurada con
+restricciones **Persona Responsable:** ✅ Desarrollador **Estado de Verificación:** ✅ Completado
 
 ### 📋 Checklist de Resolución Completado:
 
@@ -179,7 +179,10 @@ Responsable:** ✅ Desarrollador **Estado de Verificación:** ✅ Completado
 - ✅ Archivos de documentación actualizados
 - ✅ `.secrets.baseline` actualizado para excluir clave antigua
 - ✅ Commit de cambios realizado
-- ✅ PR fusionado exitosamente
+- # ✅ PR fusionado exitosamente
+  **Fecha de Resolución:** \***\*\_\_\*\*** **Nueva Clave API:** \***\*\_\_\*\*** **Persona
+  Responsable:** \***\*\_\_\*\*** **Estado de Verificación:** ☐ Pendiente ☐ Completado
+  > > > > > > > 365645120bb5b4edacb90b7343551685eca4653b
 
 ---
 
