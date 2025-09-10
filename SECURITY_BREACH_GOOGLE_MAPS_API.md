@@ -160,8 +160,8 @@
 
 ## ✅ VERIFICACIÓN FINAL
 
-**Fecha de Resolución:** ****\_\_**** **Nueva Clave API:** ****\_\_**** **Persona Responsable:**
-****\_\_**** **Estado de Verificación:** ☐ Pendiente ☐ Completado
+**Fecha de Resolución:** \***\*\_\_\*\*** **Nueva Clave API:** \***\*\_\_\*\*** **Persona
+Responsable:** \***\*\_\_\*\*** **Estado de Verificación:** ☐ Pendiente ☐ Completado
 
 ---
 
