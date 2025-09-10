@@ -87,7 +87,7 @@ async function createNotificationSettingsTable() {
     `;
 
     // Ejecutar SQL usando rpc (si está disponible) o intentar con una consulta directa
-    const { data, error } = await supabase.rpc('exec_sql', {
+    const { error } = await supabase.rpc('exec_sql', {
       sql: createTableSQL,
     });
 
