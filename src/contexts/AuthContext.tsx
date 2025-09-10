@@ -132,7 +132,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       > | null;
 
       // Determinar el rol basado en el email o metadata
-      let role: 'worker' | 'admin' | 'super_admin' = 'worker';
+      let role: 'worker' | 'admin' | 'super_admin';
       if (authData.user.email === 'conectomail@gmail.com') {
         role = 'super_admin';
       } else if (authData.user.email === 'webmaster@gusi.dev') {
