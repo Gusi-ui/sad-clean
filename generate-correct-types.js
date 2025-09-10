@@ -80,7 +80,7 @@ async function generateCorrectTypes() {
 
     // Verificar worker_notification_settings
     try {
-      const { data: settings, error: settingsError } = await supabase
+      const { error: settingsError } = await supabase
         .from('worker_notification_settings')
         .select('*')
         .limit(1);
