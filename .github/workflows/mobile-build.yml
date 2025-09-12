@@ -32,10 +32,12 @@ jobs:
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: Setup Expo CLI
-        run: |
-          npm install -g @expo/cli
-          npm install -g eas-cli
+      - name: Setup Expo and EAS
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          eas-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
 
       - name: Install dependencies
         run: |
@@ -50,18 +52,11 @@ jobs:
       - name: Setup EAS Project
         run: |
           cd mobile-app
-          if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
-            echo "Logging in to Expo..."
-            echo ${{ secrets.EXPO_TOKEN || '' }} | npx eas-cli login
-            echo "Creating Expo project..."
-            npx eas-cli project:init --non-interactive
-            echo "Project created successfully"
-          else
-            echo "Skipping project creation - no token provided"
-            npm run setup-eas
-          fi
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
+          echo "Checking authentication status..."
+          eas whoami
+          echo "Verifying project configuration..."
+          eas project:info || eas project:init --non-interactive
+          echo "Project setup completed"
 
       - name: Run linting
         run: |
@@ -76,16 +71,8 @@ jobs:
       - name: Build APK
         run: |
           cd mobile-app
-          # Intentar build con EAS si hay token, sino usar build local
-          if [ -n "${{ secrets.EXPO_TOKEN || '' }}" ]; then
-            echo "Building with EAS..."
-            npm run build:android
-          else
-            echo "Building locally..."
-            npm run build:android-apk
-          fi
-        env:
-          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN || '' }}
+          echo "Building Android APK with EAS..."
+          npm run build:android
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
