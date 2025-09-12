@@ -47,13 +47,14 @@
     },
     "extra": {
       "eas": {
-        "projectId": "3c9a2a8f-ca41-4732-ae9c-f7cbf9c71e10"
+        "projectId": "66cd7efe-d54d-4d8d-bc10-11995fa6d0e8"
       }
     },
     "build": {
       "android": {
         "buildType": "apk"
       }
-    }
+    },
+    "owner": "gusideveloper"
   }
 }
