@@ -1,5 +1,4 @@
 const fs = require('fs');
-const path = require('path');
 
 // Función para generar un UUID válido
 function generateUUID() {
@@ -23,8 +22,13 @@ appJson.expo.extra.eas.projectId = projectId;
 // Escribir el app.json actualizado
 fs.writeFileSync(appJsonPath, JSON.stringify(appJson, null, 2));
 
+// eslint-disable-next-line no-console
 console.log('✅ ProjectId actualizado en app.json:', projectId);
+// eslint-disable-next-line no-console
 console.log('📝 Para configurar EAS completamente:');
+// eslint-disable-next-line no-console
 console.log('1. Ejecuta: npx eas-cli login');
+// eslint-disable-next-line no-console
 console.log('2. Ejecuta: npx eas-cli build:configure');
+// eslint-disable-next-line no-console
 console.log('3. El projectId será:', projectId);

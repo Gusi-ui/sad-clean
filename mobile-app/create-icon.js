@@ -6,6 +6,7 @@ const { createCanvas } = require('canvas');
 const assetsDir = './assets';
 if (!fs.existsSync(assetsDir)) {
   fs.mkdirSync(assetsDir, { recursive: true });
+  // eslint-disable-next-line no-console
   console.log('Directorio assets creado');
 }
 
@@ -35,4 +36,5 @@ const buffer = canvas.toBuffer('image/png');
 const iconPath = path.join(assetsDir, 'icon.png');
 fs.writeFileSync(iconPath, buffer);
 
+// eslint-disable-next-line no-console
 console.log('Icono PNG creado exitosamente en ./assets/icon.png');
