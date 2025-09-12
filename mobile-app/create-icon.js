@@ -1,5 +1,6 @@
 const fs = require('fs');
 const path = require('path');
+const sharp = require('sharp');
 
 // Crear directorio assets si no existe
 const assetsDir = './assets';
@@ -23,9 +24,19 @@ const svgContent = `<?xml version="1.0" encoding="UTF-8"?>
         text-anchor="middle" fill="#3b82f6">SAD</text>
 </svg>`;
 
-// Guardar como SVG (que puede ser usado como icono)
+// Convertir SVG a PNG usando Sharp
 const iconPath = path.join(assetsDir, 'icon.png');
-fs.writeFileSync(iconPath, svgContent);
 
-// eslint-disable-next-line no-console
-console.log('Icono SVG creado exitosamente en ./assets/icon.png');
+async function createPngIcon() {
+  try {
+    await sharp(Buffer.from(svgContent)).png().toFile(iconPath);
+
+    // eslint-disable-next-line no-console
+    console.log('Icono PNG creado exitosamente en ./assets/icon.png');
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Error creando el icono PNG:', error);
+  }
+}
+
+createPngIcon();
