@@ -77,7 +77,7 @@ jobs:
         run: |
           cd mobile-app
           echo "Running prebuild for Android..."
-          npx expo prebuild --platform android --clear
+          npx expo prebuild --platform android --clean
 
       - name: Build APK (Local Priority)
         timeout-minutes: 15
