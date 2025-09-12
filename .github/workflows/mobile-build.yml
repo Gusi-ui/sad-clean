@@ -72,6 +72,13 @@ jobs:
           cd mobile-app
           npm run type-check
 
+      - name: Prebuild for Android
+        timeout-minutes: 5
+        run: |
+          cd mobile-app
+          echo "Running prebuild for Android..."
+          npx expo prebuild --platform android --clear
+
       - name: Build APK (Local Priority)
         timeout-minutes: 15
         run: |
