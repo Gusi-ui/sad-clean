@@ -72,65 +72,71 @@ jobs:
           cd mobile-app
           npm run type-check
 
-      - name: Build APK with EAS
-        timeout-minutes: 30
+      - name: Build APK (Local Priority)
+        timeout-minutes: 15
         run: |
           cd mobile-app
-          echo "Building Android APK with EAS..."
-          eas build --platform android --profile preview --non-interactive --wait || {
-            echo "EAS build failed or timed out, trying local build as fallback..."
-            npm run build:android-apk
-          }
+          echo "Building Android APK with local build (faster and more reliable)..."
 
-      - name: Download APK
-        timeout-minutes: 10
-        run: |
-          cd mobile-app
-
-          # Check if local build was used (fallback scenario)
-          if [ -f "build-*.apk" ] || [ -f "*.apk" ]; then
-            echo "Local APK build found, using it..."
-            APK_FILE=$(find . -name "*.apk" -type f | head -1)
-            if [ -n "$APK_FILE" ]; then
-              cp "$APK_FILE" sad-las-worker.apk
-              echo "Local APK copied successfully"
-              ls -la sad-las-worker.apk
-            fi
+          # Try local build first (more reliable)
+          if npm run build:android-apk; then
+            echo "Local build completed successfully"
           else
-            # Try to download from EAS
-            echo "Attempting to download APK from EAS..."
-            
-            # Wait a bit for build to be processed
-            sleep 10
-            
-            # Get the latest build info with timeout
-            timeout 60 bash -c '
-              while true; do
-                BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null || echo "[]")
-                if [ "$BUILD_INFO" != "[]" ]; then
-                  BUILD_URL=$(echo $BUILD_INFO | jq -r ".[0].artifacts.buildUrl" 2>/dev/null || echo "null")
-                  if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
-                    echo "Downloading APK from: $BUILD_URL"
-                    curl -L -o sad-las-worker.apk "$BUILD_URL" && break
-                  fi
-                fi
-                echo "Waiting for build to complete..."
-                sleep 15
-              done
-            ' || {
-              echo "Timeout waiting for EAS build, this may indicate the build is still in progress"
-              echo "Creating a placeholder APK for now..."
-              echo "APK build in progress" > sad-las-worker.txt
+            echo "Local build failed, trying EAS as fallback..."
+            timeout 600 eas build --platform android --profile preview --non-interactive --wait || {
+              echo "Both local and EAS builds failed"
               exit 1
             }
-            
-            if [ -f "sad-las-worker.apk" ]; then
-              echo "APK downloaded successfully"
-              ls -la sad-las-worker.apk
-            else
-              echo "Failed to download APK"
-              exit 1
+          fi
+
+      - name: Locate and Prepare APK
+        timeout-minutes: 5
+        run: |
+          cd mobile-app
+
+          echo "Searching for generated APK files..."
+
+          # Look for APK in common locations
+          APK_LOCATIONS=(
+            "android/app/build/outputs/apk/release/*.apk"
+            "android/app/build/outputs/apk/debug/*.apk"
+            "build/*.apk"
+            "*.apk"
+            "android/app/build/outputs/apk/**/*.apk"
+          )
+
+          APK_FOUND=false
+          for location in "${APK_LOCATIONS[@]}"; do
+            if ls $location 1> /dev/null 2>&1; then
+              APK_FILE=$(ls $location | head -1)
+              echo "Found APK at: $APK_FILE"
+              cp "$APK_FILE" sad-las-worker.apk
+              APK_FOUND=true
+              break
             fi
+          done
+
+          if [ "$APK_FOUND" = false ]; then
+            echo "No local APK found, trying to download from EAS..."
+            
+            # Quick attempt to get EAS build
+            BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null || echo "[]")
+            if [ "$BUILD_INFO" != "[]" ]; then
+              BUILD_URL=$(echo $BUILD_INFO | jq -r '.[0].artifacts.buildUrl' 2>/dev/null || echo "null")
+              if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
+                echo "Downloading APK from EAS: $BUILD_URL"
+                curl -L -o sad-las-worker.apk "$BUILD_URL"
+                APK_FOUND=true
+              fi
+            fi
+          fi
+
+          if [ "$APK_FOUND" = true ] && [ -f "sad-las-worker.apk" ]; then
+            echo "APK ready for upload"
+            ls -la sad-las-worker.apk
+          else
+            echo "Failed to locate or download APK"
+            exit 1
           fi
 
       - name: Get version info
