@@ -73,7 +73,7 @@ jobs:
           npm run type-check
 
       - name: Setup Gradle Cache
-        uses: actions/cache@v3
+        uses: actions/cache@v4
         with:
           path: |
             ~/.gradle/caches
@@ -127,7 +127,7 @@ jobs:
           echo "tag=v$VERSION-mobile-$BUILD_NUMBER" >> $GITHUB_OUTPUT
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: android-apk
           path: mobile-app/${{ env.APK_PATH }}
