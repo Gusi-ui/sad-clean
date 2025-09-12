@@ -72,29 +72,14 @@ jobs:
           cd mobile-app
           npm run type-check
 
-      - name: Prebuild for Android
-        timeout-minutes: 5
+      - name: Build APK with EAS (Optimized)
+        timeout-minutes: 20
         run: |
           cd mobile-app
-          echo "Running prebuild for Android..."
-          npx expo prebuild --platform android --clean
+          echo "Building Android APK with EAS (optimized settings)..."
 
-      - name: Build APK (Local Priority)
-        timeout-minutes: 15
-        run: |
-          cd mobile-app
-          echo "Building Android APK with local build (faster and more reliable)..."
-
-          # Try local build first (more reliable)
-          if npm run build:android-apk; then
-            echo "Local build completed successfully"
-          else
-            echo "Local build failed, trying EAS as fallback..."
-            timeout 600 eas build --platform android --profile preview --non-interactive --wait || {
-              echo "Both local and EAS builds failed"
-              exit 1
-            }
-          fi
+          # Use EAS with optimized settings and proper timeout
+          eas build --platform android --profile preview --non-interactive --wait
 
       - name: Locate and Prepare APK
         timeout-minutes: 5
