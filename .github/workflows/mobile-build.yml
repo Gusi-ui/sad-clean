@@ -40,6 +40,7 @@ jobs:
           packager: npm
 
       - name: Install dependencies
+        timeout-minutes: 10
         run: |
           cd mobile-app
           npm install --legacy-peer-deps
@@ -50,6 +51,7 @@ jobs:
           npm run generate-icon
 
       - name: Setup EAS Project
+        timeout-minutes: 5
         run: |
           cd mobile-app
           echo "Checking authentication status..."
@@ -59,54 +61,76 @@ jobs:
           echo "Project setup completed"
 
       - name: Run linting
+        timeout-minutes: 5
         run: |
           cd mobile-app
           npx eslint .
 
       - name: Run type checking
+        timeout-minutes: 5
         run: |
           cd mobile-app
           npm run type-check
 
       - name: Build APK with EAS
+        timeout-minutes: 30
         run: |
           cd mobile-app
           echo "Building Android APK with EAS..."
-          npm run build:android
+          eas build --platform android --profile preview --non-interactive --wait || {
+            echo "EAS build failed or timed out, trying local build as fallback..."
+            npm run build:android-apk
+          }
 
-      - name: Wait for build completion and download APK
+      - name: Download APK
+        timeout-minutes: 10
         run: |
           cd mobile-app
-          echo "Waiting for build to complete..."
-          sleep 30
 
-          # Get the latest build info
-          echo "Getting latest build information..."
-          BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json)
-
-          if [ "$BUILD_INFO" != "[]" ]; then
-            BUILD_URL=$(echo $BUILD_INFO | jq -r '.[0].artifacts.buildUrl')
-            BUILD_ID=$(echo $BUILD_INFO | jq -r '.[0].id')
-            
-            if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
-              echo "Downloading APK from: $BUILD_URL"
-              curl -L -o sad-las-worker.apk "$BUILD_URL"
-              
-              if [ -f "sad-las-worker.apk" ]; then
-                echo "APK downloaded successfully"
-                ls -la sad-las-worker.apk
-              else
-                echo "Failed to download APK"
-                exit 1
-              fi
-            else
-              echo "Build URL not available yet, build may still be in progress"
-              echo "Build ID: $BUILD_ID"
-              exit 1
+          # Check if local build was used (fallback scenario)
+          if [ -f "build-*.apk" ] || [ -f "*.apk" ]; then
+            echo "Local APK build found, using it..."
+            APK_FILE=$(find . -name "*.apk" -type f | head -1)
+            if [ -n "$APK_FILE" ]; then
+              cp "$APK_FILE" sad-las-worker.apk
+              echo "Local APK copied successfully"
+              ls -la sad-las-worker.apk
             fi
           else
-            echo "No finished builds found"
-            exit 1
+            # Try to download from EAS
+            echo "Attempting to download APK from EAS..."
+            
+            # Wait a bit for build to be processed
+            sleep 10
+            
+            # Get the latest build info with timeout
+            timeout 60 bash -c '
+              while true; do
+                BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json 2>/dev/null || echo "[]")
+                if [ "$BUILD_INFO" != "[]" ]; then
+                  BUILD_URL=$(echo $BUILD_INFO | jq -r ".[0].artifacts.buildUrl" 2>/dev/null || echo "null")
+                  if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
+                    echo "Downloading APK from: $BUILD_URL"
+                    curl -L -o sad-las-worker.apk "$BUILD_URL" && break
+                  fi
+                fi
+                echo "Waiting for build to complete..."
+                sleep 15
+              done
+            ' || {
+              echo "Timeout waiting for EAS build, this may indicate the build is still in progress"
+              echo "Creating a placeholder APK for now..."
+              echo "APK build in progress" > sad-las-worker.txt
+              exit 1
+            }
+            
+            if [ -f "sad-las-worker.apk" ]; then
+              echo "APK downloaded successfully"
+              ls -la sad-las-worker.apk
+            else
+              echo "Failed to download APK"
+              exit 1
+            fi
           fi
 
       - name: Get version info
