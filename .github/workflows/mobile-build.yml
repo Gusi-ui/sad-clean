@@ -68,42 +68,103 @@ jobs:
           cd mobile-app
           npm run type-check
 
-      - name: Build APK
+      - name: Build APK with EAS
         run: |
           cd mobile-app
           echo "Building Android APK with EAS..."
           npm run build:android
 
+      - name: Wait for build completion and download APK
+        run: |
+          cd mobile-app
+          echo "Waiting for build to complete..."
+          sleep 30
+
+          # Get the latest build info
+          echo "Getting latest build information..."
+          BUILD_INFO=$(eas build:list --platform android --status finished --limit 1 --json)
+
+          if [ "$BUILD_INFO" != "[]" ]; then
+            BUILD_URL=$(echo $BUILD_INFO | jq -r '.[0].artifacts.buildUrl')
+            BUILD_ID=$(echo $BUILD_INFO | jq -r '.[0].id')
+            
+            if [ "$BUILD_URL" != "null" ] && [ "$BUILD_URL" != "" ]; then
+              echo "Downloading APK from: $BUILD_URL"
+              curl -L -o sad-las-worker.apk "$BUILD_URL"
+              
+              if [ -f "sad-las-worker.apk" ]; then
+                echo "APK downloaded successfully"
+                ls -la sad-las-worker.apk
+              else
+                echo "Failed to download APK"
+                exit 1
+              fi
+            else
+              echo "Build URL not available yet, build may still be in progress"
+              echo "Build ID: $BUILD_ID"
+              exit 1
+            fi
+          else
+            echo "No finished builds found"
+            exit 1
+          fi
+
+      - name: Get version info
+        id: version
+        run: |
+          cd mobile-app
+          VERSION=$(node -p "require('./package.json').version")
+          BUILD_NUMBER=$(date +%Y%m%d%H%M)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "build_number=$BUILD_NUMBER" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION-mobile-$BUILD_NUMBER" >> $GITHUB_OUTPUT
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
-          path: |
-            mobile-app/android/app/build/outputs/apk/release/
-            mobile-app/android/app/build/outputs/bundle/release/
+          name: sad-las-worker-apk
+          path: mobile-app/sad-las-worker.apk
           retention-days: 30
 
       - name: Create Release
         if: github.ref == 'refs/heads/mobile-app' && github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
-          files: |
-            mobile-app/android/app/build/outputs/apk/release/*.apk
-            mobile-app/android/app/build/outputs/bundle/release/*.aab
-          tag_name: v${{ github.run_number }}-mobile
-          name: Mobile App v${{ github.run_number }}
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: "SAD LAS Worker v${{ steps.version.outputs.version }} (Build ${{ steps.version.outputs.build_number }})"
           body: |
-            📱 Build automático de la aplicación móvil SAD LAS Worker
+            ## 📱 SAD LAS Worker - Aplicación Móvil
 
-            **Cambios incluidos:**
-            - ${{ github.event.head_commit.message }}
+            ### 📦 Descarga
+            Descarga el archivo **sad-las-worker.apk** desde los assets de este release para instalar la aplicación en tu dispositivo Android.
 
-            **Descarga:**
-            - APK: Para instalación directa
-            - AAB: Para Google Play Store
+            ### 📋 Información de la Build
+            - **Versión**: ${{ steps.version.outputs.version }}
+            - **Build**: ${{ steps.version.outputs.build_number }}
+            - **Commit**: ${{ github.sha }}
+            - **Rama**: ${{ github.ref_name }}
+            - **Fecha**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")
 
-            **Notas:**
-            - Este es un build automático de la rama mobile-app
-            - Probar en dispositivos antes de distribución
+            ### 🔧 Instalación
+            1. Descarga el archivo `sad-las-worker.apk`
+            2. En tu dispositivo Android, ve a **Configuración > Seguridad**
+            3. Habilita **"Fuentes desconocidas"** o **"Instalar aplicaciones desconocidas"**
+            4. Abre el archivo APK descargado e instala la aplicación
+
+            ### 📝 Cambios Recientes
+            ${{ github.event.head_commit.message }}
+
+            ### ⚠️ Notas Importantes
+            - Esta es una versión de desarrollo/testing
+            - Probar todas las funcionalidades antes de usar en producción
+            - Reportar cualquier problema en los Issues del repositorio
+
+            ---
+
+            **🤖 Generado automáticamente por GitHub Actions**
+          files: |
+            mobile-app/sad-las-worker.apk
+          draft: false
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
