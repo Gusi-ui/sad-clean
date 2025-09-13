@@ -114,14 +114,15 @@ jobs:
 
       - name: "Run gitleaks"
         uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
+          args: detect --source=. --report-format sarif --report-path results.sarif --config .gitleaks.toml
           exit-code: 0
           verbose: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Upload Secret Scanning Results"
+        if: always() && hashFiles('results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
-        if: always()
         with:
           sarif_file: results.sarif
