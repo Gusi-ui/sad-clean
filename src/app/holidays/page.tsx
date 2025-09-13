@@ -186,6 +186,7 @@ export default function HolidaysPage(): React.JSX.Element {
       // Error loading month holidays
       setToastMessage({ type: 'error', message: 'Error cargando festivos' });
     });
+    return undefined; // ensure effect returns void
   }, [selectedYear]);
 
   // Limpiar mensaje de toast después de 5 segundos
@@ -196,6 +197,7 @@ export default function HolidaysPage(): React.JSX.Element {
       }, 5000);
       return () => clearTimeout(timer);
     }
+    return undefined; // ensure effect returns void on all paths
   }, [toastMessage]);
 
   const getTypeColor = (type: string): string => {

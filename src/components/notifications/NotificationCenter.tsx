@@ -243,7 +243,7 @@ export default function NotificationCenter({
     const channel = supabase
       .channel(`worker-${user.id}`)
       .on('broadcast', { event: 'notification' }, (payload) => {
-        const newNotification = payload.payload as WorkerNotification;
+        const newNotification = payload['payload'] as WorkerNotification;
         setNotifications((prev) => [newNotification, ...prev]);
         setUnreadCount((prev) => prev + 1);
 
@@ -299,7 +299,7 @@ export default function NotificationCenter({
       high: 'text-orange-500',
       urgent: 'text-red-500',
     };
-    return colorMap[priority] || 'text-blue-500';
+    return colorMap[priority] ?? 'text-blue-500';
   };
 
   // Formatear tiempo relativo

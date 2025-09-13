@@ -873,7 +873,7 @@ export default function PlanningPage() {
                                 <div className='font-medium truncate'>
                                   {entry.workerName}
                                 </div>
-                                <div className='text-xs opacity-75 truncate'>
+                                <div className='text-xs text-gray-600'>
                                   {entry.userName}
                                 </div>
                                 <div className='text-xs font-semibold'>
@@ -962,7 +962,9 @@ export default function PlanningPage() {
                         isToday: cell.isToday,
                         isHoliday: cell.isHoliday,
                         isWeekend: cell.isWeekend,
-                        holidayName: cell.holidayName,
+                        ...(cell.holidayName !== undefined
+                          ? { holidayName: cell.holidayName }
+                          : {}),
                       });
                     }
                   });

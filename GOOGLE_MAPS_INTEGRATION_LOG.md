@@ -39,7 +39,7 @@ Configura NEXT_PUBLIC_GOOGLE_MAPS_API_KEY en tu archivo .env
 
 ```bash
 # Archivo: .env.local
-NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ
+NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSy[REVOKED_API_KEY]
 ```
 
 ### 2. 🔄 **Reinicio del Servidor**

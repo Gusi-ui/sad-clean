@@ -153,7 +153,7 @@ export class InputValidator {
  */
 export const googleMapsConfig = {
   // API Key debe estar en variables de entorno
-  apiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? '',
+  apiKey: process.env['NEXT_PUBLIC_GOOGLE_MAPS_API_KEY'] ?? '',
 
   // Configuración de seguridad para Google Maps
   securityOptions: {
@@ -178,17 +178,17 @@ export const validateSecurityConfig = (): void => {
 
   // Verificar variables de entorno críticas
   if (
-    process.env.NEXT_PUBLIC_SUPABASE_URL === null ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL === undefined ||
-    process.env.NEXT_PUBLIC_SUPABASE_URL === ''
+    process.env['NEXT_PUBLIC_SUPABASE_URL'] === null ||
+    process.env['NEXT_PUBLIC_SUPABASE_URL'] === undefined ||
+    process.env['NEXT_PUBLIC_SUPABASE_URL'] === ''
   ) {
     errors.push('Supabase URL no configurada');
   }
 
   if (
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === null ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === undefined ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY === ''
+    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] === null ||
+    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] === undefined ||
+    process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] === ''
   ) {
     errors.push('Supabase Anon Key no configurada');
   }

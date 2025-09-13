@@ -20,10 +20,10 @@ interface UpdateNotificationsRequest {
 // GET /api/workers/[id]/notifications - Obtener notificaciones del trabajador
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
     const { searchParams } = new URL(request.url);
     const unreadOnly = searchParams.get('unread') === 'true';
     const limit = parseInt(searchParams.get('limit') ?? '50');
@@ -66,10 +66,10 @@ export async function GET(
 // POST /api/workers/[id]/notifications - Crear nueva notificación
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
     const body = (await request.json()) as CreateNotificationRequest;
     const {
       title,
@@ -96,8 +96,8 @@ export async function POST(
       title,
       body: notificationBody,
       type,
-      data,
-      expires_at,
+      data: data ?? null,
+      expires_at: expires_at ?? null,
       priority,
     };
 
@@ -105,12 +105,12 @@ export async function POST(
     // eslint-disable-next-line no-console
     console.log('Intentando crear notificación:', notificationData);
     // eslint-disable-next-line no-console
-    console.log('SUPABASE_URL:', process.env.NEXT_PUBLIC_SUPABASE_URL);
+    console.log('SUPABASE_URL:', process.env['NEXT_PUBLIC_SUPABASE_URL']);
     // Debug logging for service role key (remove in production)
     // eslint-disable-next-line no-console
     console.log(
       'SERVICE_ROLE_KEY length:',
-      process.env.SUPABASE_SERVICE_ROLE_KEY?.length
+      process.env['SUPABASE_SERVICE_ROLE_KEY']?.length
     );
 
     const { data: notification, error } = (await supabase
@@ -152,10 +152,10 @@ export async function POST(
 // PATCH /api/workers/[id]/notifications - Marcar notificaciones como leídas
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
     const body = (await request.json()) as UpdateNotificationsRequest;
     const { notification_ids: notificationIds } = body;
 

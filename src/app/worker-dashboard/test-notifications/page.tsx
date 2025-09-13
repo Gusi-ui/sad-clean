@@ -63,7 +63,7 @@ export default function TestNotificationsPage() {
       // eslint-disable-next-line no-console
       console.log = interceptLog;
 
-      await tester.runFullTest(user.id);
+      await tester.runFullTest();
 
       // Restaurar console.log
       // eslint-disable-next-line no-console

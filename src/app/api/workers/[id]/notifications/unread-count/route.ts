@@ -4,11 +4,11 @@ import { supabase } from '@/lib/database';
 
 // GET /api/workers/[id]/notifications/unread-count - Obtener conteo de notificaciones no leídas
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
     const { count, error } = await supabase
       .from('worker_notifications')
       .select('*', { count: 'exact', head: true })

@@ -36,6 +36,7 @@ type Json =
   | { [key: string]: Json | undefined }
   | Json[];
 
+// Ajuste para exactOptionalPropertyTypes: las propiedades opcionales no incluyen undefined explícitamente
 type LogParams = {
   p_activity_type: string;
   p_entity_type: string;
@@ -46,27 +47,30 @@ type LogParams = {
   p_entity_id?: string; // Mantener como string para compatibilidad con RPC
   p_entity_name?: string;
   p_details?: Json;
-  p_ip_address?: string | undefined;
-  p_user_agent?: string | undefined;
+  p_ip_address?: string;
+  p_user_agent?: string;
 };
 
 export const logActivity = async (
   activity: ActivityInsert
 ): Promise<string> => {
   try {
+    // Construir params omitiendo propiedades undefined para cumplir exactOptionalPropertyTypes
     const params: LogParams = {
       p_activity_type: activity.activity_type,
       p_entity_type: activity.entity_type,
       p_description: activity.description,
-      p_user_id: activity.user_id ?? undefined, // Convertir null a undefined para RPC
-      p_user_email: activity.user_email,
-      p_user_name: activity.user_name,
-      p_entity_id: activity.entity_id ?? undefined, // Convertir null a undefined para RPC
-      p_entity_name: activity.entity_name,
-      p_details: activity.details as Json,
-      p_ip_address: activity.ip_address ?? undefined,
-      p_user_agent: activity.user_agent ?? undefined,
     };
+
+    if (activity.user_id != null) params.p_user_id = activity.user_id;
+    if (activity.user_email != null) params.p_user_email = activity.user_email;
+    if (activity.user_name != null) params.p_user_name = activity.user_name;
+    if (activity.entity_id != null) params.p_entity_id = activity.entity_id;
+    if (activity.entity_name != null)
+      params.p_entity_name = activity.entity_name;
+    if (activity.details != null) params.p_details = activity.details as Json;
+    if (activity.ip_address != null) params.p_ip_address = activity.ip_address;
+    if (activity.user_agent != null) params.p_user_agent = activity.user_agent;
 
     // Usar solo la función RPC (más confiable)
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment

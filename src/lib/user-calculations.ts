@@ -342,9 +342,11 @@ export const computeUserMonthlyBalance = async (
           'saturday',
         ] as const;
         const key = weekdayMap[dow];
-        const add = parsed.weekdayHours[key];
-        dailyHours += add;
-        dailyLaborables += add;
+        if (key) {
+          const add = parsed.weekdayHours[key];
+          dailyHours += add;
+          dailyLaborables += add;
+        }
       }
 
       if (type === 'festivos' && isHolidayContext) {
@@ -509,9 +511,11 @@ export const computeWorkerUsersMonthlyBalances = async (
           'saturday',
         ] as const;
         const key = weekdayMap[dow];
-        const add = parsed.weekdayHours[key];
-        const cur = acc.get(a.user_id);
-        if (cur !== undefined) cur.laborables += add;
+        if (key) {
+          const add = parsed.weekdayHours[key];
+          const cur = acc.get(a.user_id);
+          if (cur !== undefined) cur.laborables += add;
+        }
       }
 
       // Festivos: fines de semana o festivos

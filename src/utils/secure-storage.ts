@@ -9,14 +9,13 @@ interface SecureStorageData {
 
 class SecureStorage {
   private readonly storageKey = 'sad_secure_storage';
-  private readonly encryptionKey =
-    process.env.NEXT_PUBLIC_SECURE_STORAGE_KEY ?? 'sad_secure_key_2025'; // En producción, configurar NEXT_PUBLIC_SECURE_STORAGE_KEY
-
   /**
    * Encripta datos básicos (en producción usar librería de encriptación)
    */
   private encrypt(data: string): string {
     // Implementación básica - en producción usar crypto-js o similar
+    // const key = process.env['NEXT_PUBLIC_SECURE_STORAGE_KEY'] ?? 'sad_secure_key_2025';
+    // Por ahora solo usamos btoa, en producción usar crypto-js con la key
     return btoa(encodeURIComponent(data));
   }
 

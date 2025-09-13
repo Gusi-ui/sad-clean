@@ -301,7 +301,9 @@ const MobileMonthList = (props: {
 
   // Función auxiliar para convertir hora a minutos
   const toMinutes = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    const [hours = 0, minutes = 0] = timeStr
+      .split(':')
+      .map((v) => Number(v ?? 0));
     return hours * 60 + minutes;
   };
 
@@ -681,7 +683,9 @@ const WorkerMonthCalendar = (props: {
 
   // Función auxiliar para convertir hora a minutos
   const toMinutes = (timeStr: string): number => {
-    const [hours, minutes] = timeStr.split(':').map(Number);
+    const [hours = 0, minutes = 0] = timeStr
+      .split(':')
+      .map((v) => Number(v ?? 0));
     return hours * 60 + minutes;
   };
 

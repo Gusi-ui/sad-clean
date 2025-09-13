@@ -11,7 +11,8 @@ import type {
  */
 export class NotificationService {
   private static instance: NotificationService;
-  private readonly webSocketConnections: Map<string, WebSocket> = new Map();
+  // Eliminado webSocketConnections no usado
+  // private readonly webSocketConnections: Map<string, WebSocket> = new Map();
 
   static getInstance(): NotificationService {
     NotificationService.instance ??= new NotificationService();

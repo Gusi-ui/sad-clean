@@ -39,3 +39,36 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mobile app builds
+*.apk
+*.aab
+*.ipa
+
+# keystore files
+*.keystore
+*.jks
+keystore_base64.txt
+
+# mobile app specific
+mobile-app/android/app/release/
+mobile-app/ios/build/
+
+# Android build directories
+mobile-app/android/.gradle/
+mobile-app/android/app/build/
+mobile-app/android/build/
+
+# Android JDK downloads
+mobile-app/android/*.jdk.zip
+
+# React Native build artifacts
+mobile-app/node_modules/**/android/build/
+mobile-app/node_modules/**/android/.cxx/
+mobile-app/node_modules/**/.gradle/
+
+# Expo build artifacts
+.expo/
+
+# Local properties
+mobile-app/android/local.properties

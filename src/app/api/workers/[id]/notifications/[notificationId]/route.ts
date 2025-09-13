@@ -4,11 +4,11 @@ import { supabase } from '@/lib/database';
 
 // DELETE /api/workers/[id]/notifications/[notificationId] - Eliminar notificación específica
 export async function DELETE(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string; notificationId: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string; notificationId: string } }
 ) {
   try {
-    const { id: workerId, notificationId } = await params;
+    const { id: workerId, notificationId } = params;
 
     const { data, error } = await supabase
       .from('worker_notifications')

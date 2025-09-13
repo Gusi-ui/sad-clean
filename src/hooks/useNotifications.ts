@@ -284,9 +284,9 @@ export function useNotifications(
         // eslint-disable-next-line no-console
         console.log(
           '📨 Notificación en tiempo real recibida:',
-          payload.payload
+          payload['payload']
         );
-        const newNotification = payload.payload as WorkerNotification;
+        const newNotification = payload['payload'] as WorkerNotification;
 
         // Agregar nueva notificación al estado
         setNotifications((prev) => [newNotification, ...prev]);

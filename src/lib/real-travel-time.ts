@@ -141,7 +141,14 @@ export async function calculateRouteRealTravelTime(
   successfulSegments: number;
   totalSegments: number;
 }> {
-  const segments = [];
+  const segments: Array<{
+    from: number;
+    to: number;
+    duration: number;
+    distance: number;
+    success: boolean;
+    errorMessage?: string;
+  }> = [];
   let totalDuration = 0;
   let totalDistance = 0;
   let successfulSegments = 0;
@@ -162,16 +169,19 @@ export async function calculateRouteRealTravelTime(
 
     const result = await calculateRealTravelTime(fromStop, toStop, travelMode);
 
-    const segment = {
+    const baseSegment = {
       from: i,
       to: i + 1,
       duration: result.duration,
       distance: result.distance,
       success: result.success,
-      errorMessage: result.errorMessage,
     };
 
-    segments.push(segment);
+    if (result.errorMessage != null) {
+      segments.push({ ...baseSegment, errorMessage: result.errorMessage });
+    } else {
+      segments.push(baseSegment);
+    }
 
     if (result.success) {
       // Solo incluir en el total si NO es el primer segmento (casa al primer servicio)

@@ -47,11 +47,16 @@ const RouteMap = ({
   // Memoizar workerInfo para evitar recreaciones innecesarias
   const memoizedWorkerInfo = useMemo(() => {
     if (workerInfo) {
-      return {
-        address: workerInfo.address,
-        postalCode: workerInfo.postalCode,
-        city: workerInfo.city,
-      };
+      const info: {
+        address?: string | null;
+        postalCode?: string | null;
+        city?: string | null;
+      } = {};
+      if (workerInfo.address !== undefined) info.address = workerInfo.address;
+      if (workerInfo.postalCode !== undefined)
+        info.postalCode = workerInfo.postalCode;
+      if (workerInfo.city !== undefined) info.city = workerInfo.city;
+      return info;
     }
     return null;
   }, [workerInfo]);
