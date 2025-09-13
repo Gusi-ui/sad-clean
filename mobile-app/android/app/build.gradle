@@ -102,10 +102,10 @@ android {
             keyPassword 'android'
         }
         release {
-            storeFile file('../../@gusideveloper__sad-las-worker.jks')
-            storePassword System.getenv('KEYSTORE_PASSWORD') ?: 'sadlas2024'
-            keyAlias System.getenv('KEY_ALIAS') ?: 'sadlasworker'
-            keyPassword System.getenv('KEY_PASSWORD') ?: 'sadlas2024'
+            storeFile file('debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
         }
     }
     buildTypes {
