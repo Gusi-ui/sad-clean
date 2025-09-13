@@ -13,7 +13,7 @@ Responsable:** Desarrollador **Estado de Verificación:** ✅ Completado
 
 **GitHub Secret Scanning** ha detectado que la clave API de Google Maps está filtrada públicamente.
 
-**Clave Comprometida:** `AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ`
+**Clave Comprometida:** `AIzaSy[REVOKED_API_KEY]`
 
 ### 📍 Ubicaciones Afectadas
 
@@ -65,7 +65,7 @@ Responsable:** Desarrollador **Estado de Verificación:** ✅ Completado
 
    ```env
    # ANTES (COMPROMETIDA)
-   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ
+   NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSy[REVOKED_API_KEY]
 
    # DESPUÉS (NUEVA CLAVE)
    NEXT_PUBLIC_GOOGLE_MAPS_API_KEY=AIzaSy_NEW_API_KEY_FROM_GOOGLE_CLOUD
@@ -82,7 +82,7 @@ Responsable:** Desarrollador **Estado de Verificación:** ✅ Completado
 #### En Google Cloud Console:
 
 1. Ve a **"APIs & Services" > "Credentials"**
-2. Encuentra la clave antigua: `AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ`
+2. Encuentra la clave antigua: `AIzaSy[REVOKED_API_KEY]`
 3. Haz clic en **"Delete"** para revocarla
 4. Confirma la eliminación
 
