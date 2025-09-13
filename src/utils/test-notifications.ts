@@ -15,7 +15,7 @@ export default class NotificationTester {
       .catch(console.error);
   }
 
-  async runFullTest(_workerId: string): Promise<void> {
+  async runFullTest(): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(
       '🧪 Iniciando prueba completa del sistema de notificaciones...'
@@ -356,9 +356,9 @@ if (typeof window !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
   if ((window as any).testNotifications === undefined) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
-    (window as any).testNotifications = async (workerId: string) => {
+    (window as any).testNotifications = async () => {
       const tester = new NotificationTester();
-      await tester.runFullTest(workerId);
+      await tester.runFullTest();
     };
   }
 

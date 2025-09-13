@@ -347,7 +347,6 @@ export const computeUserMonthlyBalance = async (
           dailyHours += add;
           dailyLaborables += add;
         }
-
       }
 
       if (type === 'festivos' && isHolidayContext) {
