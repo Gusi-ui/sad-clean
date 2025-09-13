@@ -135,9 +135,9 @@ const useSimpleRouteSegments = ({
               return hasValidAddress;
             })
             .map((stop: RouteStop) => ({
-              address: stop.address ?? undefined,
-              postalCode: stop.postalCode ?? undefined,
-              city: stop.city ?? undefined,
+              address: stop.address ?? null,
+              postalCode: stop.postalCode ?? null,
+              city: stop.city ?? null,
             }));
 
           // Direcciones filtradas listas para cálculo
@@ -167,6 +167,9 @@ const useSimpleRouteSegments = ({
           // Crear segmentos basados en los resultados
           for (let i = 0; i < routeResult.segments.length; i++) {
             const segment = routeResult.segments[i];
+            if (!segment) {
+              continue; // Defender contra índices potencialmente indefinidos
+            }
             const fromStop = allStops[segment.from];
             const toStop = allStops[segment.to];
 
@@ -177,8 +180,8 @@ const useSimpleRouteSegments = ({
               id: `segment-${i}`,
               from: fromStop?.userLabel ?? `Parada ${segment.from + 1}`,
               to: toStop?.userLabel ?? `Parada ${segment.to + 1}`,
-              fromAddress: fromStop?.address ?? undefined,
-              toAddress: toStop?.address ?? undefined,
+              fromAddress: fromStop?.address ?? '',
+              toAddress: toStop?.address ?? '',
               duration: segment.duration,
               distance: segment.distance,
               travelMode,

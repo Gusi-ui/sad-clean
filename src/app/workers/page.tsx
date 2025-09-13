@@ -1453,12 +1453,13 @@ export default function WorkersPage() {
                   value={editingWorker.weekly_contracted_hours ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value;
-                    const numValue =
-                      value === '' ? undefined : parseFloat(value);
-                    setEditingWorker({
-                      ...editingWorker,
-                      weekly_contracted_hours: numValue,
-                    });
+                    const next = { ...editingWorker } as Partial<Worker>;
+                    if (value === '') {
+                      delete next.weekly_contracted_hours;
+                    } else {
+                      next.weekly_contracted_hours = parseFloat(value);
+                    }
+                    setEditingWorker(next);
                   }}
                 />
                 <p className='text-xs text-gray-600'>
@@ -1830,12 +1831,13 @@ export default function WorkersPage() {
                   value={editingWorker.weekly_contracted_hours ?? ''}
                   onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
                     const value = e.target.value;
-                    const numValue =
-                      value === '' ? undefined : parseFloat(value);
-                    setEditingWorker({
-                      ...editingWorker,
-                      weekly_contracted_hours: numValue,
-                    });
+                    const next = { ...editingWorker } as Partial<Worker>;
+                    if (value === '') {
+                      delete next.weekly_contracted_hours;
+                    } else {
+                      next.weekly_contracted_hours = parseFloat(value);
+                    }
+                    setEditingWorker(next);
                   }}
                 />
                 <p className='text-xs text-gray-600 mt-1'>

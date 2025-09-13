@@ -24,11 +24,11 @@ interface NotificationSettingsRequest {
 
 // GET - Obtener configuración de notificaciones del trabajador
 export async function GET(
-  request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  _request: NextRequest,
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
 
     if (!workerId) {
       return NextResponse.json(
@@ -90,10 +90,10 @@ export async function GET(
 // POST - Crear o actualizar configuración de notificaciones
 export async function POST(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
     const body = (await request.json()) as NotificationSettingsRequest;
     const { settings } = body;
 
@@ -221,10 +221,10 @@ export async function POST(
 // DELETE - Eliminar configuración de notificaciones (resetear a valores por defecto)
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
-    const { id: workerId } = await params;
+    const { id: workerId } = params;
 
     if (!workerId) {
       return NextResponse.json(

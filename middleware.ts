@@ -1,7 +1,6 @@
-import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 
-export function middleware(request: NextRequest) {
+export function middleware() {
   // Middleware básico - solo permitir el paso de todas las rutas
   return NextResponse.next();
 }

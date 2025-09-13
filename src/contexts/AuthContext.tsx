@@ -143,22 +143,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         id: authData.user.id,
         email: authData.user.email ?? '',
         name:
-          (metadata?.name as string) ??
+          (metadata?.['name'] as string) ??
           authData.user.email?.split('@')[0] ??
           'Usuario',
-        surname: (metadata?.surname as string) ?? '',
-        phone: (metadata?.phone as string) ?? '',
-        dni: (metadata?.dni as string) ?? '',
-        worker_type: (metadata?.worker_type as string) ?? 'cuidadora',
+        surname: (metadata?.['surname'] as string) ?? '',
+        phone: (metadata?.['phone'] as string) ?? '',
+        dni: (metadata?.['dni'] as string) ?? '',
+        worker_type: (metadata?.['worker_type'] as string) ?? 'cuidadora',
         role,
         is_active: true,
         monthly_contracted_hours:
-          (metadata?.monthly_contracted_hours as number) ?? 0,
+          (metadata?.['monthly_contracted_hours'] as number) ?? 0,
         weekly_contracted_hours:
-          (metadata?.weekly_contracted_hours as number) ?? 0,
-        address: (metadata?.address as string) ?? null,
-        postal_code: (metadata?.postal_code as string) ?? null,
-        city: (metadata?.city as string) ?? null,
+          (metadata?.['weekly_contracted_hours'] as number) ?? 0,
+        address: (metadata?.['address'] as string) ?? null,
+        postal_code: (metadata?.['postal_code'] as string) ?? null,
+        city: (metadata?.['city'] as string) ?? null,
         created_at: authData.user.created_at,
         updated_at: authData.user.updated_at ?? authData.user.created_at,
       };

@@ -38,7 +38,7 @@ const BASE_TIME_MINUTES = {
 function extractPostalCode(address: string): string | null {
   // Buscar patrones de código postal español (5 dígitos)
   const postalCodeMatch = address.match(/\b(\d{5})\b/);
-  return postalCodeMatch ? postalCodeMatch[1] : null;
+  return postalCodeMatch?.[1] ?? null;
 }
 
 /**
@@ -49,7 +49,8 @@ function extractCity(address: string): string | null {
   const parts = address.split(',').map((part) => part.trim());
   if (parts.length >= 2) {
     // Tomar la penúltima parte como ciudad (antes del código postal)
-    return parts[parts.length - 2];
+    const city = parts[parts.length - 2];
+    return city ?? null;
   }
   return null;
 }
@@ -114,10 +115,10 @@ function estimateDistanceByCities(fromCity: string, toCity: string): number {
   };
 
   // Buscar distancia conocida
-  if (cityDistances[city1]?.[city2]) {
+  if (cityDistances[city1]?.[city2] !== undefined) {
     return cityDistances[city1][city2];
   }
-  if (cityDistances[city2]?.[city1]) {
+  if (cityDistances[city2]?.[city1] !== undefined) {
     return cityDistances[city2][city1];
   }
 
@@ -202,7 +203,10 @@ export function estimateRouteTime(
 } {
   const segments: Array<TravelEstimate & { from: number; to: number }> = [];
   for (let i = 0; i < stops.length - 1; i++) {
-    const estimate = estimateTravelTime(stops[i], stops[i + 1], travelMode);
+    const from = stops[i];
+    const to = stops[i + 1];
+    if (!from || !to) continue;
+    const estimate = estimateTravelTime(from, to, travelMode);
     segments.push({
       ...estimate,
       from: i,
