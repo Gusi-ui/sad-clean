@@ -171,6 +171,7 @@ const NoteEditor = ({
 
 export default function NotesPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [editingAssignment, setEditingAssignment] =
@@ -178,7 +179,7 @@ export default function NotesPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined || user.email === '') {
+      if (currentUser?.email === undefined || currentUser?.email === '') {
         setAssignments([]);
         setLoading(false);
         return;
@@ -191,7 +192,7 @@ export default function NotesPage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -200,7 +201,7 @@ export default function NotesPage(): React.JSX.Element {
           return;
         }
 
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
 
         // Obtener todas las asignaciones activas de la trabajadora con notas
         const { data: assignmentRows, error: assignmentErr } = await supabase
@@ -213,7 +214,7 @@ export default function NotesPage(): React.JSX.Element {
             start_date,
             end_date,
             notes,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
@@ -221,10 +222,12 @@ export default function NotesPage(): React.JSX.Element {
 
         if (assignmentErr === null && assignmentRows !== null) {
           const filtered = assignmentRows.filter((a) => {
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             return t === 'laborables' || t === 'flexible' || t === 'festivos';
           });
-          setAssignments(filtered);
+          setAssignments(filtered as unknown as AssignmentRow[]);
         }
       } catch (error) {
         // eslint-disable-next-line no-console
@@ -236,7 +239,7 @@ export default function NotesPage(): React.JSX.Element {
 
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [user?.email]);
+  }, [currentUser?.email]);
 
   const handleSaveNote = async (
     assignmentId: string,

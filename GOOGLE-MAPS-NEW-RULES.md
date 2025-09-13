@@ -70,7 +70,7 @@ https://api.tu-dominio.com
 ### 2. Editar la API Key
 
 - Ve a "APIs & Services" > "Credentials"
-- Encuentra tu API key: `AIzaSyDJO-K651Oj7Pkh_rVHGw0hmPb7NtQCozQ`
+- Encuentra tu API key: `TU_API_KEY_AQUI` (reemplaza con tu clave real)
 - Haz clic para editarla
 
 ### 3. Configurar HTTP Referrers

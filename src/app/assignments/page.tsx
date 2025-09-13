@@ -12,14 +12,17 @@ import Navigation from '@/components/layout/Navigation';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
+import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
 import { useDashboardUrl } from '@/hooks/useDashboardUrl';
 import {
-  logAssignmentCreated,
-  logAssignmentDeleted,
-  logAssignmentUpdated,
+  logAssignmentCreationActivity,
+  logAssignmentDeleteActivity,
+  logAssignmentUpdateActivityDetailed,
 } from '@/lib/activities-query';
 import { supabase } from '@/lib/database';
+import { notificationService } from '@/lib/notification-service';
+import type { NotificationType } from '@/types';
 import type { Json } from '@/types/supabase';
 import { logger } from '@/utils/logger';
 
@@ -36,8 +39,273 @@ interface Assignment {
   priority: number;
   notes: string;
   created_at: string;
-  user?: { name: string; surname: string };
-  worker?: { name: string; surname: string };
+  user?: { name: string | null; surname: string | null };
+  worker?: { name: string | null; surname: string | null };
+}
+
+// Función para enviar notificación de nueva asignación
+async function sendNewAssignmentNotification(
+  workerId: string,
+  userId: string,
+  weeklyHours: number
+): Promise<boolean> {
+  try {
+    // Obtener información del usuario y trabajadora
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('name, surname')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      logger.warn('Error obteniendo datos del usuario para notificación', {
+        userId,
+        error: userError,
+      });
+      return false;
+    }
+
+    const { data: workerData, error: workerError } = await supabase
+      .from('workers')
+      .select('name, surname')
+      .eq('id', workerId)
+      .single();
+
+    if (workerError) {
+      logger.warn(
+        'Error obteniendo datos de la trabajadora para notificación',
+        { workerId, error: workerError }
+      );
+      return false;
+    }
+
+    if (userData === null || workerData === null) {
+      logger.warn(
+        'Datos incompletos para enviar notificación de nueva asignación',
+        { userId, workerId }
+      );
+      return false;
+    }
+
+    const userName = `${userData.name ?? ''} ${userData.surname ?? ''}`.trim();
+    const workerName =
+      `${workerData.name ?? ''} ${workerData.surname ?? ''}`.trim();
+
+    // Verificar que las tablas existan antes de enviar notificación
+    try {
+      await supabase.from('worker_notifications').select('id').limit(1);
+    } catch {
+      logger.warn(
+        'Tabla worker_notifications no encontrada, creando notificación básica',
+        { workerId, userId }
+      );
+      // Crear notificación básica sin usar el servicio completo
+      const { error: basicError } = await supabase
+        .from('worker_notifications')
+        .insert({
+          worker_id: workerId,
+          title: '👤 Nueva asignación',
+          body: `Se te ha asignado un nuevo usuario: ${userName} con ${weeklyHours}h semanales`,
+          type: 'new_user',
+          priority: 'high',
+          data: {
+            userName,
+            weeklyHours,
+            assignmentType: 'nueva asignación',
+          },
+        });
+
+      if (basicError) {
+        logger.error('Error creando notificación básica de nueva asignación', {
+          workerId,
+          userId,
+          error: basicError,
+        });
+        return false;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`✅ Notificación básica creada para ${workerName}`);
+      return true;
+    }
+
+    // Enviar notificación completa usando el servicio
+    const notificationResult =
+      await notificationService.createAndSendNotification(workerId, {
+        title: '👤 Nueva asignación',
+        body: `Se te ha asignado un nuevo usuario: ${userName} con ${weeklyHours}h semanales`,
+        type: 'new_user' as NotificationType,
+        priority: 'high',
+        data: {
+          userName,
+          weeklyHours,
+          assignmentType: 'nueva asignación',
+        },
+      });
+
+    if (notificationResult !== null) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `✅ Notificación enviada a ${workerName}: Nueva asignación con ${userName}`
+      );
+      return true;
+    }
+
+    logger.error('Error enviando notificación de nueva asignación', {
+      workerId,
+      userId,
+      workerName,
+      userName,
+    });
+    return false;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error general en notificación de nueva asignación', {
+      workerId,
+      userId,
+      error: errorMessage,
+    });
+    // No relanzar el error para no interrumpir el flujo principal
+    return false;
+  }
+}
+
+// Función para enviar notificación de cambio de asignación
+async function sendAssignmentChangeNotification(
+  workerId: string,
+  userId: string,
+  oldHours: number,
+  newHours: number
+): Promise<boolean> {
+  try {
+    // Obtener información del usuario y trabajadora
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('name, surname')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      logger.warn('Error obteniendo datos del usuario para notificación', {
+        userId,
+        error: userError,
+      });
+      return false;
+    }
+
+    const { data: workerData, error: workerError } = await supabase
+      .from('workers')
+      .select('name, surname')
+      .eq('id', workerId)
+      .single();
+
+    if (workerError) {
+      logger.warn(
+        'Error obteniendo datos de la trabajadora para notificación',
+        { workerId, error: workerError }
+      );
+      return false;
+    }
+
+    if (userData === null || workerData === null) {
+      logger.warn(
+        'Datos incompletos para enviar notificación de cambio de asignación',
+        { userId, workerId }
+      );
+      return false;
+    }
+
+    const userName = `${userData.name ?? ''} ${userData.surname ?? ''}`.trim();
+    const workerName =
+      `${workerData.name ?? ''} ${workerData.surname ?? ''}`.trim();
+
+    // Crear mensaje descriptivo del cambio
+    const hoursChange = newHours > oldHours ? 'aumentado' : 'reducido';
+    const changeAmount = Math.abs(newHours - oldHours);
+
+    // Verificar que las tablas existan antes de enviar notificación
+    try {
+      await supabase.from('worker_notifications').select('id').limit(1);
+    } catch {
+      logger.warn(
+        'Tabla worker_notifications no encontrada, creando notificación básica',
+        { workerId, userId }
+      );
+      // Crear notificación básica sin usar el servicio completo
+      const { error: basicError } = await supabase
+        .from('worker_notifications')
+        .insert({
+          worker_id: workerId,
+          title: '📋 Asignación modificada',
+          body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+          type: 'assignment_change',
+          priority: 'high',
+          data: {
+            userName,
+            oldHours,
+            newHours,
+            difference: changeAmount,
+            changeType: hoursChange,
+          },
+        });
+
+      if (basicError) {
+        logger.error(
+          'Error creando notificación básica de cambio de asignación',
+          { workerId, userId, error: basicError }
+        );
+        return false;
+      }
+
+      // eslint-disable-next-line no-console
+      console.log(`✅ Notificación básica creada para ${workerName}`);
+      return true;
+    }
+
+    // Enviar notificación completa usando el servicio
+    const notificationResult =
+      await notificationService.createAndSendNotification(workerId, {
+        title: '📋 Asignación modificada',
+        body: `Tus horas semanales han sido ${hoursChange} de ${oldHours}h a ${newHours}h (${changeAmount > 0 ? '+' : ''}${changeAmount}h)`,
+        type: 'assignment_change' as NotificationType,
+        priority: 'high',
+        data: {
+          userName,
+          oldHours,
+          newHours,
+          difference: changeAmount,
+          changeType: hoursChange,
+          assignmentType: 'trabajo semanal',
+        },
+      });
+
+    if (notificationResult !== null) {
+      // eslint-disable-next-line no-console
+      console.log(
+        `✅ Notificación enviada a ${workerName}: ${oldHours}h → ${newHours}h`
+      );
+      return true;
+    }
+
+    logger.error('Error enviando notificación de cambio de asignación', {
+      workerId,
+      userId,
+      workerName,
+      userName,
+      oldHours,
+      newHours,
+    });
+    return false;
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    logger.error('Error general en notificación de cambio de asignación', {
+      workerId,
+      userId,
+      error: errorMessage,
+    });
+    // No relanzar el error para no interrumpir el flujo principal
+    return false;
+  }
 }
 
 export default function AssignmentsPage() {
@@ -50,6 +318,10 @@ export default function AssignmentsPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [assignmentToDelete, setAssignmentToDelete] =
+    useState<Assignment | null>(null);
+  const [deletingAssignment, setDeletingAssignment] = useState(false);
   const [selectedAssignment, setSelectedAssignment] =
     useState<Assignment | null>(null);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(
@@ -61,9 +333,8 @@ export default function AssignmentsPage() {
     if (typeof schedule === 'string') {
       try {
         return JSON.parse(schedule) as Record<string, unknown>;
-      } catch (parseErr) {
-        // eslint-disable-next-line no-console
-        console.error('Error parsing schedule JSON:', parseErr);
+      } catch {
+        // console.error('Error parsing schedule JSON:', parseErr); // Comentado para producción
         // Retornar un schedule por defecto si el parsing falla
         return {
           monday: {
@@ -180,8 +451,8 @@ export default function AssignmentsPage() {
             .select(
               `
             *,
-            user:users(name, surname),
-            worker:workers(name, surname)
+            user:users!inner(name, surname),
+            worker:workers!inner(name, surname)
           `
             )
             .order('created_at', { ascending: false });
@@ -190,10 +461,18 @@ export default function AssignmentsPage() {
           logger.error('Error cargando asignaciones:', assignmentsError);
         } else {
           // Transformar los datos para incluir monthly_hours
-          const transformedData = (assignmentsData ?? []).map((assignment) => ({
-            ...assignment,
-            monthly_hours: assignment.weekly_hours || 0, // Usar weekly_hours como monthly_hours temporalmente
-          })) as Assignment[];
+          const transformedData = (assignmentsData as unknown[]).map(
+            (assignment: unknown) => {
+              const assign = assignment as Record<string, unknown>;
+              return {
+                ...assign,
+                monthly_hours:
+                  typeof assign.weekly_hours === 'number'
+                    ? assign.weekly_hours
+                    : 0, // Usar weekly_hours como monthly_hours temporalmente
+              };
+            }
+          ) as Assignment[];
 
           setAssignments(transformedData);
         }
@@ -220,71 +499,85 @@ export default function AssignmentsPage() {
   };
 
   const handleDeleteAssignment = async (assignment: Assignment) => {
-    // eslint-disable-next-line no-alert
-    const confirmed = window.confirm(
-      `¿Estás seguro de que quieres eliminar la asignación de ${assignment.worker?.name} ${assignment.worker?.surname} para ${assignment.user?.name} ${assignment.user?.surname}?`
-    );
+    setAssignmentToDelete(assignment);
+    setShowDeleteModal(true);
+  };
 
-    if (confirmed) {
-      try {
-        const { error: deleteError } = await supabase
-          .from('assignments')
-          .delete()
-          .eq('id', assignment.id);
+  const handleDeleteAssignmentConfirm = async () => {
+    if (!assignmentToDelete) return;
 
-        if (deleteError !== null) {
-          logger.error('Error eliminando asignación:', deleteError);
-          setError('Error eliminando asignación');
-        } else {
-          setAssignments((prev) => prev.filter((a) => a.id !== assignment.id));
-          setSuccessMessage('Asignación eliminada correctamente');
+    setDeletingAssignment(true);
+    try {
+      const { error: deleteError } = await supabase
+        .from('assignments')
+        .delete()
+        .eq('id', assignmentToDelete.id);
 
-          // Log de eliminación de asignación
-          const nameMeta = user?.user_metadata?.['name'];
-          const adminName =
-            typeof nameMeta === 'string' && nameMeta.trim().length > 0
-              ? nameMeta
-              : 'Administrador';
-          const adminEmail = typeof user?.email === 'string' ? user.email : '';
-          const workerFullName =
-            assignment.worker?.name !== undefined &&
-            assignment.worker?.surname !== undefined
-              ? `${assignment.worker.name} ${assignment.worker.surname}`
-              : undefined;
-          const userFullName =
-            assignment.user?.name !== undefined &&
-            assignment.user?.surname !== undefined
-              ? `${assignment.user.name} ${assignment.user.surname}`
-              : undefined;
-
-          const deleteDetails: {
-            assignment_id: string;
-            worker_id: string;
-            user_id: string;
-            worker_name?: string;
-            user_name?: string;
-          } = {
-            assignment_id: assignment.id,
-            worker_id: assignment.worker_id,
-            user_id: assignment.user_id,
-          };
-          if (
-            typeof workerFullName === 'string' &&
-            workerFullName.trim() !== ''
-          ) {
-            deleteDetails.worker_name = workerFullName;
-          }
-          if (typeof userFullName === 'string' && userFullName.trim() !== '') {
-            deleteDetails.user_name = userFullName;
-          }
-
-          await logAssignmentDeleted(adminName, adminEmail, deleteDetails);
-        }
-      } catch (deleteErr) {
-        logger.error('Error eliminando asignación:', deleteErr);
+      if (deleteError !== null) {
+        logger.error('Error eliminando asignación:', deleteError);
         setError('Error eliminando asignación');
+      } else {
+        setAssignments((prev) =>
+          prev.filter((a) => a.id !== assignmentToDelete.id)
+        );
+        setSuccessMessage('Asignación eliminada correctamente');
+
+        // Log de eliminación de asignación
+        const nameMeta = user?.user_metadata?.['name'];
+        const adminName =
+          typeof nameMeta === 'string' && nameMeta.trim().length > 0
+            ? nameMeta
+            : 'Administrador';
+        const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+        // Obtener nombres reales del trabajador y usuario
+        const { data: workerData } = await supabase
+          .from('workers')
+          .select('name, surname')
+          .eq('id', assignmentToDelete.worker_id)
+          .single();
+
+        const { data: userData } = await supabase
+          .from('users')
+          .select('name, surname')
+          .eq('id', assignmentToDelete.user_id)
+          .single();
+
+        const workerName = workerData
+          ? `${workerData.name} ${workerData.surname}`.trim()
+          : 'Trabajador Desconocido';
+
+        const userName = userData
+          ? `${userData.name} ${userData.surname}`.trim()
+          : 'Usuario Desconocido';
+
+        await logAssignmentDeleteActivity(
+          adminName,
+          adminEmail,
+          'eliminó',
+          assignmentToDelete.assignment_type,
+          workerName,
+          assignmentToDelete.worker_id,
+          userName,
+          assignmentToDelete.user_id
+        );
+
+        // Cerrar modal y limpiar estado
+        setShowDeleteModal(false);
+        setAssignmentToDelete(null);
       }
+    } catch (deleteErr) {
+      logger.error('Error eliminando asignación:', deleteErr);
+      setError('Error eliminando asignación');
+    } finally {
+      setDeletingAssignment(false);
     }
+  };
+
+  const handleDeleteModalClose = () => {
+    setShowDeleteModal(false);
+    setAssignmentToDelete(null);
+    setDeletingAssignment(false);
   };
 
   const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -868,23 +1161,63 @@ export default function AssignmentsPage() {
                     .select(
                       `
                         *,
-                        user:users(name, surname),
-                        worker:workers(name, surname)
+                        user:users!inner(name, surname),
+                        worker:workers!inner(name, surname)
                       `
                     )
                     .order('created_at', { ascending: false });
 
                   // Transformar datos para incluir monthly_hours
-                  const transformedData = (newAssignments ?? []).map(
-                    (assignment) => ({
-                      ...assignment,
-                      monthly_hours: assignment.weekly_hours ?? 0,
-                    })
+                  const transformedData = (newAssignments as unknown[]).map(
+                    (assignment: unknown) => {
+                      const assign = assignment as Record<string, unknown>;
+                      return {
+                        ...assign,
+                        monthly_hours:
+                          typeof assign.weekly_hours === 'number'
+                            ? assign.weekly_hours
+                            : 0,
+                      };
+                    }
                   ) as Assignment[];
 
                   setAssignments(transformedData);
                   setShowAddModal(false);
                   setSuccessMessage('Asignación creada correctamente');
+
+                  // Enviar notificación a la trabajadora sobre la nueva asignación
+                  try {
+                    const newAssignment = transformedData.find(
+                      (a) =>
+                        a.worker_id === data.worker_id &&
+                        a.user_id === data.user_id
+                    );
+
+                    if (newAssignment) {
+                      const notificationSent =
+                        await sendNewAssignmentNotification(
+                          data.worker_id,
+                          data.user_id,
+                          totalHours
+                        );
+
+                      if (!notificationSent) {
+                        logger.warn(
+                          'No se pudo enviar notificación de nueva asignación, pero la asignación se creó correctamente',
+                          { workerId: data.worker_id, userId: data.user_id }
+                        );
+                      }
+                    }
+                  } catch (notificationError) {
+                    logger.warn(
+                      'Error enviando notificación de nueva asignación, pero la asignación se creó correctamente',
+                      {
+                        workerId: data.worker_id,
+                        userId: data.user_id,
+                        error: notificationError,
+                      }
+                    );
+                  }
 
                   // Log de creación de asignación
                   const nameMeta = user?.user_metadata?.['name'];
@@ -895,32 +1228,39 @@ export default function AssignmentsPage() {
                   const adminEmail =
                     typeof user?.email === 'string' ? user.email : '';
 
-                  const createDetails: {
-                    assignment_type?: string;
-                    worker_id?: string;
-                    user_id?: string;
-                    start_date?: string;
-                    end_date?: string | null;
-                  } = {};
-                  if (typeof data.assignment_type === 'string') {
-                    createDetails.assignment_type = data.assignment_type;
-                  }
-                  if (typeof data.worker_id === 'string') {
-                    createDetails.worker_id = data.worker_id;
-                  }
-                  if (typeof data.user_id === 'string') {
-                    createDetails.user_id = data.user_id;
-                  }
-                  if (typeof data.start_date === 'string') {
-                    createDetails.start_date = data.start_date;
-                  }
-                  createDetails.end_date =
-                    data.end_date.trim() === '' ? null : data.end_date;
+                  // Obtener nombres reales del trabajador y usuario
+                  const { data: workerData } = await supabase
+                    .from('workers')
+                    .select('name, surname')
+                    .eq('id', data.worker_id)
+                    .single();
 
-                  await logAssignmentCreated(
+                  const { data: userData } = await supabase
+                    .from('users')
+                    .select('name, surname')
+                    .eq('id', data.user_id)
+                    .single();
+
+                  const workerName = workerData
+                    ? `${workerData.name} ${workerData.surname}`.trim()
+                    : 'Trabajador Desconocido';
+
+                  const userName = userData
+                    ? `${userData.name} ${userData.surname}`.trim()
+                    : 'Usuario Desconocido';
+
+                  await logAssignmentCreationActivity(
                     adminName,
                     adminEmail,
-                    createDetails
+                    'creó',
+                    data.assignment_type,
+                    workerName,
+                    data.worker_id,
+                    userName,
+                    data.user_id,
+                    data.start_date,
+                    data.end_date.trim() === '' ? '' : data.end_date,
+                    calculateWeeklyHours(scheduleWithHoliday)
                   );
                 }
               } catch (createErr) {
@@ -935,8 +1275,10 @@ export default function AssignmentsPage() {
                 setError(`Error creando asignación: ${message}`);
               }
             };
-            // eslint-disable-next-line no-void
-            void handleSubmit();
+            handleSubmit().catch((err) => {
+              logger.error('Error in handleSubmit:', err);
+              setError('Error procesando la solicitud');
+            });
           }}
           mode='create'
         />
@@ -1015,24 +1357,48 @@ export default function AssignmentsPage() {
                     'Error desconocido';
                   setError(`Error actualizando asignación: ${message}`);
                 } else {
+                  // Enviar notificación a la trabajadora sobre el cambio de asignación
+                  const notificationSent =
+                    await sendAssignmentChangeNotification(
+                      editingAssignment.worker_id,
+                      editingAssignment.user_id,
+                      editingAssignment.monthly_hours ?? 0,
+                      updatedWeeklyHours
+                    );
+
+                  if (!notificationSent) {
+                    logger.warn(
+                      'No se pudo enviar notificación de cambio de asignación, pero la actualización continúa',
+                      {
+                        editingAssignment: editingAssignment.id,
+                      }
+                    );
+                  }
+
                   // Recargar datos
                   const { data: updatedAssignments } = await supabase
                     .from('assignments')
                     .select(
                       `
                         *,
-                        user:users(name, surname),
-                        worker:workers(name, surname)
+                        user:users!inner(name, surname),
+                        worker:workers!inner(name, surname)
                       `
                     )
                     .order('created_at', { ascending: false });
 
                   // Transformar datos para incluir monthly_hours
-                  const transformedData = (updatedAssignments ?? []).map(
-                    (assignment) => ({
-                      ...assignment,
-                      monthly_hours: assignment.weekly_hours ?? 0,
-                    })
+                  const transformedData = (updatedAssignments as unknown[]).map(
+                    (assignment: unknown) => {
+                      const assign = assignment as Record<string, unknown>;
+                      return {
+                        ...assign,
+                        monthly_hours:
+                          typeof assign.weekly_hours === 'number'
+                            ? assign.weekly_hours
+                            : 0,
+                      };
+                    }
                   ) as Assignment[];
 
                   setAssignments(transformedData);
@@ -1048,60 +1414,41 @@ export default function AssignmentsPage() {
                       : 'Administrador';
                   const adminEmail =
                     typeof user?.email === 'string' ? user.email : '';
-                  const workerFullName =
-                    editingAssignment.worker?.name !== undefined &&
-                    editingAssignment.worker?.surname !== undefined
-                      ? `${editingAssignment.worker.name} ${editingAssignment.worker.surname}`
-                      : undefined;
-                  const userFullName =
-                    editingAssignment.user?.name !== undefined &&
-                    editingAssignment.user?.surname !== undefined
-                      ? `${editingAssignment.user.name} ${editingAssignment.user.surname}`
-                      : undefined;
 
-                  const updateDetails: {
-                    assignment_id: string;
-                    assignment_type?: string;
-                    worker_id?: string;
-                    user_id?: string;
-                    start_date?: string;
-                    end_date?: string | null;
-                    worker_name?: string;
-                    user_name?: string;
-                  } = {
-                    assignment_id: editingAssignment.id,
-                  };
-                  if (typeof data.assignment_type === 'string') {
-                    updateDetails.assignment_type = data.assignment_type;
-                  }
-                  if (typeof data.worker_id === 'string') {
-                    updateDetails.worker_id = data.worker_id;
-                  }
-                  if (typeof data.user_id === 'string') {
-                    updateDetails.user_id = data.user_id;
-                  }
-                  if (typeof data.start_date === 'string') {
-                    updateDetails.start_date = data.start_date;
-                  }
-                  updateDetails.end_date =
-                    data.end_date.trim() === '' ? null : data.end_date;
-                  if (
-                    typeof workerFullName === 'string' &&
-                    workerFullName.trim() !== ''
-                  ) {
-                    updateDetails.worker_name = workerFullName;
-                  }
-                  if (
-                    typeof userFullName === 'string' &&
-                    userFullName.trim() !== ''
-                  ) {
-                    updateDetails.user_name = userFullName;
-                  }
+                  // Obtener nombres reales del trabajador y usuario
+                  const { data: workerData } = await supabase
+                    .from('workers')
+                    .select('name, surname')
+                    .eq('id', data.worker_id)
+                    .single();
 
-                  await logAssignmentUpdated(
+                  const { data: userData } = await supabase
+                    .from('users')
+                    .select('name, surname')
+                    .eq('id', data.user_id)
+                    .single();
+
+                  const workerName = workerData
+                    ? `${workerData.name} ${workerData.surname}`.trim()
+                    : 'Trabajador Desconocido';
+
+                  const userName = userData
+                    ? `${userData.name} ${userData.surname}`.trim()
+                    : 'Usuario Desconocido';
+
+                  await logAssignmentUpdateActivityDetailed(
                     adminName,
                     adminEmail,
-                    updateDetails
+                    'actualizó',
+                    editingAssignment.id,
+                    data.assignment_type,
+                    workerName,
+                    data.worker_id,
+                    userName,
+                    data.user_id,
+                    data.start_date,
+                    data.end_date.trim() === '' ? '' : data.end_date,
+                    updatedWeeklyHours
                   );
                 }
               } catch (updateErr) {
@@ -1116,8 +1463,10 @@ export default function AssignmentsPage() {
                 setError(`Error actualizando asignación: ${message}`);
               }
             };
-            // eslint-disable-next-line no-void
-            void handleSubmit();
+            handleSubmit().catch((err) => {
+              logger.error('Error in handleSubmit:', err);
+              setError('Error procesando la solicitud');
+            });
           }}
           initialData={
             editingAssignment
@@ -1180,6 +1529,106 @@ export default function AssignmentsPage() {
           }
           mode='view'
         />
+
+        {/* Modal de Confirmación de Eliminación */}
+        <Modal
+          isOpen={showDeleteModal}
+          onClose={handleDeleteModalClose}
+          title='Confirmar Eliminación'
+          size='md'
+        >
+          <div className='space-y-6'>
+            <div className='text-center'>
+              <div className='mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100 mb-4'>
+                <svg
+                  className='h-6 w-6 text-red-600'
+                  fill='none'
+                  viewBox='0 0 24 24'
+                  stroke='currentColor'
+                >
+                  <path
+                    strokeLinecap='round'
+                    strokeLinejoin='round'
+                    strokeWidth={2}
+                    d='M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z'
+                  />
+                </svg>
+              </div>
+              <h3 className='text-lg font-medium text-gray-900 mb-2'>
+                ¿Eliminar Asignación?
+              </h3>
+              <p className='text-sm text-gray-500'>
+                ¿Estás seguro de que quieres eliminar la asignación de{' '}
+                <span className='font-semibold text-gray-700'>
+                  {assignmentToDelete?.worker?.name}{' '}
+                  {assignmentToDelete?.worker?.surname}
+                </span>{' '}
+                para{' '}
+                <span className='font-semibold text-gray-700'>
+                  {assignmentToDelete?.user?.name}{' '}
+                  {assignmentToDelete?.user?.surname}
+                </span>
+                ?
+              </p>
+              <p className='text-xs text-gray-400 mt-2'>
+                Esta acción no se puede deshacer.
+              </p>
+            </div>
+
+            <div className='flex flex-col sm:flex-row justify-end space-y-3 sm:space-y-0 sm:space-x-3'>
+              <Button
+                variant='outline'
+                className='w-full sm:w-auto'
+                onClick={() => {
+                  handleDeleteModalClose();
+                }}
+                disabled={deletingAssignment}
+              >
+                ❌ Cancelar
+              </Button>
+              <Button
+                className='w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white'
+                onClick={() => {
+                  handleDeleteAssignmentConfirm().catch((err) => {
+                    logger.error(
+                      'Error in handleDeleteAssignmentConfirm:',
+                      err
+                    );
+                    setError('Error eliminando la asignación');
+                  });
+                }}
+                disabled={deletingAssignment}
+              >
+                {deletingAssignment ? (
+                  <>
+                    <svg
+                      className='animate-spin -ml-1 mr-2 h-4 w-4 text-white'
+                      fill='none'
+                      viewBox='0 0 24 24'
+                    >
+                      <circle
+                        className='opacity-25'
+                        cx='12'
+                        cy='12'
+                        r='10'
+                        stroke='currentColor'
+                        strokeWidth='4'
+                      />
+                      <path
+                        className='opacity-75'
+                        fill='currentColor'
+                        d='M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                      />
+                    </svg>
+                    Eliminando...
+                  </>
+                ) : (
+                  '🗑️ Eliminar Asignación'
+                )}
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
         {/* Footer - Mobile First */}
         <footer className='border-t border-gray-200 bg-white py-6 md:py-8 mt-auto mb-16 md:mb-0'>

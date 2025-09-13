@@ -9,7 +9,7 @@ export const useDashboardUrl = () => {
 
   // Determinar la URL del dashboard según el rol del usuario
   const getDashboardUrl = () => {
-    if (!user) return '/dashboard';
+    if (user === null || user === undefined) return '/dashboard';
 
     // Verificar el rol del usuario
     const userRole = user.role;

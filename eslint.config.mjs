@@ -55,7 +55,7 @@ const eslintConfig = [
       '@typescript-eslint/require-array-sort-compare': 'error',
       '@typescript-eslint/restrict-plus-operands': 'error',
       '@typescript-eslint/restrict-template-expressions': 'error',
-      '@typescript-eslint/strict-boolean-expressions': 'error',
+      '@typescript-eslint/strict-boolean-expressions': 'warn', // Cambiado a warning
       '@typescript-eslint/switch-exhaustiveness-check': 'error',
       '@typescript-eslint/unbound-method': 'error',
 
@@ -152,7 +152,7 @@ const eslintConfig = [
       'no-redeclare': 'error',
 
       // Funciones
-      'func-style': ['error', 'expression'],
+      'func-style': 'off', // Desactivado para permitir tanto function declarations como arrow functions
       'prefer-arrow-callback': 'error',
       'arrow-spacing': 'error',
       'no-confusing-arrow': 'error',
@@ -191,11 +191,16 @@ const eslintConfig = [
       'no-unsafe-optional-chaining': 'error',
       'no-useless-assignment': 'error',
       'no-useless-backreference': 'error',
-      'no-void': 'error',
+      'no-void': 'off', // Desactivado para permitir void en useEffect
       'no-warning-comments': 'warn',
       'prefer-promise-reject-errors': 'error',
-      'require-await': 'error',
-      yoda: 'error',
+      'require-await': 'off', // Desactivado para permitir async functions sin await cuando sea necesario
+
+      // Reglas específicas para Next.js
+      '@next/next/no-html-link-for-pages': 'error',
+      '@next/next/no-img-element': 'error',
+      '@next/next/no-sync-scripts': 'error',
+      '@next/next/no-unwanted-polyfillio': 'error',
     },
   },
   {

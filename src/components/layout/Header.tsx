@@ -58,7 +58,6 @@ const Header: React.FC = () => {
               </Button>
               <Button
                 onClick={() => {
-                  // eslint-disable-next-line no-void
                   void handleSignOut();
                 }}
                 size='sm'

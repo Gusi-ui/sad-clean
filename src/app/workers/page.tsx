@@ -11,6 +11,7 @@ import Card from '@/components/ui/Card';
 import Input from '@/components/ui/Input';
 import Modal from '@/components/ui/Modal';
 import { useAuth } from '@/contexts/AuthContext';
+import { logWorkerActivity } from '@/lib/activities-query';
 import {
   createWorker,
   deleteWorker,
@@ -30,18 +31,19 @@ const isValidField = (field: unknown): field is string =>
 /* eslint-disable react/jsx-closing-tag-location */
 export default function WorkersPage() {
   const { user } = useAuth();
+  const currentUser = user;
   const [dashboardUrl, setDashboardUrl] = useState('/dashboard');
 
   // Determinar la URL del dashboard según el rol del usuario
   useEffect(() => {
-    if (user?.role === 'super_admin') {
+    if (currentUser?.role === 'super_admin') {
       setDashboardUrl('/super-dashboard');
-    } else if (user?.role === 'admin') {
+    } else if (currentUser?.role === 'admin') {
       setDashboardUrl('/dashboard');
-    } else if (user?.role === 'worker') {
+    } else if (currentUser?.role === 'worker') {
       setDashboardUrl('/worker-dashboard');
     }
-  }, [user?.role]);
+  }, [currentUser?.role]);
 
   const [workers, setWorkers] = useState<WorkerType[]>([]);
   const [loading, setLoading] = useState(true);
@@ -336,13 +338,17 @@ export default function WorkersPage() {
         }
 
         const workerData = {
-          name: editingWorker.name?.trim() ?? '',
-          surname: editingWorker.surname?.trim() ?? '',
-          email: editingWorker.email?.trim() ?? '',
-          phone: editingWorker.phone?.trim() ?? '',
-          dni: editingWorker.dni?.trim() ?? '',
+          name: (editingWorker.name ?? '').trim(),
+          surname: (editingWorker.surname ?? '').trim(),
+          email: (editingWorker.email ?? '').trim(),
+          phone: (editingWorker.phone ?? '').trim(),
+          dni: (editingWorker.dni ?? '').trim(),
           worker_type: 'cuidadora', // Valor por defecto fijo
           is_active: editingWorker.is_active ?? true,
+          weekly_contracted_hours: editingWorker.weekly_contracted_hours ?? 0,
+          address: (editingWorker.address ?? '').trim(),
+          postal_code: (editingWorker.postal_code ?? '').trim(),
+          city: (editingWorker.city ?? '').trim(),
         } as WorkerInsert;
 
         // Debug: log the data being sent
@@ -350,6 +356,22 @@ export default function WorkersPage() {
 
         const newWorker = await createWorker(workerData);
         workerLogger.created(newWorker);
+
+        // Log de creación de trabajadora
+        const nameMeta = user?.user_metadata?.['name'];
+        const adminName =
+          typeof nameMeta === 'string' && nameMeta.trim().length > 0
+            ? nameMeta
+            : 'Administrador';
+        const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+        await logWorkerActivity(
+          adminName,
+          adminEmail,
+          'creó',
+          `${newWorker.name} ${newWorker.surname}`,
+          newWorker.id
+        );
 
         setWorkers([...workers, newWorker]);
         setIsAddModalOpen(false);
@@ -401,9 +423,60 @@ export default function WorkersPage() {
         ) {
           workerData.is_active = editingWorker.is_active;
         }
+        if (
+          editingWorker.weekly_contracted_hours !== undefined &&
+          editingWorker.weekly_contracted_hours !== null
+        ) {
+          workerData.weekly_contracted_hours =
+            editingWorker.weekly_contracted_hours;
+        }
+        if (
+          editingWorker.address !== undefined &&
+          editingWorker.address !== null
+        ) {
+          workerData.address = editingWorker.address.trim();
+        }
+        if (
+          editingWorker.postal_code !== undefined &&
+          editingWorker.postal_code !== null
+        ) {
+          workerData.postal_code = editingWorker.postal_code.trim();
+        }
+        if (editingWorker.city !== undefined && editingWorker.city !== null) {
+          workerData.city = editingWorker.city.trim();
+        }
+
+        // Debug: log de los datos que se van a enviar
+        // console.log('🔍 DEBUG - Datos a actualizar:', workerData);
+        // console.log('🔍 DEBUG - ID de trabajadora:', selectedWorker.id);
 
         const updatedWorker = await updateWorker(selectedWorker.id, workerData);
         if (updatedWorker) {
+          // Log de actualización de trabajadora (antes de la actualización de contraseña)
+          const nameMeta = user?.user_metadata?.['name'];
+          const adminName =
+            typeof nameMeta === 'string' && nameMeta.trim().length > 0
+              ? nameMeta
+              : 'Administrador';
+          const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+          try {
+            await logWorkerActivity(
+              adminName,
+              adminEmail,
+              'actualizó',
+              `${updatedWorker.name} ${updatedWorker.surname}`,
+              updatedWorker.id
+            );
+            // Actividad registrada correctamente (sin log en consola)
+          } catch (logError) {
+            workerLogger.error(
+              'Error al registrar actividad de actualización:'
+            );
+            workerLogger.error(logError);
+            // No fallar la operación principal por un error de logging
+          }
+
           // Si el admin ha introducido una contraseña válida, también actualizamos el acceso de Supabase Auth
           const trimmedPassword = workerAccessPassword.trim();
           if (
@@ -445,6 +518,8 @@ export default function WorkersPage() {
           setWorkers(updatedWorkers);
           setIsEditModalOpen(false);
           setSuccessMessage('Trabajadora actualizada con éxito.');
+        } else {
+          workerLogger.error('No se pudo obtener la trabajadora actualizada');
         }
       }
       setEditingWorker({});
@@ -480,6 +555,23 @@ export default function WorkersPage() {
       await deleteWorker(workerToDelete.id);
       setWorkers(workers.filter((w) => w.id !== workerToDelete.id));
       setSuccessMessage('Trabajadora eliminada con éxito.');
+
+      // Log de eliminación de trabajadora
+      const nameMeta = user?.user_metadata?.['name'];
+      const adminName =
+        typeof nameMeta === 'string' && nameMeta.trim().length > 0
+          ? nameMeta
+          : 'Administrador';
+      const adminEmail = typeof user?.email === 'string' ? user.email : '';
+
+      await logWorkerActivity(
+        adminName,
+        adminEmail,
+        'eliminó',
+        `${workerToDelete.name} ${workerToDelete.surname}`,
+        workerToDelete.id
+      );
+
       handleDeleteModalClose();
     } catch (err) {
       const errorMessage =
@@ -1344,6 +1436,96 @@ export default function WorkersPage() {
                   <option value='inactiva'>❌ Inactiva</option>
                 </select>
               </div>
+
+              {/* Horas Contratadas Semanales */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>⏰</span>
+                  <span>Horas Contratadas Semanales</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  type='number'
+                  min='0'
+                  max='80'
+                  step='0.5'
+                  placeholder='40'
+                  value={editingWorker.weekly_contracted_hours ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    const numValue =
+                      value === '' ? undefined : parseFloat(value);
+                    setEditingWorker({
+                      ...editingWorker,
+                      weekly_contracted_hours: numValue,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600'>
+                  Horas totales contratadas por semana (ej: 40h = jornada
+                  completa)
+                </p>
+              </div>
+
+              {/* Dirección */}
+              <div className='space-y-2 md:col-span-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>🏠</span>
+                  <span>Dirección</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  placeholder='Calle Mayor, 123, 1º A'
+                  value={editingWorker.address ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      address: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600'>
+                  Dirección completa para el cálculo de rutas
+                </p>
+              </div>
+
+              {/* Código Postal */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>📮</span>
+                  <span>Código Postal</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  placeholder='28001'
+                  value={editingWorker.postal_code ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      postal_code: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+
+              {/* Ciudad */}
+              <div className='space-y-2'>
+                <label className='flex items-center space-x-2 text-sm md:text-base font-medium text-gray-900'>
+                  <span className='text-blue-600'>🏙️</span>
+                  <span>Ciudad</span>
+                </label>
+                <Input
+                  className='w-full h-11 placeholder:text-gray-400 border-gray-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-500'
+                  placeholder='Madrid'
+                  value={editingWorker.city ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      city: e.target.value,
+                    });
+                  }}
+                />
+              </div>
             </div>
 
             {/* Botones de acción */}
@@ -1495,13 +1677,26 @@ export default function WorkersPage() {
                 <label className='block text-sm font-medium text-gray-900 mb-1'>
                   Contraseña de acceso (APP)
                 </label>
-                <div className='space-y-2'>
+                <form
+                  onSubmit={(e) => e.preventDefault()}
+                  className='space-y-2'
+                >
+                  {/* Campo de usuario oculto para accesibilidad */}
+                  <input
+                    type='text'
+                    name='username'
+                    autoComplete='username'
+                    style={{ display: 'none' }}
+                    value={editingWorker.email ?? ''}
+                    readOnly
+                  />
                   <Input
                     id='worker-password-input'
                     className='w-full h-11 bg-white text-gray-900 placeholder:text-gray-400'
                     type={showWorkerPassword ? 'text' : 'password'}
                     placeholder='Introduce o genera una contraseña'
                     value={workerAccessPassword}
+                    autoComplete='new-password'
                     onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
                       setWorkerAccessPassword(e.target.value)
                     }
@@ -1537,7 +1732,7 @@ export default function WorkersPage() {
                       Copiar credenciales
                     </Button>
                   </div>
-                </div>
+                </form>
                 <p className='mt-1 text-xs text-gray-600'>
                   Mínimo 6 caracteres. Puedes editarla manualmente.
                 </p>
@@ -1620,6 +1815,93 @@ export default function WorkersPage() {
                   <option value='activa'>Activa</option>
                   <option value='inactiva'>Inactiva</option>
                 </select>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Horas Contratadas Semanales
+                </label>
+                <Input
+                  className='w-full'
+                  type='number'
+                  min='0'
+                  max='80'
+                  step='0.5'
+                  placeholder='40'
+                  value={editingWorker.weekly_contracted_hours ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    const value = e.target.value;
+                    const numValue =
+                      value === '' ? undefined : parseFloat(value);
+                    setEditingWorker({
+                      ...editingWorker,
+                      weekly_contracted_hours: numValue,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Horas totales contratadas por semana (ej: 40h = jornada
+                  completa)
+                </p>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Dirección
+                </label>
+                <Input
+                  className='w-full'
+                  type='text'
+                  placeholder='Calle, número, piso...'
+                  value={editingWorker.address ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      address: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Dirección completa de la trabajadora
+                </p>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Código Postal
+                </label>
+                <Input
+                  className='w-full'
+                  type='text'
+                  placeholder='28001'
+                  value={editingWorker.postal_code ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      postal_code: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Código postal de la dirección
+                </p>
+              </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-900 mb-1'>
+                  Ciudad
+                </label>
+                <Input
+                  className='w-full'
+                  type='text'
+                  placeholder='Madrid'
+                  value={editingWorker.city ?? ''}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
+                    setEditingWorker({
+                      ...editingWorker,
+                      city: e.target.value,
+                    });
+                  }}
+                />
+                <p className='text-xs text-gray-600 mt-1'>
+                  Ciudad de residencia
+                </p>
               </div>
             </div>
             <div className='flex justify-end space-x-3 pt-4'>
@@ -1854,12 +2136,9 @@ export default function WorkersPage() {
               <Button
                 variant='danger'
                 onClick={() => {
-                  handleDeleteWorker().catch((deleteError) => {
-                    // eslint-disable-next-line no-console
-                    console.error(
-                      'Error al eliminar trabajadora:',
-                      deleteError
-                    );
+                  handleDeleteWorker().catch(() => {
+                    // Error al eliminar trabajadora - en producción usar sistema de logging apropiado
+                    // console.error('Error al eliminar trabajadora:', deleteError);
                   });
                 }}
                 disabled={deletingWorker}

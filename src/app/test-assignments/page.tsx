@@ -35,6 +35,7 @@ interface Holiday {
 
 export default function TestAssignmentsPage() {
   const { user } = useAuth();
+  const currentUser = user;
   const [loading, setLoading] = useState(false);
   const [results, setResults] = useState<TestResult[]>([]);
   const [holidays, setHolidays] = useState<Holiday[]>([]);
@@ -269,7 +270,7 @@ export default function TestAssignmentsPage() {
                 <p>• Año actual: {currentYear}</p>
                 <p>• Mes actual: {currentMonth}</p>
                 <p>• Festivos cargados: {holidays.length}</p>
-                <p>• Usuario: {user?.email}</p>
+                <p>• Usuario: {currentUser?.email}</p>
               </div>
             </Card>
           </div>

@@ -19,73 +19,61 @@ export default function ProtectedRoute({
 }: ProtectedRouteProps) {
   const { user, loading } = useAuth();
   const router = useRouter();
-  const [roleChecked, setRoleChecked] = useState(false);
+  const [isAuthorized, setIsAuthorized] = useState<boolean | null>(null);
 
   useEffect(() => {
-    if (!loading) {
-      // Si no hay usuario, redirigir al login
-      if (!user) {
-        router.push('/auth');
+    if (loading) return;
+
+    // Si no hay usuario, redirigir al login inmediatamente
+    if (user === null || user === undefined) {
+      router.replace('/auth');
+      setIsAuthorized(false);
+      return;
+    }
+
+    // Verificar rol si es requerido
+    if (requiredRole !== null && requiredRole !== undefined) {
+      const userRole = user.role;
+      const hasAccess =
+        userRole === requiredRole ||
+        (userRole === 'super_admin' && requiredRole === 'admin');
+
+      if (!hasAccess) {
+        // Determinar redirección según el rol
+        const defaultRedirect =
+          userRole === 'super_admin'
+            ? '/super-dashboard'
+            : userRole === 'admin'
+              ? '/dashboard'
+              : '/worker-dashboard';
+
+        router.replace(redirectTo ?? defaultRedirect);
+        setIsAuthorized(false);
         return;
       }
-
-      // Si se requiere un rol específico, verificarlo
-      if (requiredRole) {
-        const userRole = user.role;
-
-        // Permitir que super_admin acceda a páginas de admin
-        const hasAccess =
-          userRole === requiredRole ||
-          (userRole === 'super_admin' && requiredRole === 'admin');
-
-        if (!hasAccess) {
-          // Redirigir según el rol del usuario
-          let defaultRedirect = '/dashboard';
-
-          if (userRole === 'super_admin') {
-            defaultRedirect = '/super-dashboard';
-          } else if (userRole === 'admin') {
-            defaultRedirect = '/dashboard';
-          } else if (userRole === 'worker') {
-            defaultRedirect = '/worker-dashboard';
-          }
-
-          router.push(redirectTo ?? defaultRedirect);
-          return;
-        }
-      }
-
-      setRoleChecked(true);
     }
+
+    // Usuario autorizado
+    setIsAuthorized(true);
   }, [user, loading, requiredRole, redirectTo, router]);
 
-  // Mostrar spinner mientras carga
-  if (loading || !roleChecked) {
+  // Mostrar spinner mientras carga o verifica autorización
+  if (loading || isAuthorized === null) {
     return (
       <div className='min-h-screen flex items-center justify-center bg-gray-50'>
         <div className='text-center'>
-          <div className='w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4'></div>
-          <p className='text-gray-600'>Cargando...</p>
+          <div className='w-12 h-12 border-3 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-3'></div>
+          <p className='text-gray-600 text-sm'>
+            {loading ? 'Verificando sesión...' : 'Accediendo...'}
+          </p>
         </div>
       </div>
     );
   }
 
-  // Si no hay usuario, no mostrar nada (ya se está redirigiendo)
-  if (!user) {
+  // Si no está autorizado, no mostrar nada (ya se está redirigiendo)
+  if (!isAuthorized) {
     return null;
-  }
-
-  // Si se requiere un rol específico, verificar acceso
-  if (requiredRole) {
-    const userRole = user.role;
-    const hasAccess =
-      userRole === requiredRole ||
-      (userRole === 'super_admin' && requiredRole === 'admin');
-
-    if (!hasAccess) {
-      return null; // Ya se está redirigiendo
-    }
   }
 
   return children;

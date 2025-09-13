@@ -128,6 +128,7 @@ const TomorrowServicesList = (props: {
 
 export default function TomorrowPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [tomorrowAssignments, setTomorrowAssignments] = useState<
     AssignmentRow[]
   >([]);
@@ -223,7 +224,7 @@ export default function TomorrowPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setTomorrowAssignments([]);
         setLoading(false);
         return;
@@ -236,7 +237,7 @@ export default function TomorrowPage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
 
         if (workerError !== null || workerData === null) {
@@ -245,7 +246,7 @@ export default function TomorrowPage(): React.JSX.Element {
           return;
         }
 
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
 
         // Verificar si mañana es festivo
         const tomorrow = new Date();
@@ -270,7 +271,7 @@ export default function TomorrowPage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
@@ -302,11 +303,13 @@ export default function TomorrowPage(): React.JSX.Element {
             );
             if (slots.length === 0) return false;
 
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             if (useHoliday) return t === 'festivos' || t === 'flexible';
             return t === 'laborables' || t === 'flexible';
           });
-          setTomorrowAssignments(filtered);
+          setTomorrowAssignments(filtered as unknown as AssignmentRow[]);
         } else {
           setTomorrowAssignments([]);
         }
@@ -316,7 +319,7 @@ export default function TomorrowPage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [getTomorrowSlots, tomorrowKey, user?.email]);
+  }, [getTomorrowSlots, tomorrowKey, currentUser?.email]);
 
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {

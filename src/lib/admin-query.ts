@@ -2,6 +2,7 @@
 
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type { AdminInsert, User as AdminUser } from '@/types';
+import { securityLogger } from '@/utils/security-config';
 
 /**
  * Crea un nuevo usuario administrador en Supabase.
@@ -43,11 +44,14 @@ export const createAdmin = async (
     throw new Error('Email es requerido para crear un administrador');
   }
 
+  // Type assertion necesaria para tabla auth_users de Supabase
+  /* eslint-disable @typescript-eslint/no-explicit-any */
   const { error: userError } = await supabaseAdmin.from('auth_users').insert({
     id: newUserId,
     email: adminEmail,
     role: 'admin',
-  });
+  } as any);
+  /* eslint-enable @typescript-eslint/no-explicit-any */
 
   if (userError) {
     // Si la inserción en `auth_users` falla, eliminar el usuario de `auth.users`
@@ -70,11 +74,11 @@ export const createAdmin = async (
     client_code: '',
     monthly_assigned_hours: 0,
     medical_conditions: [],
-    emergency_contact: {
-      name: '',
-      phone: '',
-      relationship: '',
-    },
+    // emergency_contact: {
+    //   name: '',
+    //   phone: '',
+    //   relationship: '',
+    // }, // Comentado porque no está en el tipo User
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -225,11 +229,14 @@ export const deleteAdmin = async (
     if (authError) {
       // Si falla el borrado en Auth, intentar restaurar en auth_users
       // (Este es un caso edge, pero es buena práctica)
+      // Type assertion necesaria para tabla auth_users de Supabase
+      /* eslint-disable @typescript-eslint/no-explicit-any */
       await supabaseAdmin.from('auth_users').insert({
         id: userId,
         email: userEmail,
         role: 'admin',
-      });
+      } as any);
+      /* eslint-enable @typescript-eslint/no-explicit-any */
 
       throw new Error(
         `Error al eliminar de Supabase Auth: ${authError.message}`
@@ -265,14 +272,14 @@ export const getUsersStats = async (): Promise<{
       .select('id, role');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching users stats:', error);
+      securityLogger.error('Error fetching users stats:', error);
       throw error;
     }
 
     // Como no tenemos columna is_active, consideramos activos a todos los usuarios
     // excepto los que tengan role 'worker' (que son trabajadoras, no usuarios del sistema)
-    const users = (data ?? []).filter((u) => u.role !== 'worker');
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any, @typescript-eslint/no-unsafe-member-access
+    const users = (data ?? []).filter((u: any) => u.role !== 'worker');
 
     const stats = {
       total: users.length,
@@ -282,8 +289,7 @@ export const getUsersStats = async (): Promise<{
 
     return stats;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getUsersStats:', error);
+    securityLogger.error('Error in getUsersStats:', error);
     throw error;
   }
 };

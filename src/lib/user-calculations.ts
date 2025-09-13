@@ -68,7 +68,7 @@ export const calculateUserTotalHours = (
   );
 
   // Verificar que firstAssignment existe antes de usarlo
-  if (!firstAssignment) {
+  if (firstAssignment === null || firstAssignment === undefined) {
     return null;
   }
 
@@ -342,8 +342,7 @@ export const computeUserMonthlyBalance = async (
           'saturday',
         ] as const;
         const key = weekdayMap[dow];
-        const add =
-          parsed.weekdayHours[key as keyof ParsedSchedule['weekdayHours']];
+        const add = parsed.weekdayHours[key];
         dailyHours += add;
         dailyLaborables += add;
       }
@@ -510,8 +509,7 @@ export const computeWorkerUsersMonthlyBalances = async (
           'saturday',
         ] as const;
         const key = weekdayMap[dow];
-        const add =
-          parsed.weekdayHours[key as keyof ParsedSchedule['weekdayHours']];
+        const add = parsed.weekdayHours[key];
         const cur = acc.get(a.user_id);
         if (cur !== undefined) cur.laborables += add;
       }

@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import ProtectedRoute from '@/components/auth/ProtectedRoute';
 import { useAuth } from '@/contexts/AuthContext';
-import { getRecentActivities } from '@/lib/activities-query';
+import { getActivities } from '@/lib/activities-query';
 import {
   getAllUsers,
   getServicesStats,
@@ -110,7 +110,7 @@ export default function DashboardPage() {
         const todayServicesStats = await getTodayServicesStats();
 
         // Cargar actividades recientes
-        const activities = await getRecentActivities(6);
+        const activities = await getActivities();
 
         // Formatear incremento de horas
         const increment = servicesStats.weeklyHoursIncrement > 0 ? '+' : '';
@@ -486,6 +486,35 @@ export default function DashboardPage() {
                       </div>
                       <svg
                         className='w-5 h-5 text-purple-600'
+                        fill='none'
+                        stroke='currentColor'
+                        viewBox='0 0 24 24'
+                      >
+                        <path
+                          strokeLinecap='round'
+                          strokeLinejoin='round'
+                          strokeWidth={2}
+                          d='M9 5l7 7-7 7'
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                </Link>
+
+                <Link href='/holidays' className='block'>
+                  <div className='w-full text-left p-4 bg-gradient-to-r from-red-50 to-red-100 rounded-xl hover:from-red-100 hover:to-red-200 transition-all duration-200 border border-red-200'>
+                    <div className='flex items-center space-x-3'>
+                      <span className='text-2xl'>🎯</span>
+                      <div className='flex-1'>
+                        <p className='font-semibold text-gray-900'>
+                          Gestión de Festivos
+                        </p>
+                        <p className='text-sm text-gray-600'>
+                          Administrar festivos y políticas
+                        </p>
+                      </div>
+                      <svg
+                        className='w-5 h-5 text-red-600'
                         fill='none'
                         stroke='currentColor'
                         viewBox='0 0 24 24'

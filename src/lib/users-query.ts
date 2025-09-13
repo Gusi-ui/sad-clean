@@ -1,4 +1,6 @@
+/* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/strict-boolean-expressions */
 import type { User, UserInsert } from '@/types';
+import { securityLogger } from '@/utils/security-config';
 
 import { supabase } from './database';
 
@@ -13,15 +15,13 @@ export const getAllUsers = async (): Promise<User[]> => {
       .order('created_at', { ascending: false });
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching users:', error);
+      securityLogger.error('Error fetching users', error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getAllUsers:', error);
+    securityLogger.error('Error in getAllUsers', error);
     throw error;
   }
 };
@@ -38,15 +38,13 @@ export const getActiveUsers = async (): Promise<User[]> => {
       .order('name');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching active users:', error);
+      securityLogger.error('Error fetching active users:', error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getActiveUsers:', error);
+    securityLogger.error('Error in getActiveUsers:', error);
     throw error;
   }
 };
@@ -66,15 +64,13 @@ export const searchUsers = async (searchTerm: string): Promise<User[]> => {
       .order('name');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error searching users:', error);
+      securityLogger.error('Error searching users:', error);
       throw error;
     }
 
     return (data ?? []) as User[];
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in searchUsers:', error);
+    securityLogger.error('Error in searchUsers:', error);
     throw error;
   }
 };
@@ -91,15 +87,13 @@ export const getUserById = async (id: string): Promise<User | null> => {
       .single();
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching user by ID:', error);
+      securityLogger.error('Error fetching user by ID:', error);
       throw error;
     }
 
     return data as User;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getUserById:', error);
+    securityLogger.error('Error in getUserById:', error);
     throw error;
   }
 };
@@ -120,15 +114,13 @@ export const updateUser = async (
       .single();
 
     if (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error updating user:', error);
+      securityLogger.error('Error updating user:', error);
       throw error;
     }
 
     return data as User;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in updateUser:', error);
+    securityLogger.error('Error in updateUser:', error);
     throw error;
   }
 };
@@ -196,13 +188,11 @@ export const deleteUser = async (id: string): Promise<void> => {
     const { error } = await supabase.from('users').delete().eq('id', id);
 
     if (error) {
-      // eslint-disable-next-line no-console
-      console.error('Error deleting user:', error);
+      securityLogger.error('Error deleting user:', error);
       throw error;
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in deleteUser:', error);
+    securityLogger.error('Error in deleteUser:', error);
     throw error;
   }
 };
@@ -222,8 +212,7 @@ export const getUsersStats = async (): Promise<{
       .select('id, is_active');
 
     if (error !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching users stats:', error);
+      securityLogger.error('Error fetching users stats:', error);
       throw error;
     }
 
@@ -242,8 +231,7 @@ export const getUsersStats = async (): Promise<{
 
     return stats;
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getUsersStats:', error);
+    securityLogger.error('Error in getUsersStats:', error);
     throw error;
   }
 };

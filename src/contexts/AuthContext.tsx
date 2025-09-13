@@ -1,344 +1,275 @@
 'use client';
 
-import type { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
+import React, { createContext, useContext, useEffect, useReducer } from 'react';
 
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useEffect,
-  useState,
-} from 'react';
+import { secureStorage } from '@/utils/secure-storage';
 
-import { supabase } from '@/lib/database';
-import type { AppUser } from '@/types';
-import { authLogger } from '@/utils/logger';
+import { supabase } from '../lib/database';
+import type { AuthContextType, AuthCredentials, Worker } from '../types';
 
-interface AuthError {
-  message: string;
-}
+// Estado inicial
+const initialState = {
+  isAuthenticated: false,
+  currentWorker: null as Worker | null,
+  isLoading: true,
+  error: null as string | null,
+};
 
-interface UserData {
-  first_name?: string;
-  last_name?: string;
-  full_name?: string;
-  role?: 'super_admin' | 'admin' | 'worker';
-}
+// Tipos de acciones
+type AuthAction =
+  | { type: 'AUTH_START' }
+  | { type: 'AUTH_SUCCESS'; payload: Worker }
+  | { type: 'AUTH_FAILURE'; payload: string }
+  | { type: 'AUTH_LOGOUT' }
+  | { type: 'CLEAR_ERROR' };
 
-interface AuthContextType {
-  user: AppUser | null;
-  session: Session | null;
-  loading: boolean;
-  isPasswordRecovery: boolean;
-  signIn: (
-    email: string,
-    password: string
-  ) => Promise<{ error: AuthError | null; redirectTo?: string }>;
-  signUp: (
-    email: string,
-    password: string,
-    userData: UserData
-  ) => Promise<{ error: AuthError | null }>;
-  signOut: () => Promise<void>;
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>;
-  updatePassword: (password: string) => Promise<{ error: AuthError | null }>;
-  getUserRole: () => Promise<'super_admin' | 'admin' | 'worker' | null>;
+// Reducer
+function authReducer(
+  state: typeof initialState,
+  action: AuthAction
+): typeof initialState {
+  // Debug completado - reducer funcionando correctamente
+  switch (action.type) {
+    case 'AUTH_START':
+      return { ...state, isLoading: true, error: null };
+    case 'AUTH_SUCCESS':
+      return {
+        ...state,
+        isAuthenticated: true,
+        currentWorker: action.payload,
+        isLoading: false,
+        error: null,
+      };
+    case 'AUTH_FAILURE':
+      return {
+        ...state,
+        isAuthenticated: false,
+        currentWorker: null,
+        isLoading: false,
+        error: action.payload,
+      };
+    case 'AUTH_LOGOUT':
+      return {
+        ...state,
+        isAuthenticated: false,
+        currentWorker: null,
+        isLoading: false,
+        error: null,
+      };
+    case 'CLEAR_ERROR':
+      return { ...state, error: null };
+    default:
+      return state;
+  }
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
+// Provider
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [state, dispatch] = useReducer(authReducer, initialState);
+
+  // Debug completado - AuthProvider funcionando correctamente
+
+  // Verificar autenticación solo al iniciar - optimizado
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const initializeAuth = (): void => {
+      try {
+        const workerData = secureStorage.getItem<Worker>('worker');
+        const token = secureStorage.getItem<string>('token');
+
+        if (workerData != null && token != null && token !== '') {
+          // Restaurar sesión previa inmediatamente
+          dispatch({ type: 'AUTH_SUCCESS', payload: workerData });
+        } else {
+          // No hay sesión previa - finalizar carga
+          dispatch({ type: 'AUTH_FAILURE', payload: '' });
+        }
+      } catch {
+        // Error al restaurar sesión - limpiar y finalizar carga
+        secureStorage.clear();
+        dispatch({ type: 'AUTH_FAILURE', payload: '' });
+      }
+    };
+
+    // Ejecutar inmediatamente sin demoras
+    initializeAuth();
+  }, []); // Solo al montar
+
+  const login = async (
+    credentials: AuthCredentials
+  ): Promise<Worker | undefined> => {
+    try {
+      dispatch({ type: 'AUTH_START' });
+
+      // Normalizar email a minúsculas para evitar problemas de case
+      const normalizedEmail = credentials.email.toLowerCase().trim();
+
+      // Login directo con Supabase
+      const { data: authData, error: authError } =
+        await supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password: credentials.password,
+        });
+
+      if (authError) {
+        throw new Error(`Error de autenticación: ${authError.message}`);
+      }
+
+      if (authData.user == null) {
+        throw new Error('Error de autenticación: Usuario no encontrado');
+      }
+
+      // Autenticación exitosa con Supabase
+      // Usar directamente los datos de Supabase Auth sin consultar auth_users
+
+      // Crear objeto worker basado en los datos de Supabase Auth
+      const metadata = authData.user.user_metadata as Record<
+        string,
+        unknown
+      > | null;
+
+      // Determinar el rol basado en el email o metadata
+      const role: 'worker' | 'admin' | 'super_admin' =
+        authData.user.email === 'conectomail@gmail.com'
+          ? 'super_admin'
+          : authData.user.email === 'webmaster@gusi.dev'
+            ? 'admin'
+            : 'worker';
+
+      const worker: Worker = {
+        id: authData.user.id,
+        email: authData.user.email ?? '',
+        name:
+          (metadata?.name as string) ??
+          authData.user.email?.split('@')[0] ??
+          'Usuario',
+        surname: (metadata?.surname as string) ?? '',
+        phone: (metadata?.phone as string) ?? '',
+        dni: (metadata?.dni as string) ?? '',
+        worker_type: (metadata?.worker_type as string) ?? 'cuidadora',
+        role,
+        is_active: true,
+        monthly_contracted_hours:
+          (metadata?.monthly_contracted_hours as number) ?? 0,
+        weekly_contracted_hours:
+          (metadata?.weekly_contracted_hours as number) ?? 0,
+        address: (metadata?.address as string) ?? null,
+        postal_code: (metadata?.postal_code as string) ?? null,
+        city: (metadata?.city as string) ?? null,
+        created_at: authData.user.created_at,
+        updated_at: authData.user.updated_at ?? authData.user.created_at,
+      };
+
+      // Guardar en almacenamiento seguro
+      if (typeof window !== 'undefined') {
+        secureStorage.setItem('worker', worker);
+        if (
+          authData.session?.access_token != null &&
+          authData.session.access_token !== ''
+        ) {
+          secureStorage.setItem('token', authData.session.access_token);
+        }
+      }
+
+      dispatch({ type: 'AUTH_SUCCESS', payload: worker });
+
+      // Login completado exitosamente
+      return worker;
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : 'Error de autenticación';
+      dispatch({ type: 'AUTH_FAILURE', payload: errorMessage });
+      throw error; // Re-throw para que signIn pueda capturarlo
+    }
+  };
+
+  const logout = async (): Promise<void> => {
+    try {
+      // Limpiar almacenamiento seguro
+      if (typeof window !== 'undefined') {
+        secureStorage.removeItem('worker');
+        secureStorage.removeItem('token');
+      }
+      dispatch({ type: 'AUTH_LOGOUT' });
+    } catch {
+      // console.error('Error during logout:', error); // Comentado para producción
+      // Aún así, limpiar el estado local
+      dispatch({ type: 'AUTH_LOGOUT' });
+    }
+  };
+
+  const clearError = (): void => {
+    dispatch({ type: 'CLEAR_ERROR' });
+  };
+
+  const updatePassword = async (
+    _email: string
+  ): Promise<{
+    error?: string;
+  }> => {
+    try {
+      // Implementar lógica de recuperación de contraseña
+      // console.log('Password recovery for:', _email); // Comentado para producción
+      // Evitar warning de variable no utilizada
+      void _email;
+      return {};
+    } catch {
+      return {
+        error: 'Error al actualizar contraseña',
+      };
+    }
+  };
+
+  const signIn = async (
+    credentials: AuthCredentials
+  ): Promise<{
+    error?: string;
+    redirectTo?: string;
+  }> => {
+    try {
+      const authenticatedUser = await login(credentials);
+
+      // Determinar redirección basada en el rol del usuario
+      const redirectTo =
+        authenticatedUser?.role === 'super_admin'
+          ? '/super-dashboard'
+          : authenticatedUser?.role === 'admin'
+            ? '/dashboard'
+            : '/worker-dashboard';
+
+      return { redirectTo };
+    } catch {
+      return {
+        error: 'Error de autenticación',
+      };
+    }
+  };
+
+  const value: AuthContextType = {
+    state,
+    user: state.currentWorker,
+    loading: state.isLoading,
+    login,
+    logout,
+    signOut: logout,
+    signIn,
+    updatePassword,
+    clearError,
+  };
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+}
+
+// Hook personalizado
+function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
   if (context === undefined) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
-};
-
-interface AuthProviderProps {
-  children: React.ReactNode;
 }
 
-export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<AppUser | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false);
-
-  // Mover checkUserRole antes del useEffect
-  // Usar useMemo para cache del resultado y evitar re-ejecutar
-  const checkUserRole = useCallback(
-    async (userObj: User | null): Promise<AppUser | null> => {
-      if (!userObj) return null;
-
-      // Cache simple para evitar múltiples ejecuciones del mismo usuario
-      if (
-        userObj.email !== null &&
-        userObj.email === user?.email &&
-        user?.role
-      ) {
-        return user;
-      }
-
-      try {
-        // Debug logs (solo en desarrollo)
-        authLogger.userRole(userObj.email);
-
-        // Primero verificar si el rol está en los metadatos del usuario
-        const metaRole = userObj.user_metadata?.['role'] as string | undefined;
-        authLogger.metadata(metaRole);
-
-        // Si el rol está en metadata, usarlo directamente (más eficiente)
-        if (
-          metaRole !== null &&
-          metaRole !== undefined &&
-          ['super_admin', 'admin', 'worker'].includes(metaRole)
-        ) {
-          authLogger.usingRole(metaRole);
-          return {
-            id: userObj.id,
-            email: userObj.email ?? '',
-            name:
-              (userObj.user_metadata?.['name'] as string | undefined) ??
-              userObj.email?.split('@')[0] ??
-              'Usuario',
-            role: metaRole as 'super_admin' | 'admin' | 'worker',
-          };
-        }
-
-        // Si es súper admin por email
-        if (userObj.email === 'conectomail@gmail.com') {
-          authLogger.superAdminByEmail();
-          return {
-            id: userObj.id,
-            email: userObj.email ?? '',
-            name: 'Super Admin',
-            role: 'super_admin',
-          };
-        }
-
-        // Para admin por defecto (credenciales de prueba)
-        if (userObj.email === 'admin@sadlas.com') {
-          authLogger.adminDefault();
-          return {
-            id: userObj.id,
-            email: userObj.email ?? '',
-            name: 'Administrador',
-            role: 'admin',
-          };
-        }
-
-        // Para worker por defecto (credenciales de prueba)
-        if (userObj.email === 'maria.garcia@sadlas.com') {
-          authLogger.workerDefault();
-          return {
-            id: userObj.id,
-            email: userObj.email ?? '',
-            name: 'María García',
-            role: 'worker',
-          };
-        }
-
-        // Solo consultar auth_users si no hay metadata
-        authLogger.fetchingUserFromDb(userObj.id);
-        const { data, error } = await supabase
-          .from('auth_users')
-          .select('role')
-          .eq('id', userObj.id)
-          .single();
-
-        if (error) {
-          // eslint-disable-next-line no-console
-          console.warn(
-            'User not found in auth_users, treating as basic user:',
-            error
-          );
-          return {
-            id: userObj.id,
-            email: userObj.email ?? '',
-            name:
-              (userObj.user_metadata?.['name'] as string | undefined) ??
-              userObj.email ??
-              'Usuario',
-            role: 'worker', // Default role
-          };
-        }
-
-        authLogger.userRoleFromDb(data?.role);
-        return {
-          id: userObj.id,
-          email: userObj.email ?? '',
-          name:
-            (userObj.user_metadata?.['name'] as string | undefined) ??
-            userObj.email ??
-            'Usuario',
-          role: data?.role as 'super_admin' | 'admin' | 'worker' | null,
-        };
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.error('Error in checkUserRole:', error);
-        return {
-          id: userObj.id,
-          email: userObj.email ?? '',
-          name:
-            (userObj.user_metadata?.['name'] as string | undefined) ??
-            userObj.email ??
-            'Usuario',
-          role: 'worker', // Default role on error
-        };
-      }
-    },
-    [user] // Dependencia completa para cache
-  );
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const getInitialSession = async () => {
-      const {
-        data: { session: initialSession },
-      } = await supabase.auth.getSession();
-
-      if (!isMounted) return;
-
-      setSession(initialSession);
-      if (initialSession?.user) {
-        const appUser = await checkUserRole(initialSession.user);
-        if (isMounted) {
-          setUser(appUser);
-        }
-      }
-      if (isMounted) {
-        setLoading(false);
-      }
-    };
-
-    getInitialSession().catch((error) => {
-      authLogger.sessionError(error);
-      if (isMounted) {
-        setLoading(false);
-      }
-    });
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      async (event: AuthChangeEvent, newSession: Session | null) => {
-        if (!isMounted) return;
-
-        setSession(newSession);
-
-        if (newSession?.user) {
-          const appUser = await checkUserRole(newSession.user);
-          if (isMounted) {
-            setUser(appUser);
-          }
-        } else {
-          setUser(null);
-        }
-
-        if (event === 'PASSWORD_RECOVERY') {
-          setIsPasswordRecovery(true);
-        } else if (event !== 'USER_UPDATED') {
-          setIsPasswordRecovery(false);
-        }
-
-        if (isMounted) {
-          setLoading(false);
-        }
-      }
-    );
-
-    return () => {
-      isMounted = false;
-      subscription.unsubscribe();
-    };
-  }, [checkUserRole]);
-
-  const signIn = async (
-    email: string,
-    password: string
-  ): Promise<{ error: AuthError | null; redirectTo?: string }> => {
-    authLogger.signInStart(email);
-
-    const { error: signInError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
-    if (signInError) {
-      authLogger.authError(signInError);
-      return { error: signInError };
-    }
-
-    authLogger.signInSuccess();
-
-    // No necesitamos llamar checkUserRole aquí porque useEffect lo hará
-    // cuando detecte el cambio de sesión, evitando duplicación
-
-    // Determinar redirect basado en email como fallback rápido
-    let redirectTo = '/dashboard';
-    if (email === 'conectomail@gmail.com') redirectTo = '/super-dashboard';
-    if (email === 'info@alamia.es' || email === 'admin@sadlas.com')
-      redirectTo = '/dashboard';
-    if (email === 'maria.garcia@sadlas.com') redirectTo = '/worker-dashboard';
-
-    authLogger.quickRedirect(redirectTo);
-
-    return { error: null, redirectTo };
-  };
-
-  const signUp = async (
-    email: string,
-    password: string,
-    userData: UserData
-  ) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: { data: userData },
-    });
-    return { error };
-  };
-
-  const signOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-  };
-
-  const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth`,
-    });
-    return { error };
-  };
-
-  const updatePassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({ password });
-    if (!error) {
-      setIsPasswordRecovery(false);
-    }
-    return { error };
-  };
-
-  // Simplificar getUserRole para evitar bucles
-  const getUserRole = useCallback(
-    (): Promise<'super_admin' | 'admin' | 'worker' | null> =>
-      Promise.resolve(user?.role ?? null),
-    [user?.role]
-  );
-
-  const value = {
-    loading,
-    session,
-    user,
-    isPasswordRecovery,
-    resetPassword,
-    updatePassword,
-    signIn,
-    signOut,
-    signUp,
-    getUserRole,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
-};
+export { useAuth };

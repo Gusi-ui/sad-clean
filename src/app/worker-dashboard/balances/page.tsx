@@ -26,6 +26,7 @@ type WorkerUserBalanceRow = {
 
 export default function WorkerBalancesPage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const today = useMemo(() => new Date(), []);
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
   const [currentMonth, setCurrentMonth] = useState<number>(
@@ -65,7 +66,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
 
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) return;
+      if (currentUser?.email === undefined) return;
       setLoading(true);
       setError(null);
       try {
@@ -73,7 +74,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
         const { data: wdata, error: werr } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
         if (werr !== null || wdata === null) {
           setRows([]);
@@ -183,7 +184,7 @@ export default function WorkerBalancesPage(): React.JSX.Element {
     };
     // eslint-disable-next-line @typescript-eslint/no-floating-promises
     load();
-  }, [user?.email, currentYear, currentMonth]);
+  }, [currentUser?.email, currentYear, currentMonth]);
 
   const totals = useMemo(() => {
     const assigned = rows.reduce((a, r) => a + r.assignedMonthlyHours, 0);
@@ -195,37 +196,67 @@ export default function WorkerBalancesPage(): React.JSX.Element {
   return (
     <ProtectedRoute requiredRole='worker'>
       <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 pb-16'>
-        <header className='bg-white border-b border-gray-200'>
+        <header className='bg-white shadow-sm border-b border-gray-200'>
           <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
             <div className='flex items-center justify-between'>
-              <div className='flex items-center gap-3'>
+              <div className='flex items-center space-x-4'>
                 <Link
                   href='/worker-dashboard'
                   className='text-gray-600 hover:text-gray-900'
                 >
-                  ←
+                  <svg
+                    className='w-6 h-6'
+                    fill='none'
+                    stroke='currentColor'
+                    viewBox='0 0 24 24'
+                  >
+                    <path
+                      strokeLinecap='round'
+                      strokeLinejoin='round'
+                      strokeWidth={2}
+                      d='M15 19l-7-7 7-7'
+                    />
+                  </svg>
                 </Link>
-                <h1 className='text-lg sm:text-xl font-bold text-gray-900'>
-                  ⏱️ Balance de horas
-                </h1>
+                <div>
+                  <h1 className='text-xl font-bold text-gray-900'>
+                    ⏱️ Balance de horas
+                  </h1>
+                  <p className='text-gray-600'>
+                    {monthName} {currentYear}
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </header>
 
-        <main className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
-          <div className='mb-4 flex items-center justify-between gap-3'>
-            <div className='flex items-center gap-2'>
-              <Button variant='outline' size='sm' onClick={goPrevMonth}>
-                ← Mes anterior
-              </Button>
-              <h2 className='text-base sm:text-lg font-semibold text-gray-900 capitalize'>
-                {monthName} {currentYear}
-              </h2>
-              <Button variant='outline' size='sm' onClick={goNextMonth}>
-                Mes siguiente →
-              </Button>
-            </div>
+        <main className='w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8'>
+          <div className='mb-4 relative flex items-center'>
+            {/* Botón anterior - posicionamiento absoluto en móvil */}
+            <Button
+              variant='outline'
+              onClick={goPrevMonth}
+              className='absolute left-0 z-10 px-3 py-2 sm:px-4 sm:py-2 sm:static'
+            >
+              <span className='hidden sm:inline'>← Mes anterior</span>
+              <span className='sm:hidden'>⬅️</span>
+            </Button>
+
+            {/* Título centrado */}
+            <h2 className='flex-1 text-center text-lg sm:text-xl font-bold text-gray-900 capitalize whitespace-nowrap sm:flex-none sm:mx-2'>
+              {monthName} {currentYear}
+            </h2>
+
+            {/* Botón siguiente - posicionamiento absoluto en móvil */}
+            <Button
+              variant='outline'
+              onClick={goNextMonth}
+              className='absolute right-0 z-10 px-3 py-2 sm:px-4 sm:py-2 sm:static'
+            >
+              <span className='hidden sm:inline'>Mes siguiente →</span>
+              <span className='sm:hidden'>➡️</span>
+            </Button>
           </div>
 
           {/* Resumen agregado */}
@@ -275,7 +306,8 @@ export default function WorkerBalancesPage(): React.JSX.Element {
                       {formatDifference(row.difference)}
                     </span>
                   </div>
-                  <div className='grid grid-cols-2 gap-2 text-sm'>
+                  {/* Layout diferente para móviles y desktop */}
+                  <div className='hidden sm:grid sm:grid-cols-2 gap-2 text-sm'>
                     <div className='bg-green-50 border border-green-100 rounded-md px-2 py-1'>
                       <p className='text-[11px] text-gray-600'>Laborables</p>
                       <p className='font-medium text-gray-900'>
@@ -292,6 +324,34 @@ export default function WorkerBalancesPage(): React.JSX.Element {
                       <p className='text-[11px] text-gray-600'>Teóricas</p>
                       <p className='font-semibold text-gray-900'>
                         {row.theoreticalMonthlyHours.toFixed(1)} h
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Layout para móviles con información completa */}
+                  <div className='sm:hidden grid grid-cols-2 gap-2 text-sm'>
+                    <div className='bg-green-50 border border-green-100 rounded-md px-2 py-1'>
+                      <p className='text-[11px] text-gray-600'>Laborables</p>
+                      <p className='font-medium text-gray-900'>
+                        {row.laborablesMonthlyHours.toFixed(1)} h
+                      </p>
+                    </div>
+                    <div className='bg-yellow-50 border border-yellow-100 rounded-md px-2 py-1'>
+                      <p className='text-[11px] text-gray-600'>Festivos</p>
+                      <p className='font-medium text-gray-900'>
+                        {row.holidaysMonthlyHours.toFixed(1)} h
+                      </p>
+                    </div>
+                    <div className='bg-blue-50 border border-blue-100 rounded-md px-2 py-1'>
+                      <p className='text-[11px] text-gray-600'>Teóricas</p>
+                      <p className='font-semibold text-gray-900'>
+                        {row.theoreticalMonthlyHours.toFixed(1)} h
+                      </p>
+                    </div>
+                    <div className='bg-purple-50 border border-purple-100 rounded-md px-2 py-1'>
+                      <p className='text-[11px] text-gray-600'>Asignadas</p>
+                      <p className='font-medium text-gray-900'>
+                        {row.assignedMonthlyHours.toFixed(1)} h
                       </p>
                     </div>
                   </div>

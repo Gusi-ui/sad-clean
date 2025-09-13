@@ -156,8 +156,10 @@ export default function SuperDashboardPage() {
         const users = await getAllUsers();
         setUsersStats({
           total: users.length,
-          active: users.filter((u) => u.is_active).length,
-          inactive: users.filter((u) => !u.is_active).length,
+          active: users.filter((u) => u.is_active === true).length,
+          inactive: users.filter(
+            (u) => u.is_active === false || u.is_active === null
+          ).length,
         });
       } catch (err) {
         setError('No se pudieron cargar los datos del dashboard.');
@@ -270,17 +272,17 @@ export default function SuperDashboardPage() {
         password: newAdmin.password,
         name: newAdmin.name.trim(),
         surname: '',
-        phone: newAdmin.phone.trim(),
-        address: '',
-        postal_code: '',
-        city: '',
-        monthly_assigned_hours: 0,
-        medical_conditions: [],
-        emergency_contact: {
-          name: '',
-          phone: '',
-          relationship: '',
-        },
+        // phone: newAdmin.phone.trim(), // Comentado porque no está en AdminInsert
+        // address: '', // Comentado porque no está en AdminInsert
+        // postal_code: '', // Comentado porque no está en AdminInsert
+        // city: '', // Comentado porque no está en AdminInsert
+        // monthly_assigned_hours: 0, // Comentado porque no está en AdminInsert
+        // medical_conditions: [], // Comentado porque no está en AdminInsert
+        // emergency_contact: {
+        //   name: '',
+        //   phone: '',
+        //   relationship: '',
+        // }, // Comentado porque no está en AdminInsert
       });
 
       setAdmins([...admins, newAdminUser]);
@@ -697,7 +699,7 @@ export default function SuperDashboardPage() {
                         </p>
                         <p className='text-xs text-gray-500 mt-1'>
                           Creado:{' '}
-                          {new Date(admin.created_at).toLocaleDateString(
+                          {new Date(admin.created_at ?? '').toLocaleDateString(
                             'es-ES'
                           )}
                         </p>
@@ -1022,41 +1024,55 @@ export default function SuperDashboardPage() {
               <strong>{selectedAdminForReset?.email}</strong> inmediatamente.
             </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Nueva Contraseña *
-              </label>
-              <Input
-                type='password'
-                className='w-full'
-                placeholder='Mínimo 6 caracteres'
-                value={resetPasswordData.password}
-                onChange={(e) =>
-                  setResetPasswordData({
-                    ...resetPasswordData,
-                    password: e.target.value,
-                  })
-                }
+            <form onSubmit={(e) => e.preventDefault()} className='space-y-4'>
+              {/* Campo de usuario oculto para accesibilidad */}
+              <input
+                type='text'
+                name='username'
+                autoComplete='username'
+                style={{ display: 'none' }}
+                value={selectedAdminForReset?.email ?? ''}
+                readOnly
               />
-            </div>
 
-            <div>
-              <label className='block text-sm font-medium text-gray-700 mb-1'>
-                Confirmar Contraseña *
-              </label>
-              <Input
-                type='password'
-                className='w-full'
-                placeholder='Repetir contraseña'
-                value={resetPasswordData.confirmPassword}
-                onChange={(e) =>
-                  setResetPasswordData({
-                    ...resetPasswordData,
-                    confirmPassword: e.target.value,
-                  })
-                }
-              />
-            </div>
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Nueva Contraseña *
+                </label>
+                <Input
+                  type='password'
+                  className='w-full'
+                  placeholder='Mínimo 6 caracteres'
+                  value={resetPasswordData.password}
+                  autoComplete='new-password'
+                  onChange={(e) =>
+                    setResetPasswordData({
+                      ...resetPasswordData,
+                      password: e.target.value,
+                    })
+                  }
+                />
+              </div>
+
+              <div>
+                <label className='block text-sm font-medium text-gray-700 mb-1'>
+                  Confirmar Contraseña *
+                </label>
+                <Input
+                  type='password'
+                  className='w-full'
+                  placeholder='Repetir contraseña'
+                  value={resetPasswordData.confirmPassword}
+                  autoComplete='new-password'
+                  onChange={(e) =>
+                    setResetPasswordData({
+                      ...resetPasswordData,
+                      confirmPassword: e.target.value,
+                    })
+                  }
+                />
+              </div>
+            </form>
 
             {error !== null && error !== undefined && (
               <div className='bg-red-50 border border-red-200 text-red-600 rounded-lg p-3 text-sm'>

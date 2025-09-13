@@ -12,7 +12,6 @@ export default function LoginForm() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const { loading: authLoading } = useAuth();
   const [error, setError] = useState<string | null>(null);
   const [emailError, setEmailError] = useState<string | null>(null);
   const [passwordError, setPasswordError] = useState<string | null>(null);
@@ -72,22 +71,28 @@ export default function LoginForm() {
       // Guardar email en localStorage
       localStorage.setItem('sad_last_email', email);
 
-      const { error: signInError, redirectTo } = await signIn(email, password);
+      const { error: signInError, redirectTo } = await signIn({
+        email,
+        password,
+      });
 
-      if (signInError !== null) {
-        setError(signInError.message);
+      if (signInError != null) {
+        setError(signInError ?? 'Error de autenticación');
+        setLoading(false);
       } else if (redirectTo !== undefined) {
-        router.push(redirectTo);
+        // Redirección inmediata sin mantener loading
+        router.replace(redirectTo);
+      } else {
+        setError('Error de configuración. Contacta con soporte.');
+        setLoading(false);
       }
     } catch {
       setError('Error inesperado. Inténtalo de nuevo.');
-    } finally {
       setLoading(false);
     }
   };
 
   const handleFormSubmit = (e: React.FormEvent) => {
-    // eslint-disable-next-line no-void
     void handleSubmit(e);
   };
 
@@ -294,19 +299,24 @@ export default function LoginForm() {
               </div>
             )}
 
-            {/* Botón de Envío */}
-            <div>
-              <Button
-                type='submit'
-                className='w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg shadow-lg hover:shadow-xl transition-all duration-200'
-                loading={loading || authLoading}
-                disabled={loading || authLoading || !isFormValid}
-              >
-                {loading || authLoading
-                  ? 'Iniciando sesión...'
-                  : '🔐 Iniciar Sesión'}
-              </Button>
-            </div>
+            {/* Botón de Inicio de Sesión */}
+            <Button
+              type='submit'
+              disabled={!isFormValid || loading}
+              className='w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold py-3 px-4 rounded-lg transition-all duration-200 transform hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none'
+            >
+              {loading ? (
+                <div className='flex items-center justify-center space-x-2'>
+                  <div className='w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin'></div>
+                  <span>Verificando credenciales...</span>
+                </div>
+              ) : (
+                <div className='flex items-center justify-center space-x-2'>
+                  <span>🔐</span>
+                  <span>Iniciar Sesión</span>
+                </div>
+              )}
+            </Button>
 
             {/* Información de Ayuda */}
             <div className='text-center'>

@@ -1,32 +1,49 @@
+/* eslint-disable @typescript-eslint/no-unsafe-return, @typescript-eslint/no-unsafe-assignment */
 import { createClient } from '@supabase/supabase-js';
 
-import type { Database } from '@/types/supabase';
+import type {
+  Assignment,
+  AssignmentInsert,
+  AssignmentUpdate,
+  HoursBalance,
+  HoursBalanceInsert,
+  HoursBalanceUpdate,
+  User,
+  UserInsert,
+  UserUpdate,
+  Worker,
+  WorkerInsert,
+  WorkerUpdate,
+} from '@/types/database-types';
+import { securityLogger } from '@/utils/security-config';
 
 const supabaseUrl = process.env['NEXT_PUBLIC_SUPABASE_URL'] ?? '';
 const supabaseKey = process.env['NEXT_PUBLIC_SUPABASE_ANON_KEY'] ?? '';
-export const supabase = createClient<Database>(supabaseUrl, supabaseKey);
 
-// Tipos basados en el esquema real de Supabase
-export type Worker = Database['public']['Tables']['workers']['Row'];
-export type WorkerInsert = Database['public']['Tables']['workers']['Insert'];
-export type WorkerUpdate = Database['public']['Tables']['workers']['Update'];
+// Configurar cliente de Supabase con manejo de auth
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: true, // Importante para tokens de recuperación
+  },
+});
 
-export type Assignment = Database['public']['Tables']['assignments']['Row'];
-export type AssignmentInsert =
-  Database['public']['Tables']['assignments']['Insert'];
-export type AssignmentUpdate =
-  Database['public']['Tables']['assignments']['Update'];
-
-export type User = Database['public']['Tables']['users']['Row'];
-export type UserInsert = Database['public']['Tables']['users']['Insert'];
-export type UserUpdate = Database['public']['Tables']['users']['Update'];
-
-export type HoursBalance =
-  Database['public']['Tables']['hours_balances']['Row'];
-export type HoursBalanceInsert =
-  Database['public']['Tables']['hours_balances']['Insert'];
-export type HoursBalanceUpdate =
-  Database['public']['Tables']['hours_balances']['Update'];
+// Re-exportar tipos para compatibilidad
+export type {
+  Assignment,
+  AssignmentInsert,
+  AssignmentUpdate,
+  HoursBalance,
+  HoursBalanceInsert,
+  HoursBalanceUpdate,
+  User,
+  UserInsert,
+  UserUpdate,
+  Worker,
+  WorkerInsert,
+  WorkerUpdate,
+};
 
 // Funciones helper para SAD LAS
 
@@ -41,8 +58,7 @@ export const getActiveWorkers = async (): Promise<Worker[]> => {
     .order('name');
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching active workers:', error);
+    securityLogger.error('Error fetching active workers:', error);
     throw error;
   }
 
@@ -60,8 +76,7 @@ export const getWorkerById = async (id: string): Promise<Worker | null> => {
     .single();
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching worker:', error);
+    securityLogger.error('Error fetching worker:', error);
     throw error;
   }
 
@@ -87,8 +102,7 @@ export const getWorkerAssignments = async (
     .order('start_date', { ascending: false });
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching worker assignments:', error);
+    securityLogger.error('Error fetching worker assignments:', error);
     throw error;
   }
 
@@ -108,8 +122,7 @@ export const createAssignment = async (
     .single();
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error creating assignment:', error);
+    securityLogger.error('Error creating assignment:', error);
     throw error;
   }
 
@@ -131,8 +144,7 @@ export const updateAssignment = async (
     .single();
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error updating assignment:', error);
+    securityLogger.error('Error updating assignment:', error);
     throw error;
   }
 
@@ -162,8 +174,7 @@ export const getWorkerStats = async (
     .lte('start_date', endDate);
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching worker stats:', error);
+    securityLogger.error('Error fetching worker stats:', error);
     throw error;
   }
 
@@ -197,8 +208,7 @@ export const getAllUsers = async (): Promise<User[]> => {
     .order('name');
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching users:', error);
+    securityLogger.error('Error fetching users:', error);
     throw error;
   }
 
@@ -226,8 +236,7 @@ export const getTodayServices = async (): Promise<Assignment[]> => {
     .order('start_date', { ascending: false });
 
   if (error !== null) {
-    // eslint-disable-next-line no-console
-    console.error('Error fetching today services:', error);
+    securityLogger.error('Error fetching today services:', error);
     throw error;
   }
 
@@ -265,14 +274,13 @@ export const getServicesStats = async (): Promise<{
       .eq('status', 'active');
 
     if (weeklyError !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching weekly assignments:', weeklyError);
+      securityLogger.error('Error fetching weekly assignments:', weeklyError);
       throw weeklyError;
     }
 
     // Calcular horas totales de la semana actual
     const weeklyHours = (weeklyAssignments ?? []).reduce(
-      (total, assignment) => total + (assignment.weekly_hours || 0),
+      (total, assignment) => total + (assignment.weekly_hours ?? 0),
       0
     );
 
@@ -293,13 +301,15 @@ export const getServicesStats = async (): Promise<{
       .eq('status', 'active');
 
     if (lastWeekError !== null) {
-      // eslint-disable-next-line no-console
-      console.error('Error fetching last week assignments:', lastWeekError);
+      securityLogger.error(
+        'Error fetching last week assignments:',
+        lastWeekError
+      );
       throw lastWeekError;
     }
 
     const lastWeekHours = (lastWeekAssignments ?? []).reduce(
-      (total, assignment) => total + (assignment.weekly_hours || 0),
+      (total, assignment) => total + (assignment.weekly_hours ?? 0),
       0
     );
 
@@ -312,8 +322,7 @@ export const getServicesStats = async (): Promise<{
       weeklyHoursIncrement,
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getServicesStats:', error);
+    securityLogger.error('Error in getServicesStats:', error);
     return {
       todayServices: 0,
       weeklyHours: 0,
@@ -346,7 +355,7 @@ export const getTodayServicesStats = async (): Promise<{
 
     // Calcular horas totales
     const totalHours = todayServices.reduce(
-      (total, service) => total + (service.weekly_hours || 0),
+      (total, service) => total + (service.weekly_hours ?? 0),
       0
     );
 
@@ -357,8 +366,7 @@ export const getTodayServicesStats = async (): Promise<{
       totalHours,
     };
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Error in getTodayServicesStats:', error);
+    securityLogger.error('Error in getTodayServicesStats:', error);
     return {
       totalServices: 0,
       activeWorkers: 0,
@@ -372,8 +380,7 @@ export const getTodayServicesStats = async (): Promise<{
  * Manejo de errores centralizado
  */
 export const handleSupabaseError = (error: unknown, context: string) => {
-  // eslint-disable-next-line no-console
-  console.error(`Error in ${context}:`, error);
+  securityLogger.error(`Error in ${context}:`, error);
 
   // Determinar el tipo de error y retornar mensaje apropiado
   if (typeof error === 'object' && error !== null && 'code' in error) {

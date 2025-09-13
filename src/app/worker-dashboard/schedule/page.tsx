@@ -150,7 +150,7 @@ const WeeklySchedule = (props: {
         acc[slot.date] = [];
       }
       const array = acc[slot.date];
-      if (array) {
+      if (array !== undefined) {
         array.push(slot);
       }
       return acc;
@@ -192,28 +192,83 @@ const WeeklySchedule = (props: {
               </div>
             ) : (
               <div className='space-y-2 sm:space-y-3'>
-                {daySlots.map((slot, slotIndex) => (
-                  <div
-                    key={`${slot.assignmentId}-${slot.start}-${slot.end}-${slotIndex}`}
-                    className='bg-white rounded-lg p-3 sm:p-4 border border-gray-200 shadow-sm'
-                  >
-                    <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
-                      <div className='flex-1'>
-                        <p className='font-medium text-gray-900 text-sm sm:text-base'>
-                          {slot.userLabel}
-                        </p>
-                        <p className='text-xs sm:text-sm text-gray-600'>
-                          {slot.start} - {slot.end}
-                        </p>
-                      </div>
-                      <div className='flex justify-end sm:text-right'>
-                        <span className='inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800'>
-                          Programado
-                        </span>
+                {daySlots.map((slot, slotIndex) => {
+                  // Lógica simple de colores basada en la fecha
+                  const now = new Date();
+                  const today = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate()
+                  );
+                  const serviceDate = new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth(),
+                    currentDate.getDate()
+                  );
+
+                  // Determinar colores y textos de estado
+                  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                  const startMinutes = toMinutes(slot.start);
+                  const endMinutes = toMinutes(slot.end);
+
+                  const isPastDay = serviceDate < today;
+                  const isFutureDay = serviceDate > today;
+                  const isToday = !isPastDay && !isFutureDay;
+                  const isInProgress =
+                    isToday &&
+                    nowMinutes >= startMinutes &&
+                    nowMinutes < endMinutes;
+                  const isCompleted = isToday && nowMinutes >= endMinutes;
+
+                  const bgColor = isPastDay
+                    ? 'bg-rose-100 border-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-amber-100 border-amber-300'
+                      : isInProgress
+                        ? 'bg-green-100 border-green-300'
+                        : 'bg-rose-100 border-rose-300';
+
+                  const badgeText = isPastDay
+                    ? 'Completado'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'Pendiente'
+                      : isInProgress
+                        ? 'En curso'
+                        : 'Completado';
+
+                  const badgeColor = isPastDay
+                    ? 'bg-white/80 text-rose-800 ring-1 ring-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-white/80 text-amber-800 ring-1 ring-amber-300'
+                      : isInProgress
+                        ? 'bg-white/80 text-green-800 ring-1 ring-green-300'
+                        : 'bg-white/80 text-rose-800 ring-1 ring-rose-300';
+
+                  return (
+                    <div
+                      key={`${slot.assignmentId}-${slot.start}-${slot.end}-${slotIndex}`}
+                      className={`${bgColor} rounded-lg p-3 sm:p-4 border shadow-sm hover:bg-opacity-80`}
+                    >
+                      <div className='flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-2 sm:space-y-0'>
+                        <div className='flex-1'>
+                          <p className='font-medium text-gray-900 text-sm sm:text-base'>
+                            {slot.userLabel}
+                          </p>
+                          <p className='text-xs sm:text-sm text-gray-600'>
+                            {slot.start} - {slot.end}
+                          </p>
+                        </div>
+                        <div className='flex justify-end sm:text-right'>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 sm:px-2.5 sm:py-0.5 rounded-full text-xs font-medium ${badgeColor}`}
+                          >
+                            {badgeText}
+                          </span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -222,8 +277,8 @@ const WeeklySchedule = (props: {
     </div>
   );
 };
-// Calendario mensual estilo Planning para la trabajadora logueada (declaración superior para evitar no-use-before-define)
-const WorkerMonthCalendar = (props: {
+// Componente de lista móvil para vista de mes
+const MobileMonthList = (props: {
   assignments: Array<{
     id: string;
     assignment_type: string;
@@ -243,6 +298,355 @@ const WorkerMonthCalendar = (props: {
 }): React.JSX.Element => {
   const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
     props;
+
+  // Función auxiliar para convertir hora a minutos
+  const toMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Función para verificar si una fecha es festivo
+  const isKnownHoliday = (date: Date): boolean => {
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    return holidaySet?.has(dateKey) ?? false;
+  };
+
+  const shouldWorkOnDate = (date: Date, assignmentType: string): boolean => {
+    const dayOfWeek = date.getDay();
+    const type = (assignmentType ?? '').toLowerCase();
+    const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+
+    if (type === 'laborables')
+      return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+    if (type === 'festivos')
+      return dayOfWeek === 0 || dayOfWeek === 6 || isHoliday;
+    if (type === 'flexible' || type === 'daily') return true;
+    return dayOfWeek >= 1 && dayOfWeek <= 5 && !isHoliday;
+  };
+
+  const getDateKeyLocal = (d: Date): string =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const firstDayOfMonth = new Date(
+    monthStart.getFullYear(),
+    monthStart.getMonth(),
+    1,
+    12,
+    0,
+    0
+  );
+  const lastDayOfMonth = new Date(
+    monthEnd.getFullYear(),
+    monthEnd.getMonth(),
+    monthEnd.getDate(),
+    12,
+    0,
+    0
+  );
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  type ExpandedEntry = {
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+  };
+
+  // Generar días con servicios
+  const daysWithServices: Array<{
+    date: Date;
+    key: string;
+    isHoliday: boolean;
+    entries: ExpandedEntry[];
+  }> = [];
+
+  for (let i = 0; i < daysInMonth; i++) {
+    const date = new Date(firstDayOfMonth);
+    date.setDate(firstDayOfMonth.getDate() + i);
+    const key = getDateKeyLocal(date);
+    const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+    const entries: ExpandedEntry[] = [];
+    for (const a of assignments) {
+      const aStart = new Date(a.start_date);
+      const aEnd =
+        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+      if (date < aStart || date > aEnd) continue;
+      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+
+      const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
+      if (slots.length > 0) {
+        const userLabel =
+          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
+          'Servicio';
+        slots.forEach((s) => {
+          entries.push({
+            assignmentId: a.id,
+            userLabel,
+            start: s.start,
+            end: s.end,
+          });
+        });
+      }
+    }
+
+    if (entries.length > 0) {
+      // Ordenar entradas por hora de inicio
+      entries.sort((a, b) => {
+        const timeA = a.start.replace(':', '');
+        const timeB = b.start.replace(':', '');
+        return timeA.localeCompare(timeB);
+      });
+      daysWithServices.push({ date, key, isHoliday, entries });
+    }
+  }
+
+  return (
+    <div>
+      <div className='mb-4'>
+        <h3 className='text-lg font-semibold text-gray-900 mb-2'>Este Mes</h3>
+        <p className='text-base text-gray-600'>
+          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
+          {lastDayOfMonth.toLocaleDateString('es-ES')}
+        </p>
+      </div>
+
+      {daysWithServices.length === 0 ? (
+        <div className='text-center py-8'>
+          <div className='w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center'>
+            <span className='text-2xl'>📅</span>
+          </div>
+          <p className='text-gray-600 mb-4'>
+            No tienes servicios programados este mes.
+          </p>
+        </div>
+      ) : (
+        <div className='space-y-3'>
+          {daysWithServices.map((day) => (
+            <div
+              key={day.key}
+              className='bg-white border rounded-lg p-4 shadow-sm'
+            >
+              <div className='flex items-center justify-between mb-3'>
+                <h4 className='font-semibold text-gray-900'>
+                  {day.date.toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    day: 'numeric',
+                    month: 'short',
+                  })}
+                </h4>
+                {day.isHoliday && (
+                  <span className='text-red-600 text-sm'>🎉 Festivo</span>
+                )}
+              </div>
+              <div className='space-y-2'>
+                {day.entries.map((entry, i) => {
+                  // Determinar colores y textos de estado
+                  const now = new Date();
+                  const today = new Date(
+                    now.getFullYear(),
+                    now.getMonth(),
+                    now.getDate()
+                  );
+                  const serviceDate = new Date(
+                    day.date.getFullYear(),
+                    day.date.getMonth(),
+                    day.date.getDate()
+                  );
+
+                  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+                  const startMinutes = toMinutes(entry.start);
+                  const endMinutes = toMinutes(entry.end);
+
+                  const isPastDay = serviceDate < today;
+                  const isFutureDay = serviceDate > today;
+                  const isToday = !isPastDay && !isFutureDay;
+                  const isInProgress =
+                    isToday &&
+                    nowMinutes >= startMinutes &&
+                    nowMinutes < endMinutes;
+                  const isCompleted = isToday && nowMinutes >= endMinutes;
+
+                  const bgColor = isPastDay
+                    ? 'bg-rose-100 border-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-amber-100 border-amber-300'
+                      : isInProgress
+                        ? 'bg-green-100 border-green-300'
+                        : 'bg-rose-100 border-rose-300';
+
+                  const badgeText = isPastDay
+                    ? 'Completado'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'Pendiente'
+                      : isInProgress
+                        ? 'En curso'
+                        : 'Completado';
+
+                  const badgeColor = isPastDay
+                    ? 'bg-white/80 text-rose-800 ring-1 ring-rose-300'
+                    : isFutureDay || (isToday && !isInProgress && !isCompleted)
+                      ? 'bg-white/80 text-amber-800 ring-1 ring-amber-300'
+                      : isInProgress
+                        ? 'bg-white/80 text-green-800 ring-1 ring-green-300'
+                        : 'bg-white/80 text-rose-800 ring-1 ring-rose-300';
+
+                  return (
+                    <div
+                      key={i}
+                      className={`flex items-center justify-between p-3 rounded-lg border-l-4 shadow-sm ${bgColor}`}
+                    >
+                      <span className='font-medium text-sm text-gray-700'>
+                        {entry.userLabel}
+                      </span>
+                      <span
+                        className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${badgeColor}`}
+                      >
+                        {badgeText}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+// Componente Modal para mostrar servicios del día
+const DayServicesModal = (props: {
+  isOpen: boolean;
+  onClose: () => void;
+  date: Date;
+  services: Array<{
+    assignmentId: string;
+    userLabel: string;
+    start: string;
+    end: string;
+  }>;
+  dayStatus?: 'pending' | 'inprogress' | 'completed';
+}): React.JSX.Element => {
+  const { isOpen, onClose, date, services, dayStatus = 'pending' } = props;
+
+  if (!isOpen) return <div />;
+
+  return (
+    <div className='fixed inset-0 z-50 flex items-center justify-center'>
+      <div
+        className='absolute inset-0 bg-black bg-opacity-50'
+        onClick={onClose}
+      />
+      <div className='relative bg-white rounded-lg shadow-lg w-full max-w-md mx-4 p-4 md:p-6 max-h-96 md:max-h-[60vh] overflow-y-auto'>
+        <div className='flex justify-between items-center mb-4'>
+          <h2 className='text-lg font-semibold bg-blue-600 text-white px-3 py-2 rounded-lg shadow-sm'>
+            {date.toLocaleDateString('es-ES', {
+              weekday: 'long',
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
+          </h2>
+          <button
+            onClick={onClose}
+            className='text-gray-500 hover:text-gray-700 p-2 hover:bg-gray-100 rounded-full transition-colors'
+          >
+            ✕
+          </button>
+        </div>
+        <div className='space-y-2'>
+          {services.length === 0 ? (
+            <div className='p-4 bg-gray-50 rounded-lg border border-gray-200 text-center'>
+              <p className='text-gray-600 font-medium'>
+                No hay servicios programados
+              </p>
+              <p className='text-sm text-gray-500 mt-1'>Este día está libre</p>
+            </div>
+          ) : (
+            services.map((service, index) => {
+              // Aplicar colores tenues si el día está completado
+              const isCompletedDay = dayStatus === 'completed';
+              const isInProgressDay = dayStatus === 'inprogress';
+              const isPendingDay = dayStatus === 'pending';
+
+              let serviceClasses = 'p-3 rounded border-l-4';
+              let userLabelClasses =
+                'font-semibold px-2 py-1 rounded shadow-sm inline-block mb-1';
+              let timeClasses = 'text-sm font-medium';
+
+              if (isCompletedDay) {
+                // Días completados: rojo pastel (igual que tomorrow)
+                serviceClasses += ' bg-rose-100 border-rose-300';
+                userLabelClasses += ' text-rose-800 bg-white/80';
+                timeClasses += ' text-rose-800';
+              } else if (isInProgressDay) {
+                // Días en progreso: verde (igual que tomorrow)
+                serviceClasses += ' bg-green-100 border-green-300';
+                userLabelClasses += ' text-green-800 bg-white/80';
+                timeClasses += ' text-green-800';
+              } else if (isPendingDay) {
+                // Días pendientes: amarillo (igual que tomorrow)
+                serviceClasses += ' bg-amber-100 border-amber-300';
+                userLabelClasses += ' text-amber-800 bg-white/80';
+                timeClasses += ' text-amber-800';
+              } else {
+                // Estado por defecto
+                serviceClasses += ' bg-blue-50 border-blue-400';
+                userLabelClasses += ' text-gray-900 bg-white';
+                timeClasses += ' text-gray-700';
+              }
+
+              return (
+                <div key={index} className={serviceClasses}>
+                  <div className={userLabelClasses}>{service.userLabel}</div>
+                  <div className={timeClasses}>
+                    {service.start} - {service.end}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const WorkerMonthCalendar = (props: {
+  assignments: Array<{
+    id: string;
+    assignment_type: string;
+    schedule: unknown;
+    start_date: string;
+    end_date: string | null;
+    users?: { name: string | null; surname: string | null } | null;
+  }>;
+  getScheduleSlots: (
+    schedule: unknown,
+    assignmentType: string,
+    date: Date
+  ) => Array<{ start: string; end: string }>;
+  monthStart: Date;
+  monthEnd: Date;
+  holidaySet?: ReadonlySet<string>;
+  isMobile?: boolean;
+}): React.JSX.Element => {
+  const { assignments, getScheduleSlots, monthStart, monthEnd, holidaySet } =
+    props;
+
+  // Estado para el modal
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedServices, setSelectedServices] = useState<
+    Array<{
+      assignmentId: string;
+      userLabel: string;
+      start: string;
+      end: string;
+    }>
+  >([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   // Función para verificar si una fecha es festivo (solo desde BD)
   const isKnownHoliday = (date: Date): boolean => {
     const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -274,6 +678,101 @@ const WorkerMonthCalendar = (props: {
       d.getDate()
     ).padStart(2, '0')}`;
   const todayKey = getDateKeyLocal(new Date());
+
+  // Función auxiliar para convertir hora a minutos
+  const toMinutes = (timeStr: string): number => {
+    const [hours, minutes] = timeStr.split(':').map(Number);
+    return hours * 60 + minutes;
+  };
+
+  // Función para determinar el estado de un día basado en sus servicios
+  const getDayStatus = (
+    services: ExpandedEntry[],
+    date: Date
+  ): 'pending' | 'inprogress' | 'completed' => {
+    if (services.length === 0) return 'pending';
+
+    const now = new Date();
+    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const targetDate = new Date(
+      date.getFullYear(),
+      date.getMonth(),
+      date.getDate()
+    );
+
+    // Si es un día futuro, está pendiente
+    if (targetDate > today) return 'pending';
+
+    // Si es un día pasado, asumir que está completado
+    if (targetDate < today) {
+      return 'completed';
+    }
+
+    // Es hoy, determinar el estado basado en los servicios actuales
+    const nowMinutes = now.getHours() * 60 + now.getMinutes();
+    let hasInProgress = false;
+    let hasPending = false;
+
+    for (const service of services) {
+      const startMinutes = toMinutes(service.start);
+      const endMinutes = toMinutes(service.end);
+
+      if (nowMinutes >= startMinutes && nowMinutes < endMinutes) {
+        hasInProgress = true;
+      } else if (nowMinutes < startMinutes) {
+        hasPending = true;
+      }
+    }
+
+    if (hasInProgress) return 'inprogress';
+    if (hasPending) return 'pending';
+
+    // Todos los servicios de hoy han terminado
+    return 'completed';
+  };
+
+  // Función para obtener clases CSS basadas en el estado del día
+  const getDayClasses = (day: (typeof calendarDays)[0]): string => {
+    const baseClasses = [
+      'h-16 md:h-20 flex flex-col items-center justify-center p-1 md:p-2 rounded-lg border transition-colors relative',
+      day.isCurrentMonth
+        ? 'bg-white border-gray-200'
+        : 'bg-gray-50 border-gray-100',
+      day.isToday ? 'ring-2 ring-blue-500 bg-blue-50' : '',
+      day.isHoliday || day.isWeekend ? 'border-red-200' : '',
+      day.entries.length > 0
+        ? 'cursor-pointer hover:bg-blue-50'
+        : 'cursor-pointer hover:bg-gray-50',
+    ];
+
+    // NO aplicar colores para días completados en la rejilla
+    // (para evitar confusión con festivos que son rojos)
+    // Solo mantener colores para días en progreso y pendientes
+    if (day.status === 'inprogress') {
+      // Días en progreso: verde
+      baseClasses.push('bg-green-100 border-green-300');
+    } else if (day.status === 'pending' && day.entries.length > 0) {
+      // Días pendientes con servicios: amarillo
+      baseClasses.push('bg-amber-100 border-amber-300');
+    }
+    // Días completados no tienen colores especiales en la rejilla
+
+    return baseClasses.filter(Boolean).join(' ');
+  };
+
+  // Función para manejar clic en día
+  const handleDayClick = (date: Date, services: ExpandedEntry[]) => {
+    // Ordenar servicios por hora antes de mostrar el modal
+    const sortedServices = [...services].sort((a, b) => {
+      const timeA = a.start.replace(':', '');
+      const timeB = b.start.replace(':', '');
+      return timeA.localeCompare(timeB);
+    });
+    setSelectedDate(date);
+    setSelectedServices(sortedServices);
+    setIsModalOpen(true);
+  };
+
   const firstDayOfMonth = new Date(
     monthStart.getFullYear(),
     monthStart.getMonth(),
@@ -290,39 +789,81 @@ const WorkerMonthCalendar = (props: {
     0,
     0
   );
-  // Construir solo los días del mes actual (no arrastrar semanas completas)
-  const daysInMonth = lastDayOfMonth.getDate();
-  const monthGrid = Array.from({ length: daysInMonth }, (_, idx) => {
-    const date = new Date(firstDayOfMonth);
-    date.setDate(firstDayOfMonth.getDate() + idx);
+
+  // Para calendario convencional, necesitamos incluir días de semanas anteriores y posteriores
+  const startOfCalendar = new Date(firstDayOfMonth);
+  const dayOfWeek = firstDayOfMonth.getDay();
+  // Ajustar para que lunes sea 0 (lunes = 1 en getDay())
+  const daysToSubtract = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+  startOfCalendar.setDate(firstDayOfMonth.getDate() - daysToSubtract);
+
+  const endOfCalendar = new Date(lastDayOfMonth);
+  const lastDayOfWeek = lastDayOfMonth.getDay();
+  const daysToAdd = lastDayOfWeek === 0 ? 0 : 7 - lastDayOfWeek;
+  endOfCalendar.setDate(lastDayOfMonth.getDate() + daysToAdd);
+
+  // Crear grid de 6 semanas (42 días)
+  const calendarDays: Array<{
+    date: Date;
+    key: string;
+    isCurrentMonth: boolean;
+    isToday: boolean;
+    isWeekend: boolean;
+    isHoliday: boolean;
+    entries: ExpandedEntry[];
+    status: 'pending' | 'inprogress' | 'completed';
+  }> = [];
+  const totalDays =
+    Math.ceil(
+      (endOfCalendar.getTime() - startOfCalendar.getTime()) /
+        (1000 * 60 * 60 * 24)
+    ) + 1;
+
+  for (let i = 0; i < totalDays; i++) {
+    const date = new Date(startOfCalendar);
+    date.setDate(startOfCalendar.getDate() + i);
     const key = getDateKeyLocal(date);
-    const isCurrentMonth = true;
+    const isCurrentMonth = date.getMonth() === monthStart.getMonth();
     const isToday = key === todayKey;
     const isWeekend = date.getDay() === 0 || date.getDay() === 6;
     const isHoliday = holidaySet?.has(key) === true || isKnownHoliday(date);
+
     const entries: ExpandedEntry[] = [];
-    for (const a of assignments) {
-      const aStart = new Date(a.start_date);
-      const aEnd =
-        a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
-      if (date < aStart || date > aEnd) continue;
-      if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
-      const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
-      if (slots.length > 0) {
-        const userLabel =
-          `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
-          'Servicio';
-        slots.forEach((s) => {
-          entries.push({
-            assignmentId: a.id,
-            userLabel,
-            start: s.start,
-            end: s.end,
+    if (isCurrentMonth) {
+      for (const a of assignments) {
+        const aStart = new Date(a.start_date);
+        const aEnd =
+          a.end_date !== null ? new Date(a.end_date) : new Date('2099-12-31');
+        if (date < aStart || date > aEnd) continue;
+        if (!shouldWorkOnDate(date, a.assignment_type ?? '')) continue;
+        const slots = getScheduleSlots(a.schedule, a.assignment_type, date);
+        if (slots.length > 0) {
+          const userLabel =
+            `${a.users?.name ?? ''} ${a.users?.surname ?? ''}`.trim() ||
+            'Servicio';
+          slots.forEach((s) => {
+            entries.push({
+              assignmentId: a.id,
+              userLabel,
+              start: s.start,
+              end: s.end,
+            });
           });
-        });
+        }
       }
     }
-    return {
+
+    // Ordenar entradas por hora de inicio
+    entries.sort((a, b) => {
+      const timeA = a.start.replace(':', '');
+      const timeB = b.start.replace(':', '');
+      return timeA.localeCompare(timeB);
+    });
+
+    // Determinar el estado del día
+    const dayStatus = getDayStatus(entries, date);
+
+    calendarDays.push({
       date,
       key,
       isCurrentMonth,
@@ -330,85 +871,105 @@ const WorkerMonthCalendar = (props: {
       isWeekend,
       isHoliday,
       entries,
-    };
-  });
-  return (
-    <div>
-      <div className='mb-4 sm:mb-6'>
-        <h3 className='text-base sm:text-lg font-semibold text-gray-900 mb-1 sm:mb-2'>
-          Este Mes
-        </h3>
-        <p className='text-sm sm:text-base text-gray-600'>
-          Desde {firstDayOfMonth.toLocaleDateString('es-ES')} hasta{' '}
-          {lastDayOfMonth.toLocaleDateString('es-ES')}
-        </p>
-      </div>
-      <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-2 md:gap-3'>
-        {monthGrid.map((cell, idx) => {
-          const headerClasses = cell.isCurrentMonth
-            ? 'text-gray-900'
-            : 'text-gray-400';
-          const borderHighlight =
-            cell.isHoliday || cell.isWeekend
-              ? 'border-red-300'
-              : 'border-gray-200';
-          const todayRing = cell.isToday ? 'ring-2 ring-blue-500' : '';
-          const weekdayShort = cell.date
-            .toLocaleDateString('es-ES', { weekday: 'short' })
-            .replace('.', '')
-            .slice(0, 3);
-          return (
-            <div
-              key={idx}
-              className={`p-2 sm:p-3 border ${borderHighlight} bg-white min-h-24 rounded-lg ${todayRing}`}
-            >
-              <div className='flex items-center justify-between mb-1'>
-                <div className='flex items-center gap-2'>
-                  <span className='inline-block text-[10px] font-semibold text-gray-700 bg-gray-100 rounded px-1.5 py-0.5'>
-                    {weekdayShort}
-                  </span>
-                  <span
-                    className={`text-xs sm:text-sm font-medium ${headerClasses}`}
-                  >
-                    {cell.date.getDate()}
-                  </span>
-                </div>
-                {cell.isHoliday && (
-                  <span className='text-[10px] sm:text-xs text-red-600 font-medium'>
-                    🎉
-                  </span>
-                )}
-              </div>
-              <div className='space-y-1 max-h-36 sm:max-h-40 overflow-y-auto pr-0.5'>
-                {cell.entries.slice(0, 4).map((e, i) => (
-                  <div
-                    key={`${cell.key}-${e.assignmentId}-${i}`}
-                    className='rounded px-1.5 py-1 border-l-4 border-blue-500 bg-blue-50/70 hover:bg-blue-50'
-                  >
-                    <div className='text-[10px] sm:text-[11px] font-medium text-gray-700 truncate'>
-                      {e.userLabel}
-                    </div>
-                    <div className='flex items-center gap-1 text-[10px] sm:text-[11px] text-blue-700 font-semibold'>
-                      <span>
-                        {e.start}–{e.end}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-                {cell.entries.length === 0 && (
-                  <div className='text-center py-2'>
-                    <p className='text-[10px] text-gray-400 italic'>
-                      Sin servicios
-                    </p>
-                  </div>
-                )}
-              </div>
+      status: dayStatus,
+    });
+  }
+
+  // Dividir en semanas
+  const weeks = [];
+  for (let i = 0; i < calendarDays.length; i += 7) {
+    weeks.push(calendarDays.slice(i, i + 7));
+  }
+  // Mostrar calendario con modal en todas las pantallas
+  {
+    return (
+      <div>
+        <div className='mb-4 md:mb-6'>
+          <h3 className='text-lg md:text-xl font-semibold text-gray-900 mb-2'>
+            📅{' '}
+            {firstDayOfMonth.toLocaleDateString('es-ES', {
+              month: 'long',
+              year: 'numeric',
+            })}
+          </h3>
+          <p className='text-sm md:text-base text-gray-600'>
+            Toca un día para ver los servicios
+          </p>
+        </div>
+
+        {/* Encabezados de días de la semana */}
+        <div className='grid grid-cols-7 gap-1 md:gap-2 mb-2 md:mb-4'>
+          {['L', 'M', 'X', 'J', 'V', 'S', 'D'].map((day, index) => (
+            <div key={index} className='text-center py-2 md:py-3'>
+              <span className='text-xs md:text-sm font-semibold text-gray-600'>
+                {day}
+              </span>
             </div>
-          );
-        })}
+          ))}
+        </div>
+
+        {/* Grid del calendario */}
+        <div className='space-y-1 md:space-y-2'>
+          {weeks.map((week, weekIndex) => (
+            <div key={weekIndex} className='grid grid-cols-7 gap-1 md:gap-2'>
+              {week.map((day, dayIndex) => {
+                const dayClasses = getDayClasses(day);
+
+                return (
+                  <button
+                    key={dayIndex}
+                    className={dayClasses}
+                    onClick={() => handleDayClick(day.date, day.entries)}
+                    disabled={!day.isCurrentMonth}
+                  >
+                    <span
+                      className={`text-sm md:text-base font-medium ${
+                        day.isCurrentMonth ? 'text-gray-900' : 'text-gray-400'
+                      } ${day.isToday ? 'text-blue-600' : ''}`}
+                    >
+                      {day.date.getDate()}
+                    </span>
+
+                    {/* Indicador de servicios */}
+                    {day.entries.length > 0 && (
+                      <div className='flex items-center justify-center mt-1'>
+                        <div className='w-1.5 h-1.5 md:w-2 md:h-2 bg-blue-500 rounded-full'></div>
+                        {day.entries.length > 1 && (
+                          <span className='text-[10px] md:text-xs text-blue-600 font-medium ml-1'>
+                            {day.entries.length}
+                          </span>
+                        )}
+                      </div>
+                    )}
+
+                    {/* Indicador de festivo */}
+                    {day.isHoliday && (
+                      <div className='absolute top-1 right-1'>
+                        <span className='text-[8px] md:text-xs'>🎉</span>
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+
+        {/* Modal */}
+        <DayServicesModal
+          isOpen={isModalOpen}
+          onClose={() => setIsModalOpen(false)}
+          date={selectedDate ?? new Date()}
+          services={selectedServices}
+          dayStatus={
+            selectedDate
+              ? getDayStatus(selectedServices, selectedDate)
+              : 'pending'
+          }
+        />
       </div>
-    </div>
-  );
+    );
+  }
 };
 // Eliminado: Componente mensual previo ya no se usa
 /* const MonthlySchedule = (props: {
@@ -607,13 +1168,17 @@ const WorkerMonthCalendar = (props: {
     </div>
   );
 }; */
+// Calendario mensual estilo Planning para la trabajadora logueada (declaración superior para evitar no-use-before-define)
 export default function SchedulePage(): React.JSX.Element {
   const { user } = useAuth();
+  const currentUser = user;
   const [assignments, setAssignments] = useState<AssignmentRow[]>([]);
-  const [loading, setLoading] = useState<boolean>(true);
+  const [loading, setLoading] = useState(true);
   const [selectedPeriod, setSelectedPeriod] = useState<'week' | 'month'>(
     'week'
   );
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  const [isMobile, setIsMobile] = useState(false);
   const [holidaySet, setHolidaySet] = useState<Set<string>>(new Set());
   type TimeSlotRange = { start: string; end: string };
   const getScheduleSlots = useCallback(
@@ -731,7 +1296,7 @@ export default function SchedulePage(): React.JSX.Element {
   );
   useEffect(() => {
     const load = async (): Promise<void> => {
-      if (user?.email === undefined) {
+      if (currentUser?.email === undefined) {
         setAssignments([]);
         setLoading(false);
         return;
@@ -742,14 +1307,14 @@ export default function SchedulePage(): React.JSX.Element {
         const { data: workerData, error: workerError } = await supabase
           .from('workers')
           .select('id')
-          .ilike('email', user.email)
+          .ilike('email', currentUser?.email)
           .maybeSingle();
         if (workerError !== null || workerData === null) {
           setAssignments([]);
           setLoading(false);
           return;
         }
-        const workerId = workerData.id;
+        const workerId = (workerData as { id: string }).id;
         // Cargar festivos para el rango que abarca semana actual, próxima semana y mes restante
         const holidayStart = new Date(
           Math.min(
@@ -791,17 +1356,19 @@ export default function SchedulePage(): React.JSX.Element {
             schedule,
             start_date,
             end_date,
-            users(name, surname)
+            users!inner(name, surname)
           `
           )
           .eq('worker_id', workerId)
           .eq('status', 'active');
         if (err === null && rows !== null) {
           const filtered = rows.filter((a) => {
-            const t = (a.assignment_type ?? '').toLowerCase();
+            const assignmentType =
+              typeof a.assignment_type === 'string' ? a.assignment_type : '';
+            const t = assignmentType.toLowerCase();
             return t === 'laborables' || t === 'flexible' || t === 'festivos';
           });
-          setAssignments(filtered);
+          setAssignments(filtered as unknown as AssignmentRow[]);
         } else {
           setAssignments([]);
         }
@@ -813,6 +1380,7 @@ export default function SchedulePage(): React.JSX.Element {
     load();
   }, [
     user?.email,
+    currentUser?.email,
     weekRange.start,
     weekRange.end,
     nextWeekRange.start,
@@ -820,6 +1388,16 @@ export default function SchedulePage(): React.JSX.Element {
     monthRange.start,
     monthRange.end,
   ]);
+
+  // Detectar dispositivo móvil y tablet
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // Incluir tablets hasta 1024px
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
   const formatLongDate = (d: Date): string =>
     d.toLocaleDateString('es-ES', {
       weekday: 'long',
@@ -831,7 +1409,7 @@ export default function SchedulePage(): React.JSX.Element {
       <div className='min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50'>
         {/* Header */}
         <header className='bg-white shadow-sm border-b border-gray-200'>
-          <div className='max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4'>
+          <div className='w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8'>
             <div className='flex items-center justify-between'>
               <div className='flex items-center space-x-4'>
                 <Link
@@ -877,29 +1455,59 @@ export default function SchedulePage(): React.JSX.Element {
                   </p>
                 </div>
                 {/* Selector de período */}
-                <div className='flex space-x-2'>
-                  <Button
-                    variant={selectedPeriod === 'week' ? 'primary' : 'outline'}
-                    size='sm'
-                    onClick={() => setSelectedPeriod('week')}
-                    className='flex-1 sm:flex-none'
-                  >
-                    <span className='hidden sm:inline'>Esta Semana</span>
-                    <span className='sm:hidden'>Semana</span>
-                  </Button>
-                  <Button
-                    variant={selectedPeriod === 'month' ? 'primary' : 'outline'}
-                    size='sm'
-                    onClick={() => setSelectedPeriod('month')}
-                    className='flex-1 sm:flex-none'
-                  >
-                    <span className='hidden sm:inline'>Este Mes</span>
-                    <span className='sm:hidden'>Mes</span>
-                  </Button>
+                <div className='flex flex-col sm:flex-row gap-2 sm:gap-0 sm:space-x-2'>
+                  <div className='flex space-x-2'>
+                    <Button
+                      variant={
+                        selectedPeriod === 'week' ? 'primary' : 'outline'
+                      }
+                      size='sm'
+                      onClick={() => setSelectedPeriod('week')}
+                      className='flex-1 sm:flex-none'
+                    >
+                      <span className='hidden sm:inline'>Esta Semana</span>
+                      <span className='sm:hidden'>Semana</span>
+                    </Button>
+                    <Button
+                      variant={
+                        selectedPeriod === 'month' ? 'primary' : 'outline'
+                      }
+                      size='sm'
+                      onClick={() => setSelectedPeriod('month')}
+                      className='flex-1 sm:flex-none'
+                    >
+                      <span className='hidden sm:inline'>Este Mes</span>
+                      <span className='sm:hidden'>Mes</span>
+                    </Button>
+                  </div>
+
+                  {/* Toggle de vista para todas las pantallas en vista de mes */}
+                  {selectedPeriod === 'month' && (
+                    <div className='flex space-x-2'>
+                      <Button
+                        variant={
+                          viewMode === 'calendar' ? 'primary' : 'outline'
+                        }
+                        size='sm'
+                        onClick={() => setViewMode('calendar')}
+                        className='flex-1 sm:flex-none'
+                      >
+                        📅 Calendario
+                      </Button>
+                      <Button
+                        variant={viewMode === 'list' ? 'primary' : 'outline'}
+                        size='sm'
+                        onClick={() => setViewMode('list')}
+                        className='flex-1 sm:flex-none'
+                      >
+                        📋 Lista
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
-            <div className='p-4 sm:p-6'>
+            <div className='w-full max-w-7xl mx-auto px-2 sm:px-4 lg:px-8 py-2 sm:py-4 lg:py-8'>
               {loading ? (
                 <div className='text-center py-8'>
                   <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4'></div>
@@ -963,13 +1571,26 @@ export default function SchedulePage(): React.JSX.Element {
                       </div>
                     </div>
                   ) : (
-                    <WorkerMonthCalendar
-                      assignments={assignments}
-                      getScheduleSlots={getScheduleSlots}
-                      monthStart={monthStartLocal}
-                      monthEnd={monthEndLocal}
-                      holidaySet={holidaySet}
-                    />
+                    <div>
+                      {viewMode === 'list' ? (
+                        <MobileMonthList
+                          assignments={assignments}
+                          getScheduleSlots={getScheduleSlots}
+                          monthStart={monthStartLocal}
+                          monthEnd={monthEndLocal}
+                          holidaySet={holidaySet}
+                        />
+                      ) : (
+                        <WorkerMonthCalendar
+                          assignments={assignments}
+                          getScheduleSlots={getScheduleSlots}
+                          monthStart={monthStartLocal}
+                          monthEnd={monthEndLocal}
+                          holidaySet={holidaySet}
+                          isMobile={isMobile}
+                        />
+                      )}
+                    </div>
                   )}
                 </div>
               )}
