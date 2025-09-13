@@ -96,6 +96,10 @@ jobs:
 
       - name: Build Android APK (Direct)
         timeout-minutes: 15
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           cd mobile-app
           echo "Building Android APK directly with Gradle..."
