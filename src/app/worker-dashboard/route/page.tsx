@@ -117,9 +117,9 @@ const DailyRoute = (props: {
         end: s.end,
         startMinutes: sm,
         order: index + 1,
-        address: a.users?.address,
-        postalCode: a.users?.postal_code,
-        city: a.users?.city,
+        address: a.users?.address ?? null,
+        postalCode: a.users?.postal_code ?? null,
+        city: a.users?.city ?? null,
       };
     });
   });
@@ -788,9 +788,9 @@ export default function RoutePage(): React.JSX.Element {
           end: s.end,
           startMinutes,
           order: index + 1,
-          address: a.users?.address ?? undefined,
-          postalCode: a.users?.postal_code ?? undefined,
-          city: a.users?.city ?? undefined,
+          address: a.users?.address ?? null,
+          postalCode: a.users?.postal_code ?? null,
+          city: a.users?.city ?? null,
         };
       });
     });
@@ -1000,9 +1000,9 @@ export default function RoutePage(): React.JSX.Element {
                       workerInfo={
                         workerInfo
                           ? {
-                              address: workerInfo.address,
-                              postalCode: workerInfo.postal_code,
-                              city: workerInfo.city,
+                              address: workerInfo.address ?? null,
+                              postalCode: workerInfo.postal_code ?? null,
+                              city: workerInfo.city ?? null,
                             }
                           : null
                       }

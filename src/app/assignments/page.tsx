@@ -467,9 +467,9 @@ export default function AssignmentsPage() {
               return {
                 ...assign,
                 monthly_hours:
-                  typeof assign.weekly_hours === 'number'
-                    ? assign.weekly_hours
-                    : 0, // Usar weekly_hours como monthly_hours temporalmente
+                    typeof assign['weekly_hours'] === 'number'
+                      ? assign['weekly_hours']
+                      : 0, // Usar weekly_hours como monthly_hours temporalmente
               };
             }
           ) as Assignment[];
@@ -1174,8 +1174,8 @@ export default function AssignmentsPage() {
                       return {
                         ...assign,
                         monthly_hours:
-                          typeof assign.weekly_hours === 'number'
-                            ? assign.weekly_hours
+                          typeof assign['weekly_hours'] === 'number'
+                            ? assign['weekly_hours']
                             : 0,
                       };
                     }
@@ -1394,8 +1394,8 @@ export default function AssignmentsPage() {
                       return {
                         ...assign,
                         monthly_hours:
-                          typeof assign.weekly_hours === 'number'
-                            ? assign.weekly_hours
+                          typeof assign['weekly_hours'] === 'number'
+                            ? assign['weekly_hours']
                             : 0,
                       };
                     }

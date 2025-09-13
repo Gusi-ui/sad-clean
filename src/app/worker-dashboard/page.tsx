@@ -561,9 +561,9 @@ export default function WorkerDashboard(): React.JSX.Element {
         'thursday', // 4
         'friday', // 5
         'saturday', // 6
-      ];
+      ] as const;
 
-      return days[dayOfWeek];
+      return days[dayOfWeek] ?? 'sunday';
     };
 
     const isHolidayDate = (day: number, year: number, month: number): boolean =>
@@ -600,7 +600,7 @@ export default function WorkerDashboard(): React.JSX.Element {
         const dayName = getDayName(day, year, month);
         const daySchedule = schedule[dayName];
 
-        if (daySchedule?.enabled) {
+        if (daySchedule?.enabled === true) {
           // Verificar si es día festivo
           if (isHolidayDate(day, year, month)) {
             // Si es festivo, usar horario de festivos si existe
