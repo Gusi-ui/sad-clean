@@ -57,8 +57,12 @@
 #### **SUPABASE_ANON_KEY** (Recomendado)
 
 ```bash
-# Valor: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mdmlmd2ZtdmhienRwcmFrZWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3ODU4MTUsImV4cCI6MjA2OTM2MTgxNX0.eVWp6w2YR4H0XtWJwrsXyfOhGZ4PdNRTQBtGPr9zgbo
+# Valor: [TU_SUPABASE_ANON_KEY_AQUI]
 # Descripción: Clave anónima de Supabase
+# Cómo obtenerlo:
+# 1. Ir a tu proyecto Supabase
+# 2. Ir a Settings > API
+# 3. Copiar el valor de "anon" key
 ```
 
 ### **2.3 Pasos Detallados para Configurar Secrets**
@@ -100,8 +104,7 @@
 #### **Paso 6: Configurar SUPABASE_ANON_KEY**
 
 1. **Nombre del secret**: `SUPABASE_ANON_KEY`
-2. **Valor**:
-   `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1mdmlmd2ZtdmhienRwcmFrZWFqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTM3ODU4MTUsImV4cCI6MjA2OTM2MTgxNX0.eVWp6w2YR4H0XtWJwrsXyfOhGZ4PdNRTQBtGPr9zgbo`
+2. **Valor**: `[TU_SUPABASE_ANON_KEY_AQUI]`
 3. **Click**: "Add secret"
 
 ### **2.4 Regenerar el APK**
