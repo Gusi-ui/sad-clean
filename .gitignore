@@ -39,3 +39,17 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# mobile app builds
+*.apk
+*.aab
+*.ipa
+
+# keystore files
+*.keystore
+*.jks
+keystore_base64.txt
+
+# mobile app specific
+mobile-app/android/app/release/
+mobile-app/ios/build/
