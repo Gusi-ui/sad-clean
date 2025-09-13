@@ -15,8 +15,7 @@ export default class NotificationTester {
       .catch(console.error);
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  async runFullTest(workerId: string): Promise<void> {
+  async runFullTest(_workerId: string): Promise<void> {
     // eslint-disable-next-line no-console
     console.log(
       '🧪 Iniciando prueba completa del sistema de notificaciones...'
