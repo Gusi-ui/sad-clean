@@ -36,6 +36,10 @@ jobs:
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          build-tools-version: "34.0.0"
+          ndk-version: "26.1.10909125"
+          cmake-version: "3.22.1"
 
       - name: Setup Expo and EAS
         uses: expo/expo-github-action@v8
@@ -87,6 +91,24 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-gradle-
 
+      - name: Validate Required Secrets
+        timeout-minutes: 2
+        run: |
+          echo "Validating required secrets for APK signing..."
+          if [ -z "${{ secrets.KEYSTORE_PASSWORD }}" ]; then
+            echo "❌ ERROR: KEYSTORE_PASSWORD secret is required but not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.KEY_ALIAS }}" ]; then
+            echo "❌ ERROR: KEY_ALIAS secret is required but not set"
+            exit 1
+          fi
+          if [ -z "${{ secrets.KEY_PASSWORD }}" ]; then
+            echo "❌ ERROR: KEY_PASSWORD secret is required but not set"
+            exit 1
+          fi
+          echo "✅ All required secrets are available"
+
       - name: Setup Android Keystore
         timeout-minutes: 2
         env:
@@ -99,7 +121,8 @@ jobs:
             echo "Keystore decoded and saved successfully"
             ls -la @gusideveloper__sad-las-worker.jks
           else
-            echo "Warning: KEYSTORE_BASE64 secret not found"
+            echo "⚠️  Warning: KEYSTORE_BASE64 secret not found"
+            echo "Using debug signing config as fallback"
           fi
 
       - name: Prebuild Android Project
@@ -110,7 +133,7 @@ jobs:
           npx expo prebuild --platform android --clean
 
       - name: Build Android APK (Direct)
-        timeout-minutes: 15
+        timeout-minutes: 30
         env:
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
@@ -119,7 +142,16 @@ jobs:
           cd mobile-app
           echo "Building Android APK directly with Gradle..."
           cd android
-          ./gradlew assembleRelease --no-daemon --stacktrace
+          chmod +x ./gradlew
+          echo "=== Starting Gradle build with diagnostics ==="
+          echo "Java version:"
+          java -version
+          echo "Gradle version:"
+          ./gradlew --version
+          echo "Build environment:"
+          env | grep -E "(KEYSTORE|KEY_|ANDROID|JAVA|GRADLE)" || true
+          echo "=== Building APK ==="
+          ./gradlew assembleRelease --no-daemon --console=plain --info --stacktrace
 
       - name: Locate and Prepare APK
         timeout-minutes: 5
